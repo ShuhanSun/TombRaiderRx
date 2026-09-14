@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>寻龙诀 · 十层古墓</title>
+    <link rel="stylesheet" href="styles.css">
+
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+<div id="ui-layer">
+    <div id="top-bar" class="hud">
+        <div id="hp-bar">❤❤❤❤❤</div>
+        <div id="level-info">
+            <span id="level-num">第 1 层</span>
+            <div id="artifact-bar">冥器: 0/10</div>
+        </div>
+    </div>
+    <div id="objective" class="hud"></div>
+    <div id="game-actions"><button id="pause-btn" class="icon-btn" onclick="Game.togglePause()" aria-label="暂停">Ⅱ</button><button id="sound-btn" class="icon-btn" onclick="Game.toggleSound()" aria-label="静音">♪</button></div>
+    <div id="map-panel"><canvas id="minimap" width="180" height="180" aria-label="已探索区域地图"></canvas><div id="map-caption">探索地图 · 金点为目标</div></div>
+    <div id="control-hint" class="hud"></div>
+    <div id="item-bar"></div>
+    <div id="buff-bar"></div>
+    <div id="msg-box" role="status" aria-live="polite"></div>
+    <div id="level-title-box"><div id="level-title-text"></div></div>
+
+    <!-- Controls -->
+    <div id="joystick-zone"><div id="joystick-knob"></div></div>
+    <button id="sprint-btn" aria-label="按住冲刺">疾行</button>
+</div>
+
+<!-- Exit Confirm Modal -->
+<div id="exit-modal" class="overlay" role="dialog" aria-modal="true" aria-labelledby="exit-title">
+    <div class="item-card" style="max-width:80%; width:300px;">
+        <span class="exit-icon">🕳️</span>
+        <h2 id="exit-title" style="color:#ffd700">发现盗洞</h2>
+        <button id="exit-confirm-btn" class="btn" onclick="Game.confirmNextLevel()" style="margin-top:10px; font-size:20px; padding:10px 30px;">进入下一层</button>
+    </div>
+</div>
+
+<div id="pause-modal" class="overlay" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+    <div class="pause-card"><div class="eyebrow">TOMB RAIDER</div><h2 id="pause-title">灯火未熄</h2><p id="pause-desc">歇息片刻，古墓中的时间已暂停。</p><button id="resume-btn" class="btn" onclick="Game.togglePause()">继续探索</button></div>
+</div>
+<!-- Game Over Screen -->
+<div id="game-over-modal" class="overlay">
+    <h2 id="end-title">胜败乃兵家常事</h2>
+    <p style="color:#ccc; margin-bottom:30px" id="end-desc">大侠请重新来过</p>
+    <button class="btn" onclick="Game.restart()" id="end-btn">再探古墓</button>
+</div>
+
+<!-- Victory Screen -->
+<div id="victory-modal" class="overlay">
+    <h2 id="win-title">摸金校尉 凯旋</h2>
+    <div style="font-size:80px; margin-bottom:20px">🏆</div>
+    <p style="color:#ffd700; font-size:20px; margin-bottom:30px" id="win-desc">找到冥器，逃出生天！</p>
+    <button class="btn" onclick="Game.restart()" id="win-btn">再来一局</button>
+</div>
+
+<!-- Start Screen -->
+<div id="start-screen" class="overlay active">
+    <button id="lang-switch" onclick="Game.toggleLang()">中文 / English</button>
+    <div class="eyebrow">SHUHAN SUN · TOMB RAIDER</div>
+    <h1 id="game-title">寻龙诀</h1>
+    <p style="color:#ffd700; letter-spacing: 2px; text-shadow: 0 0 5px #ff6f00;" id="game-ver">十层古墓 · 一盏孤灯</p>
+
+    <div class="intro-box">
+        <p class="intro-text" id="intro-p1">
+            传说中的古墓埋藏着无数金银财宝，但也由古代机关和复活的僵尸守卫。玩家扮演一名摸金校尉，需深入十层地下迷宫。每一层都有无数危险，只有开启棺材，<b>找到镇墓冥器</b>，才能打开通往下一层的盗洞，带着荣耀重返人间。
+        </p>
+    </div>
+
+    <div class="guide-grid"><div><span>01</span><strong id="guide-move">循光探路</strong><p id="guide-move-desc">WASD / 方向键移动，Shift 疾行；手机使用摇杆。</p></div><div><span>02</span><strong id="guide-find">驻足开棺</strong><p id="guide-find-desc">靠近石棺停留片刻，寻找本层唯一的镇墓冥器。</p></div><div><span>03</span><strong id="guide-exit">寻龙脱身</strong><p id="guide-exit-desc">拾取罗盘指引方向，取得冥器后前往盗洞。</p></div></div>
+    <button class="btn start-cta" style="margin-top:30px" onclick="Game.init()" id="start-btn-text">点灯摸金</button>
+
+    <div class="footer">
+        © 2025 Shuhan Sun. All Rights Reserved.<br>
+        Developed for TombRaider Survival Project.
+    </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
