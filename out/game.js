@@ -326,7 +326,7 @@ class Coffin extends Entity {
                 AudioSys.playAttack();
             }
             else if(this.content === 'trap') {
-                 Game.spawn(new Trap(this.x,this.y+40, Game.lvl-1));
+                 const launcher=new Trap(this.x,this.y+40, Game.lvl-1);World.mountTrap(launcher);Game.spawn(launcher);
                  Game.addText(this.x, this.y, LANG[curLang].msgs.trap, '#f44336');
                  AudioSys.playTrap(0);
             }
@@ -471,7 +471,7 @@ class Zombie extends Entity {
 class Trap extends Entity {
     constructor(x,y,lvlIndex){
         super(x,y,'trap');
-        this.life=3; this.cd=1.5+Math.random(); this.windup=0;this.aim=0;this.recoil=0;
+        this.life=3; this.cd=1.5+Math.random(); this.windup=0;this.aim=0;this.displayAim=0;this.recoil=0;
         const data = LEVELS_DATA[Math.min(lvlIndex,9)];
         this.pType = data.type === 'MIX' ? Object.keys(PROJ_TYPES)[Math.floor(Math.random()*4)] : data.type;
         this.color = data.col;
@@ -481,10 +481,15 @@ class Trap extends Entity {
     update(dt,p){
         const dist=Math.hypot(this.x-p.x,this.y-p.y);
         this.recoil=Math.max(0,this.recoil-dt);
+        if(this.windup<=0&&this.recoil<=0&&dist<400&&MapSys.lineClear(this.x,this.y,p.x,p.y))this.aim=Math.atan2(p.y-this.y,p.x-this.x);
+        const turn=Math.atan2(Math.sin(this.aim-this.displayAim),Math.cos(this.aim-this.displayAim));
+        this.displayAim+=Math.sign(turn)*Math.min(Math.abs(turn),dt*3.8);
         if(this.windup>0) {
             this.windup-=dt;
+            if(this.windup<=0&&Math.abs(Math.atan2(Math.sin(this.aim-this.displayAim),Math.cos(this.aim-this.displayAim)))>.01)this.windup=.001;
             if(this.windup<=0) {
-                Game.spawn(new Projectile(this.x,this.y,this.aim,this.pType));
+                this.displayAim=this.aim;
+                Game.spawn(new Projectile(this.x+Math.cos(this.aim)*20,this.y+Math.sin(this.aim)*20,this.aim,this.pType));
                 this.recoil=.28;
                 const fx=new Effect(this.x+Math.cos(this.aim)*20,this.y+Math.sin(this.aim)*20,'muzzle');fx.angle=this.aim;Game.spawn(fx);
                 AudioSys.playTrap(dist);
@@ -527,7 +532,7 @@ class Projectile extends Entity {
 }
 
 class Player extends Entity {
-    constructor(x,y){super(x,y,'player');this.hp=5;this.sight=CONFIG.BASE_SIGHT;this.inv=0;this.buffs={hoof:0,candle:0,jade:0};this.walkT=0;this.hasCompass=0;this.stepPhase=0;this.direction=0;this.walkFrame=1;this.walkDistance=0;this.stepDistance=0;this.moving=false;}
+    constructor(x,y){super(x,y,'player');this.hp=5;this.sight=CONFIG.BASE_SIGHT;this.inv=0;this.buffs={hoof:0,candle:0,jade:0};this.walkT=0;this.hasCompass=0;this.stepPhase=0;this.direction=0;this.walkFrame=1;this.walkDistance=0;this.stepDistance=0;this.moving=false;this.inWater=MapSys.get(x,y)===TERRAIN.WATER;}
     update(dt){
         if(this.inv>0)this.inv-=dt;
         if(this.buffs.hoof>0) this.buffs.hoof-=dt;
@@ -558,10 +563,14 @@ class Player extends Entity {
 
         }
         const moved=Math.hypot(this.x-oldX,this.y-oldY);this.moving=moved>.01;
+        const water=MapSys.get(this.x,this.y)===TERRAIN.WATER,enteredWater=water&&!this.inWater;
+        this.inWater=water;
+        if(enteredWater&&this.moving){AudioSys.playStep(true,Input.sprint);this.stepDistance=0;}
         if(this.moving) {
             this.walkDistance+=moved;this.stepDistance+=moved;
             this.walkFrame=Math.floor(this.walkDistance/28)%4;this.stepPhase=this.walkDistance/112*Math.PI*2;
-            if(this.stepDistance>=56) {this.stepDistance%=56;AudioSys.playStep(MapSys.get(this.x,this.y)===TERRAIN.WATER,Input.sprint);}
+            const stride=water?26:56;
+            if(!enteredWater&&this.stepDistance>=stride) {this.stepDistance%=stride;AudioSys.playStep(water,Input.sprint);}
         } else {this.walkFrame=1;this.stepPhase=0;this.stepDistance=0;}
 
     }
@@ -693,7 +702,7 @@ const Game = {
 
     restart: function() {
         AudioSys.init();
-        this.lvl = 1; this.art = 0; this.saved = null; this.items = [];
+        Passage.reset();this.lvl = 1; this.art = 0; this.saved = null; this.items = [];
         document.getElementById('game-over-modal').classList.remove('active');
         document.getElementById('victory-modal').classList.remove('active');
         this.running = 1;
@@ -728,12 +737,15 @@ const Game = {
     },
 
     showExitModal: function() {
-        document.getElementById('exit-modal').classList.add('active');
+        Passage.open(this.lvl);document.getElementById('exit-modal').classList.add('active');
         this.pause = true; Input.reset();Sound.pause();
         document.getElementById('exit-confirm-btn').focus();
     },
     confirmNextLevel: function() {
         if(!this.running||!World.canExit()||!document.getElementById('exit-modal').classList.contains('active')) return;
+        Sound.unlock();Passage.depart();
+    },
+    finishNextLevel: function() {
         document.getElementById('exit-modal').classList.remove('active');
         this.pause = false;Sound.unlock();
         if(this.lvl>=10){ this.victory(); }
@@ -895,6 +907,7 @@ const Game = {
         if(this.lastTime===null) this.lastTime=timestamp;
         const delta=Math.min(Math.max((timestamp-this.lastTime)/1000,0),0.1);
         this.lastTime=timestamp;
+        if(Passage.active)Passage.update(delta);
         if(!this.pause) {
             this.accumulator+=delta;
             const dt=1/60;

@@ -5,7 +5,7 @@ const path=require('node:path');
 const output=process.argv[2]||'tmp/render-check';fs.mkdirSync(output,{recursive:true});
 const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:[process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES]}));
 (async()=>{
-    const {Game,Art,World}=setup(2026);
+    const {Game,Art,World,Passage,els}=setup(2026);
     Art.sprites=await loadImage('out/assets/tomb-sprites.png');
     Art.walker=await loadImage('out/assets/raider-walk.png');Art.prepareWalker(()=>createCanvas(1,1));
     Art.zombies=await loadImage('out/assets/jiangshi-motion.png');Art.traps=await loadImage('out/assets/trap-motion.png');
@@ -27,5 +27,8 @@ const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:
     const sheet=createCanvas(900,700),sc=sheet.getContext('2d');sc.fillStyle='#243234';sc.fillRect(0,0,900,700);
     for(let row=0;row<4;row++)for(let col=0;col<4;col++){Art.raider(sc,{direction:row,walkFrame:col,moving:true},65+col*95,100+row*145,105);Art.frame(sc,Art.zombies,row*4+col,480+col*105,100+row*145,105,105,true);}
     fs.writeFileSync(path.join(output,'motion.png'),sheet.toBuffer('image/png'));
+    const pc=createCanvas(640,320);els['passage-scene'].width=640;els['passage-scene'].height=320;els['passage-scene'].getContext=()=>pc.getContext('2d');
+    for(const next of [1,3,5,6,8,9,10]){Passage.open(next);Passage.time=2;Passage.draw();fs.writeFileSync(path.join(output,'passage-'+next+'.png'),pc.toBuffer('image/png'));}
+    Game.load(4);const hazard=World.hazards[0];Game.p.x=hazard.x;Game.p.y=hazard.y+80;Game.elapsed=4.7;Game.render();fs.writeFileSync(path.join(output,'corridor.png'),Game.cvs.toBuffer('image/png'));
     console.log('Rendered floors 1, 4 and 7 at 390×844 using real Canvas and atlas PNGs.');
 })();

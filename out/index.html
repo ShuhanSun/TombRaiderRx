@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>寻龙诀 · 十层古墓</title>
-    <link rel="stylesheet" href="styles.css?v=3">
+    <link rel="stylesheet" href="styles.css?v=4">
 
 </head>
 <body>
@@ -35,10 +35,14 @@
 
 <!-- Exit Confirm Modal -->
 <div id="exit-modal" class="overlay" role="dialog" aria-modal="true" aria-labelledby="exit-title">
-    <div class="item-card" style="max-width:80%; width:300px;">
-        <span class="exit-icon">🕳️</span>
-        <h2 id="exit-title" style="color:#ffd700">发现盗洞</h2>
-        <button id="exit-confirm-btn" class="btn" onclick="Game.confirmNextLevel()" style="margin-top:10px; font-size:20px; padding:10px 30px;">进入下一层</button>
+    <div class="passage-card">
+        <div id="passage-kicker" class="eyebrow">盗洞深处</div>
+        <canvas id="passage-scene" width="640" height="320" aria-hidden="true"></canvas>
+        <div class="passage-copy"><div id="passage-floor"></div><h2 id="exit-title">下一重墓</h2>
+        <p id="passage-description"></p><p id="passage-detail"></p>
+        <div class="passage-progress"><span id="passage-progress-fill"></span></div>
+        <button id="exit-confirm-btn" class="btn" onclick="Game.confirmNextLevel()">进入下一层</button>
+        <p id="passage-status" role="status" aria-live="polite">整顿行装，继续深入</p></div>
     </div>
 </div>
 
@@ -84,9 +88,10 @@
     </div>
 </div>
 
-<script src="audio.js?v=3"></script>
-<script src="world.js?v=3"></script>
-<script src="art.js?v=3"></script>
-<script src="game.js?v=3"></script>
+<script src="audio.js?v=4"></script>
+<script src="world.js?v=4"></script>
+<script src="art.js?v=4"></script>
+<script src="transitions.js?v=4"></script>
+<script src="game.js?v=4"></script>
 </body>
 </html>

@@ -106,11 +106,11 @@ const Scene = {
             const kind=hazard.kind==='poison'?12:hazard.kind==='fire'?8:6;
             const index=kind===6?6:kind+(active?2:warn?1:0);
             if(active||warn)Art.glow(ctx,hazard.x,hazard.y,43,hazard.kind==='poison'?'#8bc85038':'#f99a4538');
-            Art.frame(ctx,Art.traps,index,hazard.x,hazard.y,62);
+            Art.frame(ctx,Art.traps,index,hazard.x,hazard.y,50);
             if(active&&kind===6) {
                 // Raise the spikes over the plate during the first 0.12 seconds.
                 ctx.save();ctx.globalAlpha=Math.min(1,(phase-4.5)/.12);
-                Art.frame(ctx,Art.traps,7,hazard.x,hazard.y-2,62);ctx.restore();
+                Art.frame(ctx,Art.traps,7,hazard.x,hazard.y-2,50);ctx.restore();
             }
             if(warn&&!active)Art.label(ctx,hazard.x,hazard.y-37,curLang==='CN'?'避开机关':'MOVE AWAY','#ffc39b');
         }
@@ -180,11 +180,11 @@ const Scene = {
         }
         if(e.type==='trap') {
             const kick=(e.recoil||0)/.28*7;
-            ctx.save();ctx.translate(e.x-Math.cos(e.aim)*kick,e.y-Math.sin(e.aim)*kick);
-            if(e.windup>0)ctx.rotate(Math.sin(time*38)*.025);
-            Art.sprite(ctx,e.pType==='FIRE'?7:6,0,0,68);ctx.restore();
+            ctx.save();ctx.translate(e.x,e.y);ctx.rotate(e.displayAim);ctx.translate(-kick,0);
+            // Side-on barrel points right in the atlas; local +X is the exact firing axis.
+            ctx.drawImage(Art.traps,327,345,184,214,-26,-25,46,50);ctx.restore();
             if(e.windup>0) {
-                ctx.save();ctx.strokeStyle='#ff876bad';ctx.lineWidth=2;ctx.setLineDash([7,5]);ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.x+Math.cos(e.aim)*250,e.y+Math.sin(e.aim)*250);ctx.stroke();ctx.restore();
+                ctx.save();ctx.strokeStyle='#ff876bad';ctx.lineWidth=2;ctx.setLineDash([7,5]);ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.x+Math.cos(e.displayAim)*250,e.y+Math.sin(e.displayAim)*250);ctx.stroke();ctx.restore();
                 Art.glow(ctx,e.x,e.y-10,35,'#ff5a3966');
             }return;
         }

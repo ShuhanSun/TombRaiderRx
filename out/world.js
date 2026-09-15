@@ -15,7 +15,7 @@ const ROOM_TYPES = {
     burial:{cn:'陪葬室',en:'Burial chamber',hint:'石棺之中，可能是供物，也可能是守墓人。',enHint:'Coffins may hold offerings—or guardians.'},
     supply:{cn:'供奉室',en:'Offering chamber',hint:'这里留有补给；满血时糯米酒不会自动消耗。',enHint:'Supplies await. Wine is preserved while at full health.'},
     sanctuary:{cn:'安息室',en:'Sanctuary',hint:'靠近青色祭坛驻足，可恢复生命或获得短暂护身。',enHint:'Stay beside the teal altar to heal or gain a brief shield.'},
-    trap:{cn:'机关室',en:'Trap chamber',hint:'红色预警亮起后，离开危险区域。',enHint:'Move away when red warning marks appear.'},
+    trap:{cn:'机弩侧室',en:'Crossbow chamber',hint:'壁弩会转向追踪；甬道中的地面机关先预警后触发。',enHint:'Wall launchers turn to aim. Floor hazards guard the passages.'},
     seal:{cn:'封印室',en:'Seal chamber',hint:'靠近金色祭坛驻足，解除一道封印。',enHint:'Stay beside the gold altar to break a seal.'},
     exit:{cn:'归墟水道',en:'The way below',hint:'冥器入囊、封印尽解后，盗洞方可通行。',enHint:'The exit opens once the relic is found and all seals are broken.'}
 };
@@ -42,11 +42,10 @@ const World = {
                     if(coffin&&coffin.content!=='artifact')coffin.content='supply';
                 }
                 if(r.kind==='sanctuary') this.addAltar(r,'sanctuary');
-                if(r.kind==='trap' || (Game.lvl===4&&r.kind==='burial')) {
-                    for(let j=0;j<3;j++)this.hazards.push({x:(r.x+1.5+j*1.5)*50,y:(r.y+r.h-2)*50,offset:j*.6,kind:this.theme.hazard});
-                }
+
             }
         });
+        this.placePassageHazards();
         for(let i=0;i<this.theme.seals;i++) {
             const r=rooms[1+i%Math.max(1,rooms.length-2)];r.kind='seal';
             this.addAltar(r,'seal',i);
@@ -58,13 +57,46 @@ const World = {
                 e.zType=this.theme.zombies[Math.floor(Math.random()*this.theme.zombies.length)];
                 e.spd=e.zType===1?125+Game.lvl*2:e.zType===2?42:48+Game.lvl*4;
             }
-            if(e.type==='trap') {e.pType=this.theme.trap==='MIX'?['ARROW','FIRE','STONE'][Math.floor(Math.random()*3)]:this.theme.trap;e.cd=1.5+Math.random();e.windup=0;}
+            if(e.type==='trap') {this.mountTrap(e);e.pType=this.theme.trap==='MIX'?['ARROW','FIRE','STONE'][Math.floor(Math.random()*3)]:this.theme.trap;e.cd=1.5+Math.random();e.windup=0;}
         });
         // The first compass is discoverable without having to search the entire floor.
         const compass=Game.ents.find(e=>e.code==='item_compass');
         if(compass&&!Game.p.hasCompass) {compass.x=Game.p.x+65;compass.y=Game.p.y+50;}
         this.baseSight=this.theme.sight;
         this.updateRoom();
+    },
+    placePassageHazards() {
+        const candidates=[];
+        for(let y=2;y<MapSys.h-2;y++)for(let x=2;x<MapSys.w-2;x++) {
+            const at=y*MapSys.w+x,px=x*50+25,py=y*50+25;
+            if(MapSys.t[at]===TERRAIN.WALL||this.roomTiles[at]!==-1)continue;
+            const horizontal=MapSys.t[at-1]!==1&&MapSys.t[at+1]!==1,vertical=MapSys.t[at-MapSys.w]!==1&&MapSys.t[at+MapSys.w]!==1;
+            if(!horizontal&&!vertical)continue;
+            if(Math.hypot(px-Game.p.x,py-Game.p.y)<220||Math.hypot(px-Game.exitPos.x,py-Game.exitPos.y)<100)continue;
+            candidates.push({x:px,y:py,kind:this.theme.hazard,offset:(x*7+y*3)%60/10});
+        }
+        // Spread danger out, leaving room to wait for a safe phase before crossing.
+        for(let i=candidates.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[candidates[i],candidates[j]]=[candidates[j],candidates[i]];}
+        for(const h of candidates) {
+            if(this.hazards.every(other=>Math.hypot(other.x-h.x,other.y-h.y)>=180))this.hazards.push(h);
+            if(this.hazards.length>=Math.min(14,5+Game.lvl))break;
+        }
+    },
+    mountTrap(trap) {
+        let best=null,score=Infinity;
+        for(let y=1;y<MapSys.h-1;y++)for(let x=1;x<MapSys.w-1;x++) {
+            const at=y*MapSys.w+x,px=x*50+25,py=y*50+25;
+            if(MapSys.t[at]===1||Math.hypot(px-Game.p.x,py-Game.p.y)<180)continue;
+            if(Math.hypot(px-trap.x,py-trap.y)>=score)continue;
+            const room=this.rooms[this.roomTiles[at]];
+            if(room&&['entry','sanctuary'].includes(room.kind))continue;
+            if(Game.ents.some(e=>e!==trap&&['trap','coffin'].includes(e.type)&&Math.hypot(e.x-px,e.y-py)<42))continue;
+            for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]])if(MapSys.t[at+dx+dy*MapSys.w]===1) {
+                const dist=Math.hypot(px-trap.x,py-trap.y);
+                if(dist<score){score=dist;best={x:px+dx*9,y:py+dy*9,angle:Math.atan2(-dy,-dx)};}
+            }
+        }
+        if(best){trap.x=best.x;trap.y=best.y;trap.aim=trap.displayAim=best.angle;}
     },
     addAltar(room,kind,offset=0) {
         this.altars.push({x:(room.x+1.5+(offset%3)*1.5)*50,y:(room.y+1.5)*50,kind,done:false,progress:0});
@@ -105,7 +137,7 @@ const World = {
             } else a.progress=0;
         }
         for(const h of this.hazards) {
-            if(this.phase(h)>4.5&&Math.abs(h.x-Game.p.x)<27&&Math.abs(h.y-Game.p.y)<27)Game.p.hit();
+            if(this.phase(h)>4.5&&Math.abs(h.x-Game.p.x)<21&&Math.abs(h.y-Game.p.y)<21)Game.p.hit();
         }
     }
 };
