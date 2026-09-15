@@ -308,3 +308,31 @@ test('flood effects slow or obscure and harmful contact has a grace period',()=>
  Game.load(7);Game.getArtifact();World.altars.forEach(a=>a.done=true);ExitGate.open();ExitGate.radius=3;Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y;Game.p.inv=0;
  ExitGate.update(2);assert.equal(Game.p.hp,5);ExitGate.update(.3);assert.equal(Game.p.hp,4);
 });
+
+test('main chamber exit, remote crank and finite increasing floor populations',()=>{
+ const {Game,World,ExitGate}=setup(113);
+ for(let n=0;n<100;n++){
+  Game.load(n%10+1);
+  assert.ok(World.inside(Game.exitRoom,Game.exitPos.x,Game.exitPos.y));
+  assert.ok(!World.inside(Game.exitRoom,ExitGate.switch.x,ExitGate.switch.y));
+  assert.ok(Math.hypot(ExitGate.switch.x-Game.exitPos.x,ExitGate.switch.y-Game.exitPos.y)>=500);
+  assert.ok(ExitGate.routeDistance<45,'route fits 25 seconds of normal movement plus flood slowdown');
+  assert.equal(Game.ents.filter(e=>e.type==='ground_item').length,5+2*Game.lvl);
+  assert.equal(Game.ents.filter(e=>e.type==='zombie').length,4+2*Game.lvl);
+ }
+});
+
+test('jade persists until one blocked hit; compass loss hides map and can be recovered',()=>{
+ const {Game,els,context,Projectile}=setup();
+ Game.p.inv=0;Game.getItem('item_jade');Game.p.update(20);
+ assert.equal(Game.p.buffs.jade,1);
+ new Projectile(Game.p.x,Game.p.y,0,'FIRE').update(0,Game.p);
+ assert.equal(Game.p.hp,5);assert.equal(Game.p.buffs.jade,0);
+ Game.getItem('item_compass');assert.equal(els['map-panel'].style.display,'');
+ vm.runInContext('Math.random=()=>0',context);Game.p.inv=0;Game.p.hit();
+ assert.equal(Game.p.hp,4);assert.equal(Game.p.hasCompass,0);assert.equal(els['map-panel'].style.display,'none');
+ const drop=Game.ents.find(e=>e.pickupDelay===2);assert.ok(drop);
+ drop.update(1,Game.p);assert.equal(Game.p.hasCompass,0);
+ drop.update(1,Game.p);drop.update(0,Game.p);
+ assert.equal(Game.p.hasCompass,1);assert.equal(els['map-panel'].style.display,'');
+});

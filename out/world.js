@@ -17,7 +17,7 @@ const ROOM_TYPES = {
     sanctuary:{cn:'安息室',en:'Sanctuary',hint:'靠近青色祭坛驻足，可恢复生命或获得短暂护身。',enHint:'Stay beside the teal altar to heal or gain a brief shield.'},
     trap:{cn:'机弩侧室',en:'Crossbow chamber',hint:'壁弩会转向追踪；甬道中的地面机关先预警后触发。',enHint:'Wall launchers turn to aim. Floor hazards guard the passages.'},
     seal:{cn:'封印室',en:'Seal chamber',hint:'靠近金色祭坛驻足，解除一道封印。',enHint:'Stay beside the gold altar to break a seal.'},
-    exit:{cn:'归墟水道',en:'The way below',hint:'冥器入囊、封印尽解后，驻足机械开关拉闸；盗洞限时 25 秒。',enHint:'After the relic and seals, stand by the crank. The exit opens for 25 seconds.'}
+    exit:{cn:'主墓室',en:'Main burial chamber',hint:'冥器入囊、封印尽解后，驻足机械开关拉闸；盗洞限时 25 秒。',enHint:'After the relic and seals, stand by the crank. The exit opens for 25 seconds.'}
 };
 
 const World = {
@@ -36,10 +36,6 @@ const World = {
                     if(this.theme.water && ((x*13+y*7)%19)/19<this.theme.water) MapSys.t[y*MapSys.w+x]=TERRAIN.WATER;
                 }
                 if(r.kind==='supply') {
-                    for(const [j,code] of ['item_wine','item_hoof','item_jade'].entries())
-                        Game.spawn(new GroundItem((r.x+1.5+j)*50,(r.y+r.h-1.5)*50,code));
-                    const coffin=Game.ents.find(e=>e.type==='coffin'&&this.inside(r,e.x,e.y));
-                    if(coffin&&coffin.content!=='artifact')coffin.content='supply';
                 }
                 if(r.kind==='sanctuary') this.addAltar(r,'sanctuary');
 
@@ -52,6 +48,9 @@ const World = {
         }
         // Keep sanctuaries and arrival rooms free of spawned enemies and traps.
         Game.ents=Game.ents.filter(e=>!(['zombie','trap'].includes(e.type)&&rooms.some(r=>['sanctuary','entry'].includes(r.kind)&&this.inside(r,e.x,e.y))));
+        const enemyRooms=rooms.filter(r=>!['sanctuary','entry'].includes(r.kind));
+        let missing=4+Game.lvl*2-Game.ents.filter(e=>e.type==='zombie').length;
+        for(let i=0;i<missing;i++){const r=enemyRooms[i%enemyRooms.length];Game.spawn(new Zombie((r.x+1.5+i%Math.max(1,r.w-2))*50,(r.y+1.5+Math.floor(i/3)%Math.max(1,r.h-2))*50));}
         Game.ents.forEach(e=>{
             if(e.type==='zombie') {
                 e.species=SPECIES[Game.lvl-1];e.zType=e.species.type;e.spd=e.species.speed;
@@ -107,7 +106,7 @@ const World = {
         const seals=this.altars.filter(a=>a.kind==='seal'&&!a.done).sort((a,b)=>Math.hypot(a.x-Game.p.x,a.y-Game.p.y)-Math.hypot(b.x-Game.p.x,b.y-Game.p.y));
         return seals[0]||(ExitGate.remaining>0?Game.exitPos:ExitGate.switch);
     },
-    sight() {return Math.max(180,(this.baseSight||300)*(ExitGate.levelAt(Game.p.x,Game.p.y)>.3?(ExitGate.flood.fog||1):1)+(Game.p.buffs.candle>0?170*Math.min(1,Game.p.buffs.candle/2):0));},
+    sight() {return Math.max(100,((this.baseSight||300)+(Game.p.buffs.candle>0?170*Math.min(1,Game.p.buffs.candle/2):0))*(ExitGate.levelAt(Game.p.x,Game.p.y)>.25?(ExitGate.flood.fog||1):1));},
     phase(h) {return (Game.elapsed+h.offset)%6;},
     updateRoom() {
         const r=this.rooms.find(r=>this.inside(r,Game.p.x,Game.p.y));
@@ -128,7 +127,7 @@ const World = {
                     a.done=true;AudioSys.playItem(true);
                     if(a.kind==='seal') Game.msg(curLang==='CN'?`封印已破 · 还剩 ${this.remaining()} 道`:`Seal broken · ${this.remaining()} remain`,'#e5be72');
                     else {
-                        if(Game.p.hp<5)Game.p.hp++;else Game.p.buffs.jade=Math.max(Game.p.buffs.jade,8);
+                        if(Game.p.hp<5)Game.p.hp++;else Game.p.buffs.jade=1;
                         Game.msg(curLang==='CN'?'祭火护佑 · 生命恢复或护身八秒':'Altar blessing · healed or shielded for 8s','#9bd4b9');
                     }
                     Game.updateHUD();

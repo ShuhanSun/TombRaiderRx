@@ -65,8 +65,8 @@ const LANG = {
             candle: {n:"残油铜灯", d:"<b>添油续火</b>: 扩大视野 20 秒，每层仅一盏。"},
             wine: {n:"糯米酒", d:"<b>祛阴补阳</b>: 恢复 1 点生命值。"},
             hoof: {n:"黑驴蹄子", d:"<b>生人勿近</b>: 僵尸退避 15 秒。"},
-            jade: {n:"金缕玉衣", d:"<b>刀枪不入</b>: 免疫所有伤害 15 秒。"},
-            compass: {n:"风水罗盘", d:"<b>寻龙分金</b>: 依次指向冥器、封印、机械开关与已开启的盗洞。"}
+            jade: {n:"金缕玉衣", d:"<b>刀枪不入</b>: 抵挡下一次伤害后破损，不叠加。"},
+            compass: {n:"风水罗盘", d:"<b>寻龙分金</b>: 持有时显示小地图并指引目标；受伤可能掉落。"}
         },
         msgs: {
             start: "进入第 %s 层",
@@ -78,7 +78,7 @@ const LANG = {
             compass: "罗盘在手! 寻龙分金!",
             heal: "生命恢复!",
             repel: "尸畏 15秒!",
-            immune: "无敌 15秒!",
+            immune: "玉衣护身 · 可抵挡一次伤害",
             hole: "水脉倒灌 · 盗洞已开"
         },
         levelNames: LEVEL_NAMES_CN,
@@ -105,8 +105,8 @@ const LANG = {
             candle: {n:"Oil Lamp", d:"<b>Last Oil</b>: Wider sight for 20 seconds. One lamp per floor."},
             wine: {n:"Rice Wine", d:"<b>Vitality</b>: Restore 1 HP."},
             hoof: {n:"Donkey Hoof", d:"<b>Repel</b>: Zombies fear you for 15s."},
-            jade: {n:"Jade Suit", d:"<b>Invincible</b>: Immune to ALL damage for 15s."},
-            compass: {n:"Compass", d:"<b>Feng Shui</b>: Points to Artifact, then Exit."}
+            jade: {n:"Jade Suit", d:"<b>Invincible</b>: Blocks one hit, then breaks. Does not stack."},
+            compass: {n:"Compass", d:"<b>Feng Shui</b>: Unlocks the minimap and guides you. May drop when hurt."}
         },
         msgs: {
             start: "Entered Level %s",
@@ -118,7 +118,7 @@ const LANG = {
             compass: "Compass Active!",
             heal: "HP Restored!",
             repel: "Repel 15s!",
-            immune: "Invincible 15s!",
+            immune: "Jade suit · blocks one hit",
             hole: "Exit Opened! Water Rising!"
         },
         levelNames: LEVEL_NAMES_EN,
@@ -273,8 +273,11 @@ class Entity { constructor(x,y,t){this.x=x;this.y=y;this.type=t;this.dead=0;} }
 class GroundItem extends Entity {
     constructor(x,y,code) { super(x,y,'ground_item'); this.code=code; }
     update(dt, p) {
+        if(this.pickupDelay>0){this.pickupDelay=Math.max(0,this.pickupDelay-dt);return;}
+        const key=this.code.replace('item_','');
+        if((key==='compass'&&p.hasCompass)||(key==='jade'&&p.buffs.jade>0))return;
         if(this.code==='item_wine'&&p.hp>=5)return;
-        if(Math.hypot(this.x-p.x, this.y-p.y) < 30) { Game.getItem(this.code); this.dead = 1; }
+        if(Math.hypot(this.x-p.x, this.y-p.y) < 30) { Game.getItem(this.code);if(this.remaining!==undefined&&key!=='compass')p.buffs[key]=this.remaining; this.dead = 1; }
     }
     draw(ctx) {
         const iKey = this.code.replace('item_', '');
@@ -519,7 +522,7 @@ class Projectile extends Entity {
         this.age+=dt;this.life-=dt; if(this.life<0){this.dead=1;return;}
         this.x+=this.vx*dt; this.y+=this.vy*dt;
         if(Math.hypot(this.x-p.x,this.y-p.y)<this.info.size+10){
-            if(p.buffs.jade > 0) this.dead = 1; else { p.hit(); this.dead=1; }
+            p.hit(); this.dead=1;
         }
         if(MapSys.get(this.x,this.y)===TERRAIN.WALL) {this.dead=1;Game.spawn(new Effect(this.x-this.vx*dt,this.y-this.vy*dt,'dust'));}
     }
@@ -537,7 +540,7 @@ class Player extends Entity {
         if(this.inv>0)this.inv-=dt;
         if(this.buffs.hoof>0) this.buffs.hoof-=dt;
         if(this.buffs.candle>0) this.buffs.candle=Math.max(0,this.buffs.candle-dt);
-        if(this.buffs.jade>0) this.buffs.jade-=dt;
+
 
         const oldX=this.x, oldY=this.y;
         let s=160*ExitGate.speed();
@@ -575,9 +578,18 @@ class Player extends Entity {
 
     }
     hit(){
-        if(!Game.running || this.inv>0 || this.buffs.jade>0)return;
+        if(!Game.running || this.inv>0)return;
+        if(this.buffs.jade>0){this.buffs.jade=0;this.inv=1.5;Game.msg(curLang==='CN'?'玉衣碎裂 · 抵挡了一次伤害':'Jade suit shattered · one hit blocked','#a5d6a7');Game.refreshBuffs();return;}
         this.hp--; this.inv=1.5; Game.shake=10; AudioSys.playHurt();
         Game.updateHUD(); Game.msg(LANG[curLang].msgs.hurt,"#f00");
+        const held=[...(this.hasCompass?['compass']:[]),...['candle','hoof'].filter(k=>this.buffs[k]>0)];
+        if(held.length&&Math.random()<.35){
+            const key=held[Math.floor(Math.random()*held.length)],remaining=this.buffs[key];
+            if(key==='compass')this.hasCompass=0;else this.buffs[key]=0;
+            const item=new GroundItem(this.x,this.y,'item_'+key);item.pickupDelay=2;item.remaining=remaining;Game.spawn(item);
+            Game.msg(curLang==='CN'?`受伤掉落：${LANG.CN.items[key].n} · 可返回拾回`:`Dropped ${key} · recover it from the ground`,'#e5b779');
+        }
+        Game.drawMinimap();Game.refreshBuffs();
         if(this.hp<=0)Game.over();
     }
     draw(ctx){
@@ -773,11 +785,10 @@ const Game = {
 
         const corners=[];
         rms.forEach(r => {
-             corners.push({x:r.x*CONFIG.TILE+25, y:r.y*CONFIG.TILE+25});
-             corners.push({x:(r.x+r.w)*CONFIG.TILE-25, y:(r.y+r.h)*CONFIG.TILE-25});
+             for(let x=r.x;x<r.x+r.w;x++)corners.push({x:x*50+25,y:r.y*50+25});
         });
 
-        ['item_compass', 'item_wine', 'item_hoof', 'item_jade', 'item_candle'].forEach(code => {
+        ['item_compass', 'item_wine', 'item_hoof', 'item_jade', 'item_candle',...Array.from({length:l*2},(_,i)=>['item_wine','item_hoof','item_jade'][i%3])].forEach(code => {
              if(corners.length>0) {
                  const ri = Math.floor(Math.random()*corners.length);
                  this.ents.push(new GroundItem(corners[ri].x, corners[ri].y, code));
@@ -811,7 +822,7 @@ const Game = {
         }
 
         this.exitRoom = e;
-        this.exitPos = {x:(e.x+e.w/2)*CONFIG.TILE, y:(e.y+0.5)*CONFIG.TILE};
+        this.exitPos = {x:(e.x+Math.floor(e.w/2)+.5)*CONFIG.TILE, y:(e.y+Math.floor(e.h/2)+.5)*CONFIG.TILE};
 
         for(let i=0;i<4+l*2;i++){
             const r=rms[1+Math.floor(Math.random()*(rms.length-1))];
@@ -858,10 +869,10 @@ const Game = {
         AudioSys.playUse();
 
         if(c==='item_candle'){ this.p.buffs.candle=20; this.msg(LANG[curLang].msgs.candle, col); }
-        if(c==='item_compass'){ this.p.hasCompass=1; this.msg(LANG[curLang].msgs.compass, col); }
+        if(c==='item_compass'){ this.p.hasCompass=1; this.drawMinimap(); this.msg(LANG[curLang].msgs.compass, col); }
         if(c==='item_wine'){ this.p.hp=Math.min(5,this.p.hp+1); this.msg(LANG[curLang].msgs.heal, col); this.updateHUD(); }
         if(c==='item_hoof'){ this.p.buffs.hoof=15; this.msg(LANG[curLang].msgs.repel, col); }
-        if(c==='item_jade'){ this.p.buffs.jade=15; this.msg(LANG[curLang].msgs.immune, col); }
+        if(c==='item_jade'){ this.p.buffs.jade=1; this.msg(LANG[curLang].msgs.immune, col); }
     },
 
     spawn: function(e){this.ents.push(e);},
@@ -875,7 +886,7 @@ const Game = {
 
         document.getElementById('artifact-bar').innerText = `${LANG[curLang].artLabel}: ${this.art}/10`;
         const cn=curLang==='CN';
-        document.getElementById('objective').textContent=World.remaining()&&this.exit?(cn?`冥器已得 · 还需破除 ${World.remaining()} 道封印`:`Relic secured · ${World.remaining()} seals remain`):this.exit?(ExitGate.remaining>0?(cn?`盗洞 ${Math.ceil(ExitGate.remaining)}秒 · ${ExitGate.flood.name}扩散中`:`Exit ${Math.ceil(ExitGate.remaining)}s · ${ExitGate.flood.en}`):(cn?'寻找机械开关 · 驻足拉闸开启盗洞':'Find the crank · stand beside it to open the exit')):(cn?'寻找镇墓冥器 · 驻足开棺':'Find the relic · stay beside coffins');
+        document.getElementById('objective').textContent=World.remaining()&&this.exit?(cn?`冥器已得 · 还需破除 ${World.remaining()} 道封印`:`Relic secured · ${World.remaining()} seals remain`):this.exit?(ExitGate.remaining>0?(cn?`主墓室盗洞 ${Math.ceil(ExitGate.remaining)}秒 · ${ExitGate.flood.name}扩散中`:`Exit ${Math.ceil(ExitGate.remaining)}s · ${ExitGate.flood.en}`):(cn?'寻找机械开关 · 驻足拉闸开启盗洞':'Find the crank · stand beside it to open the exit')):(cn?'寻找镇墓冥器 · 驻足开棺':'Find the relic · stay beside coffins');
         document.getElementById('exit-confirm-btn').textContent=this.lvl===10?(cn?'逃出生天':'Escape the tomb'):LANG[curLang].exitModal.yes;
     },
     over: function(){
@@ -936,7 +947,7 @@ const Game = {
     refreshBuffs: function() {
         let html='';
         if(this.p.buffs.hoof>0) html+=`<div class="buff buff-hoof">🐴 ${Math.ceil(this.p.buffs.hoof)}s</div>`;
-        if(this.p.buffs.jade>0) html+=`<div class="buff buff-jade">🥋 ${Math.ceil(this.p.buffs.jade)}s</div>`;
+        if(this.p.buffs.jade>0) html+=`<div class="buff buff-jade">🥋 ${curLang==='CN'?'护身 ×1':'Shield ×1'}</div>`;
         if(this.p.hasCompass) html+=`<div class="buff buff-compass">🧭 ${curLang==='CN'?'寻龙':'Compass'}</div>`;
         const bar=document.getElementById('buff-bar');
         if(bar.innerHTML!==html) bar.innerHTML=html;
@@ -955,6 +966,8 @@ const Game = {
     },
     drawMinimap: function() {
         const canvas=document.getElementById('minimap'), ctx=canvas.getContext('2d'), scale=canvas.width/MapSys.w;
+        document.getElementById('map-panel').style.display=this.p.hasCompass?'':'none';
+        if(!this.p.hasCompass){ctx.clearRect(0,0,canvas.width,canvas.height);return;}
         ctx.fillStyle='#09110f'; ctx.fillRect(0,0,canvas.width,canvas.height);
         for(let i=0;i<this.explored.length;i++) {
             if(!this.explored[i]) continue;

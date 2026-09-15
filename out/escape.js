@@ -37,13 +37,16 @@ const ExitGate={
    }
   }
   const usable=at=>{const x=(at%MapSys.w)*50+25,y=Math.floor(at/MapSys.w)*50+25;return !World.hazards.some(h=>Math.hypot(h.x-x,h.y-y)<65)&&!Game.ents.some(e=>['coffin','trap'].includes(e.type)&&Math.hypot(e.x-x,e.y-y)<55);};
-  const at=queue.find(at=>this.dist[at]>=3&&this.dist[at]<=6&&usable(at))??queue.find(at=>this.dist[at]>=2&&usable(at))??queue[1]??origin;
+  const candidates=queue.filter(at=>{const x=at%MapSys.w*50+25,y=Math.floor(at/MapSys.w)*50+25;return usable(at)&&!World.inside(Game.exitRoom,x,y)&&Math.hypot(x-Game.exitPos.x,y-Game.exitPos.y)>=500;});
+  candidates.sort((a,b)=>Math.abs(this.dist[a]-24)-Math.abs(this.dist[b]-24));
+  const at=candidates[0]??queue.filter(usable).sort((a,b)=>this.dist[b]-this.dist[a])[0];
+  this.routeDistance=this.dist[at];
   this.switch={x:at%MapSys.w*50+25,y:Math.floor(at/MapSys.w)*50+25,type:'gate_switch'};
  },
  open(){
   if(!this.ready()||this.remaining>0)return false;
   this.remaining=this.duration;this.latched=true;this.progress=0;AudioSys.playOpen();
-  Game.msg(curLang==='CN'?`闸门已开 · ${this.duration} 秒 · ${this.flood.name}正在涌出`:`Gate open · ${this.duration}s · ${this.flood.en} spreading`,this.flood.color);Game.updateHUD();return true;
+  Game.msg(curLang==='CN'?`闸门已开 · ${this.duration} 秒 · ${this.flood.name}正在涌出 · 速回主墓室`:`Gate open · ${this.duration}s · ${this.flood.en} spreading`,this.flood.color);Game.updateHUD();return true;
  },
  levelAt(x,y){const i=Math.floor(y/50)*MapSys.w+Math.floor(x/50);return this.dist?.[i]>=0?Math.max(0,Math.min(1,this.radius-this.dist[i])):0;},
  speed(){return this.levelAt(Game.p.x,Game.p.y)>.25?this.flood.slow:1;},
@@ -55,7 +58,7 @@ const ExitGate={
   const near=Math.hypot(Game.p.x-this.switch.x,Game.p.y-this.switch.y)<55;
   if(!near)this.latched=false;
   if(near&&!Game.p.moving&&this.ready()&&!this.remaining&&!this.latched){this.progress+=dt;if(this.progress>=1)this.open();}else this.progress=0;
-  const affected=this.levelAt(Game.p.x,Game.p.y)>.5;
+  const affected=this.levelAt(Game.p.x,Game.p.y)>.25;
   if(affected&&this.flood.harm){this.exposure+=dt;if(this.exposure>=this.flood.harm){Game.p.hit();this.exposure=0;}}else this.exposure=0;
   const count=Math.ceil(this.remaining);if(count!==this.notice){this.notice=count;Game.updateHUD();}
  },
