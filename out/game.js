@@ -980,7 +980,7 @@ const Game = {
             if(e.type==='coffin'&&!e.opened&&this.explored[index]) dot(e,'#c3aa8a',2);
         }
         const target=World.target();
-        if(target&&(this.exit||this.p.hasCompass)) dot(target,'#ffd47d',3);
+        if(target&&this.p.hasCompass) dot(target,'#ffd47d',3);
         for(const a of World.altars) {
             const index=Math.floor(a.y/50)*60+Math.floor(a.x/50);
             if(!a.done&&(this.explored[index]||(this.exit&&a.kind==='seal')))dot(a,a.kind==='seal'?'#e9bd75':'#80dcb9',2.5);

@@ -128,7 +128,7 @@ const Scene = {
         shade.addColorStop(0,'#00000000');shade.addColorStop(.65,'#030a0d40');shade.addColorStop(1,'#020608ec');ctx.fillStyle=shade;ctx.fillRect(0,0,w,h);
         // Keep the nearby actors readable through the torch falloff.
         ctx.save();ctx.translate(-cx,-cy);
-        if(p.hasCompass || game.exit) {
+        if(p.hasCompass) {
             const target=World.target();
             if(target) {
                 const angle=Math.atan2(target.y-p.y,target.x-p.x);
