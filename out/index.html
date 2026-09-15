@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>寻龙诀 · 十层古墓</title>
-    <link rel="stylesheet" href="styles.css?v=4">
+    <link rel="stylesheet" href="styles.css?v=5">
 
 </head>
 <body>
@@ -77,7 +77,7 @@
         </p>
     </div>
 
-    <div class="guide-grid"><div><span>01</span><strong id="guide-move">循光探路</strong><p id="guide-move-desc">WASD / 方向键移动，Shift 疾行；手机使用摇杆。</p></div><div><span>02</span><strong id="guide-find">驻足开棺</strong><p id="guide-find-desc">靠近石棺停留片刻，寻找本层唯一的镇墓冥器。</p></div><div><span>03</span><strong id="guide-exit">寻龙脱身</strong><p id="guide-exit-desc">拾取罗盘指引方向，取得冥器后前往盗洞。</p></div></div>
+    <div class="guide-grid"><div><span>01</span><strong id="guide-move">循光探路</strong><p id="guide-move-desc">WASD / 方向键移动，Shift 疾行；手机使用摇杆。</p></div><div><span>02</span><strong id="guide-find">驻足开棺</strong><p id="guide-find-desc">靠近石棺停留片刻，寻找本层唯一的镇墓冥器。</p></div><div><span>03</span><strong id="guide-exit">寻龙脱身</strong><p id="guide-exit-desc">取得冥器并破印后，驻足机械开关拉闸，25秒内进入盗洞。</p></div></div>
     <button class="btn start-cta" style="margin-top:30px" onclick="Game.init()" id="start-btn-text">点灯摸金</button>
 
     <div class="audio-check"><button id="sound-test-btn" class="btn secondary" onclick="Sound.test()">开启 / 试音</button><p id="audio-status" role="status"></p></div>
@@ -88,10 +88,11 @@
     </div>
 </div>
 
-<script src="audio.js?v=4"></script>
-<script src="world.js?v=4"></script>
-<script src="art.js?v=4"></script>
-<script src="transitions.js?v=4"></script>
-<script src="game.js?v=4"></script>
+<script src="audio.js?v=5"></script>
+<script src="escape.js?v=5"></script>
+<script src="world.js?v=5"></script>
+<script src="art.js?v=5"></script>
+<script src="transitions.js?v=5"></script>
+<script src="game.js?v=5"></script>
 </body>
 </html>

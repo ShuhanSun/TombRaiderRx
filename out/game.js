@@ -66,7 +66,7 @@ const LANG = {
             wine: {n:"糯米酒", d:"<b>祛阴补阳</b>: 恢复 1 点生命值。"},
             hoof: {n:"黑驴蹄子", d:"<b>生人勿近</b>: 僵尸退避 15 秒。"},
             jade: {n:"金缕玉衣", d:"<b>刀枪不入</b>: 免疫所有伤害 15 秒。"},
-            compass: {n:"风水罗盘", d:"<b>寻龙分金</b>: 指向冥器棺材，得手后指向盗洞。"}
+            compass: {n:"风水罗盘", d:"<b>寻龙分金</b>: 依次指向冥器、封印、机械开关与已开启的盗洞。"}
         },
         msgs: {
             start: "进入第 %s 层",
@@ -147,7 +147,7 @@ const AudioSys = {
         osc.connect(g); g.connect(this.gain);
         osc.start(t); osc.stop(t+dur+0.2);
     },
-    playStep: function(water=false,sprint=false) { Sound.footstep(water,sprint); },
+    playStep: function(water=false,sprint=false) { /* Footstep and wading audio disabled by request. */ },
     playOpen: function() {
         if(!this.ctx||this.muted||this.ctx.state!=='running') return;
         const t=this.ctx.currentTime, o=this.ctx.createOscillator(), g=this.ctx.createGain(), f=this.ctx.createBiquadFilter();
@@ -320,7 +320,7 @@ class Coffin extends Entity {
                 Game.addText(this.x,this.y,curLang==='CN'?'供物尚存':'Offerings remain','#aaddbb');
             }
             else if(this.content === 'zombie') {
-                Game.spawn(new Zombie(this.x,this.y+20, 0));
+                Game.spawn(new Zombie(this.x,this.y+20));
                 Game.addText(this.x, this.y, LANG[curLang].msgs.zombie, '#f44336');
                 Game.spawn(new Effect(this.x,this.y,'burst'));
                 AudioSys.playAttack();
@@ -384,9 +384,9 @@ class Coffin extends Entity {
 }
 
 class Zombie extends Entity {
-    constructor(x,y,type=0){super(x,y,'zombie');
+    constructor(x,y,type=SPECIES[Game.lvl-1].type){super(x,y,'zombie');
         this.zType = type; // 0: Blue, 1: Red (Sprinter), 2: Green (Spitter)
-        this.spd = type===1 ? CONFIG.SPRINTER_SPD : (type===2 ? CONFIG.GREEN_SPD : CONFIG.ZOMBIE_SPD + Game.lvl*5);
+        this.species={...SPECIES[Game.lvl-1],windup:type===SPECIES[Game.lvl-1].type?SPECIES[Game.lvl-1].windup:type===2?.6:.38};this.zType=type;this.spd=this.species.speed;
         this.dir = Math.random()*6.28; this.changeDirT = 0;
         this.attackCD=0;this.attackState='';this.attackClock=0;this.attackAim=0;this.hopPhase=Math.random();this.hopHeight=0;this.landT=0;this.moving=false;
     }
@@ -401,7 +401,7 @@ class Zombie extends Entity {
                 if(this.attackState==='windup') {
                     this.attackState='strike';this.attackClock=.24;
                     if(this.zType===2) {
-                        Game.spawn(new Projectile(this.x,this.y,this.attackAim,'VENOM'));
+                        Game.spawn(new Projectile(this.x,this.y,this.attackAim,this.species.shot||'VENOM'));
                         const fx=new Effect(this.x,this.y,'spit');fx.angle=this.attackAim;Game.spawn(fx);
                         AudioSys.playTrap(d);
                     } else {
@@ -415,27 +415,27 @@ class Zombie extends Entity {
             }
             return;
         }
-        const inRange=this.zType===2?d<250:d<36;
+        const inRange=this.zType===2?d<this.species.sense:d<36;
         if(!repel&&inRange&&this.attackCD<=0&&MapSys.lineClear(this.x,this.y,p.x,p.y)) {
-            this.attackState='windup';this.attackClock=this.zType===2?.6:.38;
+            this.attackState='windup';this.attackClock=this.species.windup;
             this.attackAim=Math.atan2(dy,dx);this.hopHeight=0;return;
         }
         let vx=0,vy=0;
         if(repel&&d<350) {vx=-dx/(d||1);vy=-dy/(d||1);}
         else if(this.zType===1) {
-            if(d<180) {vx=dx/(d||1);vy=dy/(d||1);}
+            if(d<this.species.sense) {vx=dx/(d||1);vy=dy/(d||1);}
             else {
                 this.changeDirT-=dt;
                 if(this.changeDirT<=0){this.changeDirT=1+Math.random();this.dir=Math.random()*Math.PI*2;}
                 vx=Math.cos(this.dir);vy=Math.sin(this.dir);
             }
-        } else if(d<160||(Input.active&&d<(Input.sprint?420:250))) {vx=dx/(d||1);vy=dy/(d||1);}
+        } else if(d<this.species.sense||(Input.active&&d<(Input.sprint?420:250))) {vx=dx/(d||1);vy=dy/(d||1);}
         if(Math.hypot(vx,vy)<.01) {this.hopHeight=0;this.hopPhase=0;return;}
-        const period=this.zType===1?.52:.82,previous=this.hopPhase;
+        const period=this.species.hop,previous=this.hopPhase;
         this.hopPhase=(this.hopPhase+dt/period)%1;
         const airborne=this.hopPhase<.68;
         this.hopHeight=airborne?Math.sin(this.hopPhase/.68*Math.PI)*(this.zType===1?17:13):0;
-        const speed=this.spd*(repel?1.5:1)*(MapSys.get(this.x,this.y)===TERRAIN.WATER?.45:1);
+        const speed=this.spd*(repel?1.5:1)*(MapSys.get(this.x,this.y)===TERRAIN.WATER&&!this.species.aquatic?.45:1);
         const distance=airborne?speed*dt/.68:0,oldX=this.x,oldY=this.y;
         const nx=this.x+vx*distance,ny=this.y+vy*distance;
         if(MapSys.canOccupy(nx,this.y,9))this.x=nx;else if(this.zType===1)this.dir=Math.PI-this.dir;
@@ -540,7 +540,7 @@ class Player extends Entity {
         if(this.buffs.jade>0) this.buffs.jade-=dt;
 
         const oldX=this.x, oldY=this.y;
-        let s=160;
+        let s=160*ExitGate.speed();
         if(Input.sprint) s *= 1.5; // Sprint!
         if(MapSys.get(this.x,this.y)===TERRAIN.WATER) s*=0.5;
 
@@ -674,7 +674,7 @@ const Game = {
             'guide-find':cn?'驻足开棺':'DISCOVER',
             'guide-find-desc':cn?'靠近石棺停留片刻，寻找本层唯一的镇墓冥器。':'Stay beside a coffin to open it. Find the relic on each floor.',
             'guide-exit':cn?'寻龙脱身':'ESCAPE',
-            'guide-exit-desc':cn?'拾取罗盘指引方向，取得冥器后前往盗洞。':'Collect a compass to locate the relic, then follow it to the exit.',
+            'guide-exit-desc':cn?'取得冥器并破印后，驻足机械开关拉闸，25秒内进入盗洞。':'Find the relic, break seals, then turn the crank. Reach the exit within 25 seconds.',
             'pause-title':cn?'灯火未熄':'The flame awaits',
             'pause-desc':cn?'歇息片刻，古墓中的时间已暂停。':'Take a breath. The tomb is paused.',
             'resume-btn':cn?'继续探索':'Resume exploration',
@@ -737,6 +737,7 @@ const Game = {
     },
 
     showExitModal: function() {
+        if(!World.canExit())return;
         Passage.open(this.lvl);document.getElementById('exit-modal').classList.add('active');
         this.pause = true; Input.reset();Sound.pause();
         document.getElementById('exit-confirm-btn').focus();
@@ -842,17 +843,10 @@ const Game = {
 
 
         this.art++; this.exit=1;
-        this.msg(`${name} · ${World.remaining()?(curLang==='CN'?'冥器入囊，还需解除封印':'Relic secured. Break the remaining seals.'):LANG[curLang].msgs.hole}`, "#dfc58c");
+        this.msg(`${name} · ${World.remaining()?(curLang==='CN'?'冥器入囊，还需解除封印':'Relic secured. Break the remaining seals.'):(curLang==='CN'?'寻找机械开关，拉闸开启盗洞':'Find the mechanical crank to open the exit')}`, "#dfc58c");
         this.updateHUD();
 
-        const r = this.exitRoom;
-        for(let y=r.y; y<r.y+r.h; y++){
-            for(let x=r.x; x<r.x+r.w; x++){
-                 if(MapSys.get(x*CONFIG.TILE, y*CONFIG.TILE) === TERRAIN.FLOOR) {
-                     MapSys.t[y*MapSys.w+x] = 2;
-                 }
-            }
-        }
+
     },
     getItem: function(c) {
         AudioSys.playItem(true);
@@ -881,7 +875,7 @@ const Game = {
 
         document.getElementById('artifact-bar').innerText = `${LANG[curLang].artLabel}: ${this.art}/10`;
         const cn=curLang==='CN';
-        document.getElementById('objective').textContent=World.remaining()&&this.exit?(cn?`冥器已得 · 还需破除 ${World.remaining()} 道封印`:`Relic secured · ${World.remaining()} seals remain`):this.exit?(cn?'盗洞已开启 · 循罗盘离开':'Exit open · follow the compass'):(cn?'寻找镇墓冥器 · 驻足开棺':'Find the relic · stay beside coffins');
+        document.getElementById('objective').textContent=World.remaining()&&this.exit?(cn?`冥器已得 · 还需破除 ${World.remaining()} 道封印`:`Relic secured · ${World.remaining()} seals remain`):this.exit?(ExitGate.remaining>0?(cn?`盗洞 ${Math.ceil(ExitGate.remaining)}秒 · ${ExitGate.flood.name}扩散中`:`Exit ${Math.ceil(ExitGate.remaining)}s · ${ExitGate.flood.en}`):(cn?'寻找机械开关 · 驻足拉闸开启盗洞':'Find the crank · stand beside it to open the exit')):(cn?'寻找镇墓冥器 · 驻足开棺':'Find the relic · stay beside coffins');
         document.getElementById('exit-confirm-btn').textContent=this.lvl===10?(cn?'逃出生天':'Escape the tomb'):LANG[curLang].exitModal.yes;
     },
     over: function(){
@@ -1022,7 +1016,7 @@ const Game = {
             }
         }
 
-        if(this.exit) {
+        if(World.canExit()) {
             ctx.save(); ctx.translate(this.exitPos.x, this.exitPos.y);
             ctx.fillStyle='#000';ctx.beginPath();ctx.arc(0,0,30,0,6.28);ctx.fill();
             ctx.strokeStyle='#795548'; ctx.lineWidth=4;

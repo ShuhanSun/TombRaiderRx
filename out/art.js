@@ -9,8 +9,8 @@ const Art = {
     ],
     load() {
         const load=src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src;});
-        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png')]).then(([sprites,materials,walker,zombies,traps])=>{
-            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;
+        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png'),load('assets/tomb-mechanisms.png')]).then(([sprites,materials,walker,zombies,traps,mechanisms])=>{
+            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;this.mechanisms=mechanisms;
             const xs=[0,313,626,940,1254],ys=[0,302,618,918,1254];
             for(let i=0;i<16;i++) {
                 const c=document.createElement('canvas');c.width=c.height=100;
@@ -55,6 +55,10 @@ const Art = {
         this.frame(ctx,this.walker,e.direction*4+(front?0:e.moving?e.walkFrame:3),0,y-split,size,size,true);ctx.restore();
     },
 
+    mechanism(ctx,index,x,y,size) {
+        const xs=[0,319,638,956,1275],ys=[0,402,665,941,1233],col=index%4,row=Math.floor(index/4);
+        ctx.drawImage(this.mechanisms,xs[col],ys[row],xs[col+1]-xs[col],ys[row+1]-ys[row],x-size/2,y-size/2,size,size);
+    },
     sprite(ctx,index,x,y,size,flip=false) {
         if(!this.ready)return;
         const r=this.rects[index];ctx.save();ctx.translate(x,y);
@@ -97,6 +101,7 @@ const Scene = {
                 ctx.fillStyle=`rgba(122,214,207,${.05+.035*Math.sin(time*2+x*.9+y)})`;ctx.fillRect(x*50,y*50,50,50);
             }
         }
+        ExitGate.draw(ctx,left,right,top,bottom);
         for(const r of World.rooms) {
             if(r.x*50>cx+w||(r.x+r.w)*50<cx||r.y*50>cy+h||(r.y+r.h)*50<cy)continue;
             ctx.strokeStyle=World.theme.tint+'45';ctx.lineWidth=2;ctx.strokeRect(r.x*50+7,r.y*50+7,r.w*50-14,r.h*50-14);
@@ -115,7 +120,7 @@ const Scene = {
             if(warn&&!active)Art.label(ctx,hazard.x,hazard.y-37,curLang==='CN'?'避开机关':'MOVE AWAY','#ffc39b');
         }
         const visible=e=>e.x>cx-100&&e.x<cx+w+100&&e.y>cy-100&&e.y<cy+h+100;
-        const objects=[...World.props.map(e=>({...e,type:'decoration'})),...World.altars.map(e=>({...e,type:'altar'})),...game.ents.filter(e=>!e.dead),{...game.exitPos,type:'exit'}].filter(visible).sort((a,b)=>a.y-b.y);
+        const objects=[...World.props.map(e=>({...e,type:'decoration'})),...World.altars.map(e=>({...e,type:'altar'})),...game.ents.filter(e=>!e.dead),ExitGate.switch,...(World.canExit()?[{...game.exitPos,type:'exit'}]:[])].filter(visible).sort((a,b)=>a.y-b.y);
         for(const e of objects)this.entity(ctx,e,game);
         for(const t of game.texts) {ctx.save();ctx.translate(t.x,t.y);t.draw(ctx);ctx.restore();}
         ctx.restore();
@@ -136,8 +141,15 @@ const Scene = {
     entity(ctx,e,game) {
         const time=game.elapsed,cn=curLang==='CN',distance=Math.hypot(e.x-game.p.x,e.y-game.p.y);
         if(e.type==='decoration') {if(e.glow)Art.glow(ctx,e.x,e.y-18,95,'#e9aa342b');Art.sprite(ctx,e.sprite,e.x,e.y,e.size);return;}
+        if(e.type==='gate_switch') {
+            const open=ExitGate.remaining>0;
+            Art.glow(ctx,e.x,e.y,65,open?'#e4b95555':'#d4bd7040');
+            Art.mechanism(ctx,open?1:0,e.x,e.y-15,84);
+            Art.label(ctx,e.x,e.y-65,open?(cn?`闸门开启 ${Math.ceil(ExitGate.remaining)}秒`:`OPEN ${Math.ceil(ExitGate.remaining)}s`):ExitGate.ready()?(cn?'驻足拉闸 · 开启盗洞':'STAND TO TURN CRANK'):(cn?'机械开关 · 冥器与封印未就绪':'CRANK · RELIC / SEALS REQUIRED'));
+            if(ExitGate.progress>0)Art.progress(ctx,e.x,e.y-52,ExitGate.progress,'#efd496');return;
+        }
         if(e.type==='exit') {
-            Art.sprite(ctx,15,e.x,e.y,85);Art.label(ctx,e.x,e.y-70,World.canExit()?(cn?'离开此层':'DESCEND'):(cn?'盗洞 · 未解锁':'EXIT · LOCKED'),World.canExit()?'#f5d592':'#bbb3a1');return;
+            Art.mechanism(ctx,3,e.x,e.y,84);Art.label(ctx,e.x,e.y-54,cn?`盗洞 · ${Math.ceil(ExitGate.remaining)}秒`:`EXIT · ${Math.ceil(ExitGate.remaining)}s`,'#f5d592');return;
         }
         if(e.type==='altar') {
             const col=e.kind==='seal'?'#e7be6c':'#8fdbbd';
@@ -161,7 +173,8 @@ const Scene = {
                 ctx.save();ctx.translate(e.x+Math.cos(e.attackAim)*lunge,e.y-lift+Math.sin(e.attackAim)*lunge);
                 if(e.x>game.p.x)ctx.scale(-1,1);
                 if(e.landT>0)ctx.scale(1.06,.94);
-                Art.frame(ctx,Art.zombies,e.zType*4+pose,0,0,78,78,true);ctx.restore();
+                ctx.filter=e.species.filter;Art.frame(ctx,Art.zombies,e.zType*4+pose,0,0,e.species.size,e.species.size,true);ctx.restore();
+                if(distance<180)Art.label(ctx,e.x,e.y-e.species.size-4,cn?e.species.name:e.species.en,'#d9bd99');
                 if(e.attackState==='windup')Art.label(ctx,e.x,e.y-77,cn?'!':'!','#ffae83');
             }
             return;

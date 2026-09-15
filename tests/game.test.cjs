@@ -100,15 +100,15 @@ test('two pointers move and sprint independently; cancellation and blur clear in
     windowEvents.blur();assert.equal(Input.sprint,false);assert.equal(Game.pause,true);
 });
 
-test('ten-floor progression preserves equipment, floods only on pickup, and ends once',()=>{
-    const {Game,MapSys,els,World,Passage}=setup();
+test('ten-floor progression preserves equipment and requires a gate crank before exit',()=>{
+    const {Game,MapSys,els,World,Passage,ExitGate}=setup();
     Game.p.hp=4;Game.p.buffs.candle=20;Game.p.hasCompass=1;
     for(let floor=1;floor<=10;floor++) {
         assert.equal(Game.lvl,floor);assert.equal(Game.art,floor-1);
         if(!World.theme.water)assert.equal([...MapSys.t].filter(t=>t===2).length,0);
         Game.getArtifact();Game.getArtifact();assert.equal(Game.art,floor);
-        assert.ok([...MapSys.t].some(t=>t===2));
-        World.altars.forEach(a=>a.done=true);Game.showExitModal();Game.confirmNextLevel();Passage.update(1.3);
+        assert.equal(ExitGate.remaining,0);
+        World.altars.forEach(a=>a.done=true);ExitGate.open();Game.showExitModal();Game.confirmNextLevel();Passage.update(1.3);
         assert.equal(Game.p.hp,4);assert.equal(Game.p.buffs.candle,0);assert.equal(Game.p.hasCompass,1);
     }
     assert.equal(Game.running,0);assert.ok(els['victory-modal'].classList.contains('active'));
@@ -117,7 +117,7 @@ test('ten-floor progression preserves equipment, floods only on pickup, and ends
 });
 
 test('seals block the exit until all required altars are activated',()=>{
-    const {Game,World,Passage}=setup();
+    const {Game,World,Passage,ExitGate}=setup();
     Game.load(7);Game.getArtifact();assert.equal(World.remaining(),2);assert.equal(World.canExit(),false);
     Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y;Game.step(1/60);assert.equal(Game.pause,false);
     Game.showExitModal();Game.confirmNextLevel();assert.equal(Game.lvl,7);Game.pause=false;
@@ -125,7 +125,7 @@ test('seals block the exit until all required altars are activated',()=>{
         Game.p.x=altar.x;Game.p.y=altar.y;
         for(let i=0;i<73;i++)World.update(1/60);
     }
-    assert.equal(World.remaining(),0);assert.equal(World.canExit(),true);
+    assert.equal(World.remaining(),0);assert.equal(World.canExit(),false);ExitGate.open();assert.equal(World.canExit(),true);
     Game.showExitModal();Game.confirmNextLevel();Passage.update(1.3);assert.equal(Game.lvl,8);
 });
 
@@ -209,10 +209,10 @@ test('zombies hop, land, telegraph melee, allow dodging and hit only once per st
     const {Game,MapSys,Zombie}=setup();MapSys.t.fill(0);Game.p.x=500;Game.p.y=500;Game.p.inv=0;Game.ents=[Game.p];
     const hopper=new Zombie(380,500,0);hopper.hopPhase=0;
     hopper.update(.15,Game.p);assert.ok(hopper.hopHeight>5);assert.ok(hopper.x>380);
-    hopper.update(.43,Game.p);assert.equal(hopper.hopHeight,0);assert.ok(Game.ents.some(e=>e.effectType==='dust'));
+    hopper.update(.61,Game.p);assert.equal(hopper.hopHeight,0);assert.ok(Game.ents.some(e=>e.effectType==='dust'));
     const z=new Zombie(475,500,0);z.update(.01,Game.p);assert.equal(z.attackState,'windup');assert.equal(Game.p.hp,5);
-    Game.p.x=550;z.update(.39,Game.p);assert.equal(z.attackState,'strike');assert.equal(Game.p.hp,5);
-    const attacker=new Zombie(525,500,1);attacker.update(.01,Game.p);attacker.update(.39,Game.p);assert.equal(Game.p.hp,4);assert.equal(attacker.dead,0);
+    Game.p.x=550;z.update(z.species.windup+.01,Game.p);assert.equal(z.attackState,'strike');assert.equal(Game.p.hp,5);
+    const attacker=new Zombie(525,500,1);attacker.update(.01,Game.p);attacker.update(attacker.species.windup+.01,Game.p);assert.equal(Game.p.hp,4);assert.equal(attacker.dead,0);
     Game.p.inv=0;attacker.update(.05,Game.p);assert.equal(Game.p.hp,4);
 });
 
@@ -225,17 +225,11 @@ test('spitter waits for windup and repel cancels attacks; trap recoil decays',()
     trap.update(.3,Game.p);assert.equal(trap.recoil,0);
 });
 
-test('footstep buffers contain non-clipping finite audio, cache variations and respect mute',()=>{
-    const {Sound,AudioSys}=setup();let plays=0;const buffers=[];
-    AudioSys.ctx={state:'running',sampleRate:22050,
-        createBuffer(channels,length,rate){const data=new Float32Array(length);const b={getChannelData:()=>data,length,rate};buffers.push(b);return b;},
-        createBufferSource(){return {playbackRate:{value:1},connect(){},disconnect(){},start(){plays++;}};},
-        createGain(){return {gain:{value:0},connect(){},disconnect(){}};}
-    };AudioSys.gain={};Sound.suspended=false;
-    for(let i=0;i<20;i++)Sound.footstep(i%2===0,i%3===0);
-    assert.equal(plays,20);assert.ok(buffers.length<=6);
-    for(const b of buffers){const samples=b.getChannelData();assert.ok(samples.some(v=>Math.abs(v)>.01));assert.ok(samples.every(v=>Number.isFinite(v)&&Math.abs(v)<1));}
-    AudioSys.muted=true;Sound.footstep();assert.equal(plays,20);AudioSys.muted=false;Sound.suspended=true;Sound.footstep();assert.equal(plays,20);
+test('walking and wading produce no footstep audio',()=>{
+    const {Game,MapSys,Input,Sound}=setup();let calls=0;Sound.footstep=()=>calls++;
+    Game.ents=[Game.p];Input.active=true;Input.x=1;Input.y=0;
+    for(const terrain of [0,2]){MapSys.t.fill(terrain);for(let i=0;i<180;i++)Game.p.update(1/60);}
+    assert.equal(calls,0);
 });
 
 test('passage hazards stay outside rooms and launchers mount beside walls on every floor',()=>{
@@ -261,7 +255,7 @@ test('launcher turns smoothly across angle wrap and its muzzle matches the fired
     assert.ok(Math.abs(shot.y-(trap.y+Math.sin(shot.ang)*20))<.001);
 });
 
-test('crossing into water immediately splashes and leaving restores stone footsteps',()=>{
+test('terrain detection still tracks entering and leaving water with playback disabled',()=>{
     const {Game,MapSys,Input,AudioSys}=setup();MapSys.t.fill(0);Game.ents=[Game.p];Game.p.x=499;Game.p.y=525;
     MapSys.t[10*MapSys.w+10]=2;const events=[];AudioSys.playStep=(water)=>events.push(water);
     Input.active=true;Input.x=1;Input.y=0;Game.p.update(1/60);assert.deepEqual(events,[true]);
@@ -270,12 +264,47 @@ test('crossing into water immediately splashes and leaving restores stone footst
 });
 
 test('descent previews next theme, freezes play, ignores duplicate taps and can restart safely',()=>{
-    const {Game,Passage,World,THEMES,els,tick}=setup();Game.getArtifact();Game.showExitModal();
+    const {Game,Passage,World,THEMES,els,tick,ExitGate}=setup();Game.getArtifact();ExitGate.open();Game.showExitModal();
     assert.equal(els['exit-title'].textContent,THEMES[1].name);assert.equal(Passage.mode,'bolts');
     Game.p.buffs.candle=10;const elapsed=Game.elapsed;Game.confirmNextLevel();Game.confirmNextLevel();
     tick(0);tick(100);assert.equal(Game.lvl,1);assert.equal(Game.elapsed,elapsed);assert.equal(Game.p.buffs.candle,10);
     Passage.update(1.3);assert.equal(Game.lvl,2);assert.equal(Passage.active,false);assert.equal(Game.pause,false);
-    Game.getArtifact();World.altars.forEach(a=>a.done=true);Game.showExitModal();Game.confirmNextLevel();Game.restart();Passage.update(2);assert.equal(Game.lvl,1);
+    Game.getArtifact();World.altars.forEach(a=>a.done=true);ExitGate.open();Game.showExitModal();Game.confirmNextLevel();Game.restart();Passage.update(2);assert.equal(Game.lvl,1);
     assert.equal(new Set(Passage.modes).size,11);
     for(let next=1;next<=10;next++){Passage.open(next);Passage.update(.1);assert.ok(els['passage-description'].textContent.length>10);}
+});
+
+test('crank reveals the hidden exit, expires, requires rearming and can reopen',()=>{
+ const {Game,ExitGate,World,Input,Scene,calls}=setup();Input.active=false;
+ assert.equal(World.canExit(),false);assert.equal(ExitGate.open(),false);
+ calls.length=0;Scene.draw(Game);assert.ok(!calls.some(c=>c[0]==='fillText'&&String(c[1]).startsWith('盗洞 ·')));
+ Game.getArtifact();assert.equal(World.canExit(),false);assert.equal(ExitGate.radius,0);
+ Game.p.x=ExitGate.switch.x;Game.p.y=ExitGate.switch.y;Game.p.moving=false;
+ for(let i=0;i<61;i++)ExitGate.update(1/60);assert.ok(World.canExit());assert.ok(ExitGate.remaining>24);
+ for(let i=0;i<26*60;i++)ExitGate.update(1/60);assert.equal(World.canExit(),false);assert.equal(ExitGate.remaining,0);
+ ExitGate.update(2);assert.equal(ExitGate.remaining,0);
+ Game.p.x+=100;ExitGate.update(.01);Game.p.x-=100;ExitGate.update(1.1);assert.ok(World.canExit());
+});
+
+test('flood grows along reachable tiles, respects walls, recedes, and resets each floor',()=>{
+ const {Game,ExitGate,MapSys,World}=setup();Game.getArtifact();ExitGate.open();
+ assert.equal(ExitGate.radius,0);ExitGate.update(2);assert.ok(ExitGate.levelAt(Game.exitPos.x,Game.exitPos.y)>0);
+ for(let i=0;i<MapSys.t.length;i++)if(MapSys.t[i]===1)assert.equal(ExitGate.dist[i],-1);
+ const far=ExitGate.dist.findIndex(d=>d>4);assert.equal(ExitGate.levelAt(far%60*50+25,Math.floor(far/60)*50+25),0);
+ ExitGate.remaining=0;ExitGate.latched=true;const radius=ExitGate.radius;Game.p.x=ExitGate.switch.x+100;ExitGate.update(.2);assert.ok(ExitGate.radius<radius);
+ for(let lvl=1;lvl<=10;lvl++){Game.load(lvl);assert.equal(ExitGate.radius,0);assert.equal(ExitGate.remaining,0);assert.ok(MapSys.canOccupy(ExitGate.switch.x,ExitGate.switch.y,10));assert.ok(!World.hazards.some(h=>Math.hypot(h.x-ExitGate.switch.x,h.y-ExitGate.switch.y)<65));}
+});
+
+test('each floor applies its guardian species and flood; pause freezes the gate',()=>{
+ const {Game,SPECIES,FLOOD_TYPES,ExitGate,tick}=setup();assert.equal(new Set(SPECIES.map(s=>s.name)).size,10);assert.equal(new Set(FLOOD_TYPES.map(s=>s.sprite)).size,10);
+ for(let lvl=1;lvl<=10;lvl++){Game.load(lvl);for(const z of Game.ents.filter(e=>e.type==='zombie')){assert.equal(z.species.name,SPECIES[lvl-1].name);assert.equal(z.spd,SPECIES[lvl-1].speed);}assert.equal(ExitGate.flood,FLOOD_TYPES[lvl-1]);}
+ Game.load(1);Game.getArtifact();ExitGate.open();tick(0);Game.togglePause();tick(5000);assert.equal(ExitGate.remaining,25);assert.equal(ExitGate.radius,0);
+});
+
+test('flood effects slow or obscure and harmful contact has a grace period',()=>{
+ const {Game,ExitGate,World}=setup();Game.getArtifact();ExitGate.open();ExitGate.radius=3;
+ Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y;assert.ok(ExitGate.speed()<1);
+ Game.load(5);Game.getArtifact();ExitGate.open();Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y;const clear=World.sight();ExitGate.radius=3;assert.ok(World.sight()<clear);
+ Game.load(7);Game.getArtifact();World.altars.forEach(a=>a.done=true);ExitGate.open();ExitGate.radius=3;Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y;Game.p.inv=0;
+ ExitGate.update(2);assert.equal(Game.p.hp,5);ExitGate.update(.3);assert.equal(Game.p.hp,4);
 });

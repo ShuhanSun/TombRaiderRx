@@ -17,7 +17,7 @@ const ROOM_TYPES = {
     sanctuary:{cn:'安息室',en:'Sanctuary',hint:'靠近青色祭坛驻足，可恢复生命或获得短暂护身。',enHint:'Stay beside the teal altar to heal or gain a brief shield.'},
     trap:{cn:'机弩侧室',en:'Crossbow chamber',hint:'壁弩会转向追踪；甬道中的地面机关先预警后触发。',enHint:'Wall launchers turn to aim. Floor hazards guard the passages.'},
     seal:{cn:'封印室',en:'Seal chamber',hint:'靠近金色祭坛驻足，解除一道封印。',enHint:'Stay beside the gold altar to break a seal.'},
-    exit:{cn:'归墟水道',en:'The way below',hint:'冥器入囊、封印尽解后，盗洞方可通行。',enHint:'The exit opens once the relic is found and all seals are broken.'}
+    exit:{cn:'归墟水道',en:'The way below',hint:'冥器入囊、封印尽解后，驻足机械开关拉闸；盗洞限时 25 秒。',enHint:'After the relic and seals, stand by the crank. The exit opens for 25 seconds.'}
 };
 
 const World = {
@@ -54,15 +54,14 @@ const World = {
         Game.ents=Game.ents.filter(e=>!(['zombie','trap'].includes(e.type)&&rooms.some(r=>['sanctuary','entry'].includes(r.kind)&&this.inside(r,e.x,e.y))));
         Game.ents.forEach(e=>{
             if(e.type==='zombie') {
-                e.zType=this.theme.zombies[Math.floor(Math.random()*this.theme.zombies.length)];
-                e.spd=e.zType===1?125+Game.lvl*2:e.zType===2?42:48+Game.lvl*4;
+                e.species=SPECIES[Game.lvl-1];e.zType=e.species.type;e.spd=e.species.speed;
             }
             if(e.type==='trap') {this.mountTrap(e);e.pType=this.theme.trap==='MIX'?['ARROW','FIRE','STONE'][Math.floor(Math.random()*3)]:this.theme.trap;e.cd=1.5+Math.random();e.windup=0;}
         });
         // The first compass is discoverable without having to search the entire floor.
         const compass=Game.ents.find(e=>e.code==='item_compass');
         if(compass&&!Game.p.hasCompass) {compass.x=Game.p.x+65;compass.y=Game.p.y+50;}
-        this.baseSight=this.theme.sight;
+        ExitGate.setup();this.baseSight=this.theme.sight;
         this.updateRoom();
     },
     placePassageHazards() {
@@ -102,13 +101,13 @@ const World = {
         this.altars.push({x:(room.x+1.5+(offset%3)*1.5)*50,y:(room.y+1.5)*50,kind,done:false,progress:0});
     },
     remaining() {return this.altars.filter(a=>a.kind==='seal'&&!a.done).length;},
-    canExit() {return !!Game.exit&&this.remaining()===0;},
+    canExit() {return ExitGate.ready()&&ExitGate.remaining>0;},
     target() {
         if(!Game.exit)return Game.artifactPos;
         const seals=this.altars.filter(a=>a.kind==='seal'&&!a.done).sort((a,b)=>Math.hypot(a.x-Game.p.x,a.y-Game.p.y)-Math.hypot(b.x-Game.p.x,b.y-Game.p.y));
-        return seals[0]||Game.exitPos;
+        return seals[0]||(ExitGate.remaining>0?Game.exitPos:ExitGate.switch);
     },
-    sight() {return Math.max(180,(this.baseSight||300)+(Game.p.buffs.candle>0?170*Math.min(1,Game.p.buffs.candle/2):0));},
+    sight() {return Math.max(180,(this.baseSight||300)*(ExitGate.levelAt(Game.p.x,Game.p.y)>.3?(ExitGate.flood.fog||1):1)+(Game.p.buffs.candle>0?170*Math.min(1,Game.p.buffs.candle/2):0));},
     phase(h) {return (Game.elapsed+h.offset)%6;},
     updateRoom() {
         const r=this.rooms.find(r=>this.inside(r,Game.p.x,Game.p.y));
@@ -120,7 +119,7 @@ const World = {
         hint.textContent=type?(cn?type.hint:type.enHint):(cn?'沿石壁前行，留意通向其他墓室的岔口。':'Follow the stone passage and watch for branching rooms.');
     },
     update(dt) {
-        this.updateRoom();
+        ExitGate.update(dt);this.updateRoom();
         for(const a of this.altars) {
             if(a.done)continue;
             if(Math.hypot(a.x-Game.p.x,a.y-Game.p.y)<48) {
