@@ -2,7 +2,7 @@ const THEMES = [
     {name:'沙海迷冢',en:'Buried in Sand',tile:0,wall:12,tint:'#b78c51',sight:320,water:0,hazard:'sand',seals:0,zombies:[0,0,0],trap:'ARROW',note:'沙下无声。驻足开棺，寻找镇墓之物。',enNote:'Stay beside coffins to uncover the relic.'},
     {name:'千纹机关廊',en:'Hall of Hidden Bolts',tile:1,wall:13,tint:'#a5b4aa',sight:320,water:0,hazard:'spikes',seals:0,zombies:[0,1],trap:'ARROW',note:'弩机亮起红线后发射，横向躲开。',enNote:'Crossbows warn with a red line. Dodge sideways.'},
     {name:'青铜兽影厅',en:'Bronze Guardians',tile:2,wall:14,tint:'#8da98c',sight:310,water:0,hazard:'spikes',seals:0,zombies:[0,0,1],trap:'LOG',note:'青铜卫尸巡游。疾行的声响会惊动远处守卫。',enNote:'Bronze guardians patrol. Sprinting attracts distant enemies.'},
-    {name:'巨鼎炼魂室',en:'The Soul Furnace',tile:3,wall:15,tint:'#db8448',sight:340,water:0,hazard:'fire',seals:0,zombies:[1,0],trap:'FIRE',note:'地火先亮后燃。看清火圈，等它熄灭再走。',enNote:'Ember circles flare before burning. Wait for them to fade.'},
+    {name:'巨鼎炼魂室',en:'The Soul Furnace',tile:3,wall:15,tint:'#db8448',sight:340,water:0,hazard:'fire',seals:0,zombies:[1,0],trap:'FIRE',note:'地火先亮后燃。看清喷火口，等火势熄灭再走。',enNote:'Floor vents glow before burning. Wait for them to fade.'},
     {name:'石骨迷宫',en:'Labyrinth of Bones',tile:4,wall:13,tint:'#9cabb0',sight:240,water:0,hazard:'spikes',seals:0,zombies:[1,1,0],trap:'STONE',note:'深处灯影短。循已走过的地图寻找岔路。',enNote:'Light fades in the maze. Use explored paths to find new routes.'},
     {name:'荧光棺河',en:'River of Lost Coffins',tile:5,wall:13,tint:'#5fa9a3',sight:310,water:0.24,hazard:'poison',seals:0,zombies:[2,2,0],trap:'VENOM',note:'积水迟滞脚步。绿毒尸会隔水吐毒。',enNote:'Flooded tiles slow movement. Spitters attack across the water.'},
     {name:'九字封印井',en:'Well of Two Seals',tile:6,wall:15,tint:'#a68ec9',sight:290,water:0,hazard:'poison',seals:2,zombies:[0,2],trap:'ARROW',note:'两座封印锁住去路。靠近祭坛驻足破印。',enNote:'Two seals bar the exit. Stay beside each altar to break them.'},
@@ -30,14 +30,13 @@ const World = {
         rooms.forEach((r,i)=>{
             r.kind=i===0?'entry':i===rooms.length-1?'exit':types[(i-1)%types.length];
             for(let y=r.y;y<r.y+r.h;y++)for(let x=r.x;x<r.x+r.w;x++)this.roomTiles[y*MapSys.w+x]=i;
-            this.props.push({x:(r.x+.65)*50,y:(r.y+.65)*50,sprite:7,size:65,glow:true});
-            this.props.push({x:(r.x+r.w-.65)*50,y:(r.y+.65)*50,sprite:7,size:65,glow:true});
+            if(i===0||r.kind==='sanctuary'||i%3===0)this.props.push({x:(r.x+.65)*50,y:(r.y+.65)*50,sprite:7,size:65,glow:true});
             if(i>0&&i<rooms.length-1) {
                 for(let y=r.y+1;y<r.y+r.h-1;y++)for(let x=r.x+1;x<r.x+r.w-1;x++) {
                     if(this.theme.water && ((x*13+y*7)%19)/19<this.theme.water) MapSys.t[y*MapSys.w+x]=TERRAIN.WATER;
                 }
                 if(r.kind==='supply') {
-                    for(const [j,code] of ['item_wine','item_hoof',Game.lvl===9?'item_jade':'item_candle'].entries())
+                    for(const [j,code] of ['item_wine','item_hoof','item_jade'].entries())
                         Game.spawn(new GroundItem((r.x+1.5+j)*50,(r.y+r.h-1.5)*50,code));
                     const coffin=Game.ents.find(e=>e.type==='coffin'&&this.inside(r,e.x,e.y));
                     if(coffin&&coffin.content!=='artifact')coffin.content='supply';
@@ -77,7 +76,7 @@ const World = {
         const seals=this.altars.filter(a=>a.kind==='seal'&&!a.done).sort((a,b)=>Math.hypot(a.x-Game.p.x,a.y-Game.p.y)-Math.hypot(b.x-Game.p.x,b.y-Game.p.y));
         return seals[0]||Game.exitPos;
     },
-    sight() {return Math.max(180,Game.p.sight+(this.baseSight||300)-300);},
+    sight() {return Math.max(180,(this.baseSight||300)+(Game.p.buffs.candle>0?170*Math.min(1,Game.p.buffs.candle/2):0));},
     phase(h) {return (Game.elapsed+h.offset)%6;},
     updateRoom() {
         const r=this.rooms.find(r=>this.inside(r,Game.p.x,Game.p.y));
@@ -106,7 +105,7 @@ const World = {
             } else a.progress=0;
         }
         for(const h of this.hazards) {
-            if(this.phase(h)>4.5&&Math.hypot(h.x-Game.p.x,h.y-Game.p.y)<28)Game.p.hit();
+            if(this.phase(h)>4.5&&Math.abs(h.x-Game.p.x)<27&&Math.abs(h.y-Game.p.y)<27)Game.p.hit();
         }
     }
 };

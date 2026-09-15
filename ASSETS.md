@@ -1,6 +1,6 @@
 # Asset provenance
 
-Two original atlases were generated with the built-in image generation tool for this game, then inspected and copied into `out/assets/`. No third-party game artwork was imported. Both atlases are 1254×1254 pixels. Source images are unchanged; the Canvas renderer uses explicit source rectangles because generated cell boundaries are not perfectly uniform.
+Original atlases were generated with the built-in image generation tool for this game, then inspected and copied into `out/assets/`. No third-party game artwork was imported. All atlases are 1254×1254 pixels. Source images are unchanged; the Canvas renderer uses explicit source rectangles because generated cell boundaries are not perfectly uniform.
 
 - `out/assets/tomb-sprites.png`: RGBA with transparency. Sixteen richly detailed painterly, slightly elevated orthographic game sprites: explorer, blue/red/green jiangshi; closed/open stone sarcophagus, bronze crossbow, brazier; lamp, wine flask, hoof talisman, jade vest; compass, relic seal, altar, stairs.
 - `out/assets/tomb-materials.png`: opaque terrain atlas: sandstone, limestone, bronze, ember basalt; gray stone, damp moss stone, ritual purple stone, obsidian; imperial gold stone, meteor stone, teal water, cracked moss stone; sandstone/gray/bronze/basalt wall reliefs.
@@ -8,4 +8,14 @@ Two original atlases were generated with the built-in image generation tool for 
 
 ## Generation brief
 
-Create production game atlases for a Chinese ancient-tomb survival game. Realistic painterly 3D-render appearance, top-down/slightly three-quarter orthographic view, lighting from upper left, aged cloth, eroded carved stone and oxidized bronze. No emoji, pixel art, labels, text, UI, dividers or mock screenshots. Sprite atlas: a transparent 4×4 atlas in the subject order listed above, isolated complete objects with padding. Terrain atlas: opaque 4×4 top-down material textures in the listed order, each material filling its cell. The requested 2048 size and exact regular grid were not honored by generation; the renderer accounts for the actual 1254 size and inspected boundaries. No retries or image editing were used.
+Create production game atlases for a Chinese ancient-tomb survival game. Realistic painterly 3D-render appearance, top-down/slightly three-quarter orthographic view, lighting from upper left, aged cloth, eroded carved stone and oxidized bronze. No emoji, pixel art, labels, text, UI, dividers or mock screenshots. Sprite atlas: a transparent 4×4 atlas in the subject order listed above, isolated complete objects with padding. Terrain atlas: opaque 4×4 top-down material textures in the listed order, each material filling its cell. The requested 2048 size and exact regular grid were not honored by generation; the renderer accounts for the actual 1254 size and inspected boundaries. The first two atlases were accepted without retries. Motion atlases later received background-extraction passes through the built-in image tool.
+
+## Motion assets
+
+- `out/assets/raider-walk.png`: generated four-direction, four-frame explorer sheet. Source is RGB; neutral background uses the renderer’s cached color-key import. Static torso and articulated boot rendering maintain the held lantern and exaggerate alternating steps without regenerating textures.
+- `out/assets/jiangshi-motion.png`: RGBA sheet; blue/red/green jiangshi grounded, airborne, crouching and lunging/spitting; dust, slash, venom and muzzle sparks.
+- `out/assets/trap-motion.png`: RGBA sheet; arrow, stone, log, fireball; venom, crossbow, retracted/extended spikes; fire vent inactive/warning/active/smoke; poison grate inactive/warning/active and rubble.
+
+Built-in generation prompts requested realistic elevated orthographic 4×4 sheets matching the original game art, four sequential down/left/right/back gait frames, three zombie classes with hop/windup/strike frames, and the listed projectile/trap states. Follow-up prompt: remove only the checkerboard background, preserve all sprites and grid, output true RGBA. Zombie/trap extraction succeeded; player extraction retained RGB, supported by the renderer. Original generated files are preserved. Explicit per-column source boundaries avoid neighbouring poses bleeding into frames.
+
+Footsteps are short cached Web Audio buffers with stone heel/sole/grit and water splash variants. Playback follows actual travel distance, respects pause and mute, and disconnects finished sources. No external samples or audio service are used.

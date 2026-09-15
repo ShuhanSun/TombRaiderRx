@@ -62,7 +62,7 @@ const LANG = {
         winDesc: "找到冥器，逃出生天！",
         winBtn: "再来一局",
         items: {
-            candle: {n:"千年油灯", d:"<b>长明不灭</b>: 视野大幅扩大。"},
+            candle: {n:"残油铜灯", d:"<b>添油续火</b>: 扩大视野 20 秒，每层仅一盏。"},
             wine: {n:"糯米酒", d:"<b>祛阴补阳</b>: 恢复 1 点生命值。"},
             hoof: {n:"黑驴蹄子", d:"<b>生人勿近</b>: 僵尸退避 15 秒。"},
             jade: {n:"金缕玉衣", d:"<b>刀枪不入</b>: 免疫所有伤害 15 秒。"},
@@ -74,7 +74,7 @@ const LANG = {
             empty: "棺中只余尘土",
             trap: "机括声起 · 速退",
             zombie: "棺中有变 · 守墓尸苏醒",
-            candle: "灯火通明!",
+            candle: "添油续火 · 照明 20 秒",
             compass: "罗盘在手! 寻龙分金!",
             heal: "生命恢复!",
             repel: "尸畏 15秒!",
@@ -102,7 +102,7 @@ const LANG = {
         winDesc: "Artifacts found. You survived!",
         winBtn: "Play Again",
         items: {
-            candle: {n:"Ancient Lamp", d:"<b>Eternal Flame</b>: Max Vision Range."},
+            candle: {n:"Oil Lamp", d:"<b>Last Oil</b>: Wider sight for 20 seconds. One lamp per floor."},
             wine: {n:"Rice Wine", d:"<b>Vitality</b>: Restore 1 HP."},
             hoof: {n:"Donkey Hoof", d:"<b>Repel</b>: Zombies fear you for 15s."},
             jade: {n:"Jade Suit", d:"<b>Invincible</b>: Immune to ALL damage for 15s."},
@@ -114,7 +114,7 @@ const LANG = {
             empty: "Empty...",
             trap: "Trap Triggered!",
             zombie: "Zombie Rise!",
-            candle: "Lamp Lit!",
+            candle: "Lamp lit · 20 seconds",
             compass: "Compass Active!",
             heal: "HP Restored!",
             repel: "Repel 15s!",
@@ -147,7 +147,7 @@ const AudioSys = {
         osc.connect(g); g.connect(this.gain);
         osc.start(t); osc.stop(t+dur+0.2);
     },
-    playStep: function() { if(this.ctx) this.tone(60, 'square', 0.1, 0.15, 30); },
+    playStep: function(water=false,sprint=false) { Sound.footstep(water,sprint); },
     playOpen: function() {
         if(!this.ctx||this.muted||this.ctx.state!=='running') return;
         const t=this.ctx.currentTime, o=this.ctx.createOscillator(), g=this.ctx.createGain(), f=this.ctx.createBiquadFilter();
@@ -388,59 +388,63 @@ class Zombie extends Entity {
         this.zType = type; // 0: Blue, 1: Red (Sprinter), 2: Green (Spitter)
         this.spd = type===1 ? CONFIG.SPRINTER_SPD : (type===2 ? CONFIG.GREEN_SPD : CONFIG.ZOMBIE_SPD + Game.lvl*5);
         this.dir = Math.random()*6.28; this.changeDirT = 0;
-        this.attackCD = 0;
+        this.attackCD=0;this.attackState='';this.attackClock=0;this.attackAim=0;this.hopPhase=Math.random();this.hopHeight=0;this.landT=0;this.moving=false;
     }
     update(dt,p) {
-        const oldX=this.x, oldY=this.y;
-        const dx=p.x-this.x, dy=p.y-this.y, d=Math.hypot(dx,dy);
-        let repel = p.buffs.hoof > 0;
-
-        if(this.zType === 0 || this.zType === 2) { // Blue or Green
-            let active = d<160 || (Input.active && d<(Input.sprint?420:250));
-            if(active || repel) {
-                let tx=dx, ty=dy, s=this.spd;
-                if(repel && d<350) { tx=-dx; ty=-dy; s=this.spd*1.5; }
-                if(MapSys.get(this.x,this.y)===TERRAIN.WATER) s*=0.4;
-                if(!repel || d<350) {
-                    this.x += (tx/(d||1))*s*dt; if(MapSys.get(this.x,this.y)===TERRAIN.WALL) this.x=oldX;
-                    this.y += (ty/(d||1))*s*dt; if(MapSys.get(this.x,this.y)===TERRAIN.WALL) this.y=oldY;
-                }
+        const dx=p.x-this.x,dy=p.y-this.y,d=Math.hypot(dx,dy),repel=p.buffs.hoof>0;
+        this.attackCD=Math.max(0,this.attackCD-dt);
+        this.landT=Math.max(0,this.landT-dt);this.moving=false;
+        if(repel&&this.attackState) {this.attackState='';this.attackClock=0;this.attackCD=.6;}
+        if(this.attackState) {
+            this.hopHeight=0;this.attackClock-=dt;
+            if(this.attackClock<=0) {
+                if(this.attackState==='windup') {
+                    this.attackState='strike';this.attackClock=.24;
+                    if(this.zType===2) {
+                        Game.spawn(new Projectile(this.x,this.y,this.attackAim,'VENOM'));
+                        const fx=new Effect(this.x,this.y,'spit');fx.angle=this.attackAim;Game.spawn(fx);
+                        AudioSys.playTrap(d);
+                    } else {
+                        const facing=(dx*Math.cos(this.attackAim)+dy*Math.sin(this.attackAim))/(d||1);
+                        if(d<43&&(facing>.3||d<18)&&MapSys.lineClear(this.x,this.y,p.x,p.y))p.hit();
+                        const fx=new Effect(this.x+Math.cos(this.attackAim)*20,this.y+Math.sin(this.attackAim)*20,'slash');fx.angle=this.attackAim;Game.spawn(fx);
+                        if(d<220)AudioSys.playAttack();
+                    }
+                } else if(this.attackState==='strike') {this.attackState='recover';this.attackClock=.32;}
+                else {this.attackState='';this.attackCD=this.zType===2?1.8:this.zType===1?1.1:1.4;}
             }
-
-            // Blue Attack
-            if(this.zType === 0) {
-                if(this.attackCD > 0) this.attackCD -= dt;
-                if(!repel && d<20 && this.attackCD <= 0) {
-                    p.hit(); AudioSys.playAttack(); this.attackCD = 1.0;
-                }
-            }
-
-            // Green Attack (Spit)
-            if(this.zType === 2) {
-                this.attackCD -= dt;
-                if(!repel && d < 250 && this.attackCD <= 0 && MapSys.lineClear(this.x,this.y,p.x,p.y)) {
-                    const ang = Math.atan2(dy, dx);
-                    Game.spawn(new Projectile(this.x, this.y, ang, 'VENOM'));
-                    AudioSys.playTrap(d);
-                    this.attackCD = 2.0 + Math.random();
-                }
-            }
-
-        } else { // Red Sprinter
-            this.changeDirT -= dt;
-            if(this.changeDirT <= 0) { this.changeDirT = 1.0 + Math.random(); this.dir = Math.random() * 6.28; }
-            let vx = Math.cos(this.dir) * this.spd; let vy = Math.sin(this.dir) * this.spd;
-            this.x += vx * dt; if(MapSys.get(this.x, this.y) === TERRAIN.WALL) { this.x = oldX; this.dir = Math.PI - this.dir; }
-            this.y += vy * dt; if(MapSys.get(this.x, this.y) === TERRAIN.WALL) { this.y = oldY; this.dir = -this.dir; }
-
-            if(!repel && d<20) {
-                p.hit();
-                Game.spawn(new Effect(this.x, this.y, 'burst'));
-                AudioSys.playAttack();
-                this.dead = 1;
-            }
+            return;
         }
-        this.hop = Math.abs(Math.sin(Date.now()/(this.zType===1?100:200)))*-8;
+        const inRange=this.zType===2?d<250:d<36;
+        if(!repel&&inRange&&this.attackCD<=0&&MapSys.lineClear(this.x,this.y,p.x,p.y)) {
+            this.attackState='windup';this.attackClock=this.zType===2?.6:.38;
+            this.attackAim=Math.atan2(dy,dx);this.hopHeight=0;return;
+        }
+        let vx=0,vy=0;
+        if(repel&&d<350) {vx=-dx/(d||1);vy=-dy/(d||1);}
+        else if(this.zType===1) {
+            if(d<180) {vx=dx/(d||1);vy=dy/(d||1);}
+            else {
+                this.changeDirT-=dt;
+                if(this.changeDirT<=0){this.changeDirT=1+Math.random();this.dir=Math.random()*Math.PI*2;}
+                vx=Math.cos(this.dir);vy=Math.sin(this.dir);
+            }
+        } else if(d<160||(Input.active&&d<(Input.sprint?420:250))) {vx=dx/(d||1);vy=dy/(d||1);}
+        if(Math.hypot(vx,vy)<.01) {this.hopHeight=0;this.hopPhase=0;return;}
+        const period=this.zType===1?.52:.82,previous=this.hopPhase;
+        this.hopPhase=(this.hopPhase+dt/period)%1;
+        const airborne=this.hopPhase<.68;
+        this.hopHeight=airborne?Math.sin(this.hopPhase/.68*Math.PI)*(this.zType===1?17:13):0;
+        const speed=this.spd*(repel?1.5:1)*(MapSys.get(this.x,this.y)===TERRAIN.WATER?.45:1);
+        const distance=airborne?speed*dt/.68:0,oldX=this.x,oldY=this.y;
+        const nx=this.x+vx*distance,ny=this.y+vy*distance;
+        if(MapSys.canOccupy(nx,this.y,9))this.x=nx;else if(this.zType===1)this.dir=Math.PI-this.dir;
+        if(MapSys.canOccupy(this.x,ny,9))this.y=ny;else if(this.zType===1)this.dir=-this.dir;
+        this.moving=Math.hypot(this.x-oldX,this.y-oldY)>.001||airborne;
+        if(previous<.68&&this.hopPhase>=.68) {
+            this.landT=.13;
+            if(d<280)Game.spawn(new Effect(this.x,this.y+4,'dust'));
+        }
     }
     draw(ctx){
         ctx.translate(0,this.hop||0);
@@ -467,7 +471,7 @@ class Zombie extends Entity {
 class Trap extends Entity {
     constructor(x,y,lvlIndex){
         super(x,y,'trap');
-        this.life=3; this.cd=1.5+Math.random(); this.windup=0;this.aim=0;
+        this.life=3; this.cd=1.5+Math.random(); this.windup=0;this.aim=0;this.recoil=0;
         const data = LEVELS_DATA[Math.min(lvlIndex,9)];
         this.pType = data.type === 'MIX' ? Object.keys(PROJ_TYPES)[Math.floor(Math.random()*4)] : data.type;
         this.color = data.col;
@@ -476,10 +480,13 @@ class Trap extends Entity {
     }
     update(dt,p){
         const dist=Math.hypot(this.x-p.x,this.y-p.y);
+        this.recoil=Math.max(0,this.recoil-dt);
         if(this.windup>0) {
             this.windup-=dt;
             if(this.windup<=0) {
                 Game.spawn(new Projectile(this.x,this.y,this.aim,this.pType));
+                this.recoil=.28;
+                const fx=new Effect(this.x+Math.cos(this.aim)*20,this.y+Math.sin(this.aim)*20,'muzzle');fx.angle=this.aim;Game.spawn(fx);
                 AudioSys.playTrap(dist);
                 this.cd=LEVELS_DATA[this.lvlIdx].delay+0.4;
             }
@@ -499,17 +506,17 @@ class Trap extends Entity {
 
 class Projectile extends Entity {
     constructor(x,y,a,type){super(x,y,'proj');
-        this.info = PROJ_TYPES[type] || PROJ_TYPES.ARROW;
+        this.pType=type;this.age=0;this.info = PROJ_TYPES[type] || PROJ_TYPES.ARROW;
         this.vx=Math.cos(a)*this.info.spd; this.vy=Math.sin(a)*this.info.spd;
         this.life=3.0; this.ang=a;
     }
     update(dt,p){
-        this.life-=dt; if(this.life<0)this.dead=1;
+        this.age+=dt;this.life-=dt; if(this.life<0){this.dead=1;return;}
         this.x+=this.vx*dt; this.y+=this.vy*dt;
         if(Math.hypot(this.x-p.x,this.y-p.y)<this.info.size+10){
             if(p.buffs.jade > 0) this.dead = 1; else { p.hit(); this.dead=1; }
         }
-        if(MapSys.get(this.x,this.y)===TERRAIN.WALL) this.dead=1;
+        if(MapSys.get(this.x,this.y)===TERRAIN.WALL) {this.dead=1;Game.spawn(new Effect(this.x-this.vx*dt,this.y-this.vy*dt,'dust'));}
     }
     draw(ctx){
         ctx.rotate(this.ang); ctx.fillStyle=this.info.col;
@@ -520,11 +527,11 @@ class Projectile extends Entity {
 }
 
 class Player extends Entity {
-    constructor(x,y){super(x,y,'player');this.hp=5;this.sight=CONFIG.BASE_SIGHT;this.inv=0;this.buffs={hoof:0,candle:0,jade:0};this.walkT=0;this.hasCompass=0;this.stepPhase=0;}
+    constructor(x,y){super(x,y,'player');this.hp=5;this.sight=CONFIG.BASE_SIGHT;this.inv=0;this.buffs={hoof:0,candle:0,jade:0};this.walkT=0;this.hasCompass=0;this.stepPhase=0;this.direction=0;this.walkFrame=1;this.walkDistance=0;this.stepDistance=0;this.moving=false;}
     update(dt){
         if(this.inv>0)this.inv-=dt;
         if(this.buffs.hoof>0) this.buffs.hoof-=dt;
-        if(this.buffs.candle>0) this.buffs.candle-=dt;
+        if(this.buffs.candle>0) this.buffs.candle=Math.max(0,this.buffs.candle-dt);
         if(this.buffs.jade>0) this.buffs.jade-=dt;
 
         const oldX=this.x, oldY=this.y;
@@ -533,6 +540,7 @@ class Player extends Entity {
         if(MapSys.get(this.x,this.y)===TERRAIN.WATER) s*=0.5;
 
         if(Input.active){
+            this.direction=Math.abs(Input.x)>Math.abs(Input.y)?(Input.x<0?1:2):(Input.y<0?3:0);
             if(Math.abs(Input.x)>.08)this.facingLeft=Input.x<0;
             const nx=this.x+Input.x*s*dt, ny=this.y+Input.y*s*dt;
 
@@ -548,9 +556,14 @@ class Player extends Entity {
                 }
             });
 
-            this.stepPhase += dt * 10;
-            this.walkT+=dt; if(this.walkT > 0.4) { AudioSys.playStep(); this.walkT=0; }
-        } else { this.stepPhase = 0; }
+        }
+        const moved=Math.hypot(this.x-oldX,this.y-oldY);this.moving=moved>.01;
+        if(this.moving) {
+            this.walkDistance+=moved;this.stepDistance+=moved;
+            this.walkFrame=Math.floor(this.walkDistance/28)%4;this.stepPhase=this.walkDistance/112*Math.PI*2;
+            if(this.stepDistance>=56) {this.stepDistance%=56;AudioSys.playStep(MapSys.get(this.x,this.y)===TERRAIN.WATER,Input.sprint);}
+        } else {this.walkFrame=1;this.stepPhase=0;this.stepDistance=0;}
+
     }
     hit(){
         if(!Game.running || this.inv>0 || this.buffs.jade>0)return;
@@ -725,7 +738,7 @@ const Game = {
         this.pause = false;Sound.unlock();
         if(this.lvl>=10){ this.victory(); }
         else {
-            this.saved={hp:this.p.hp,sight:this.p.sight,hasCompass:this.p.hasCompass};
+            this.saved={hp:this.p.hp,hasCompass:this.p.hasCompass};
             this.load(this.lvl+1);
         }
     },
@@ -751,7 +764,7 @@ const Game = {
              corners.push({x:(r.x+r.w)*CONFIG.TILE-25, y:(r.y+r.h)*CONFIG.TILE-25});
         });
 
-        ['item_compass', 'item_wine', 'item_hoof', 'item_jade', 'item_candle', 'item_candle', 'item_candle'].forEach(code => {
+        ['item_compass', 'item_wine', 'item_hoof', 'item_jade', 'item_candle'].forEach(code => {
              if(corners.length>0) {
                  const ri = Math.floor(Math.random()*corners.length);
                  this.ents.push(new GroundItem(corners[ri].x, corners[ri].y, code));
@@ -838,7 +851,7 @@ const Game = {
         // Direct Pickup (No Modal)
         AudioSys.playUse();
 
-        if(c==='item_candle'){ this.p.sight=Math.min(750,this.p.sight+150); this.msg(LANG[curLang].msgs.candle, col); }
+        if(c==='item_candle'){ this.p.buffs.candle=20; this.msg(LANG[curLang].msgs.candle, col); }
         if(c==='item_compass'){ this.p.hasCompass=1; this.msg(LANG[curLang].msgs.compass, col); }
         if(c==='item_wine'){ this.p.hp=Math.min(5,this.p.hp+1); this.msg(LANG[curLang].msgs.heal, col); this.updateHUD(); }
         if(c==='item_hoof'){ this.p.buffs.hoof=15; this.msg(LANG[curLang].msgs.repel, col); }
@@ -921,7 +934,7 @@ const Game = {
         const bar=document.getElementById('buff-bar');
         if(bar.innerHTML!==html) bar.innerHTML=html;
         const itemBar=document.getElementById('item-bar');
-        const lamp=this.p.sight>CONFIG.BASE_SIGHT?`<div class="item-slot">🪔 ${curLang==='CN'?'灯火':'Light'} +${this.p.sight-CONFIG.BASE_SIGHT}</div>`:'';
+        const lamp=this.p.buffs.candle>0?`<div class="item-slot ${this.p.buffs.candle<5?'lamp-low':''}">🪔 ${curLang==='CN'?'灯油':'Oil'} ${Math.ceil(this.p.buffs.candle)}s</div>`:'';
         if(itemBar.innerHTML!==lamp) itemBar.innerHTML=lamp;
     },
     refreshExploration: function() {

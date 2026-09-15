@@ -15,7 +15,7 @@ test('300 generated floors have one reachable relic, connected terrain and safe 
     const {Game,MapSys,World}=setup(19);
     for(let n=0;n<300;n++) {
         Game.load(n%10+1);
-        const relics=Game.ents.filter(e=>e.content==='artifact');assert.equal(relics.length,1);
+        const relics=Game.ents.filter(e=>e.content==='artifact');assert.equal(relics.length,1);assert.equal(Game.ents.filter(e=>e.code==='item_candle').length,1);
         const index=p=>Math.floor(p.y/50)*60+Math.floor(p.x/50);
         const seen=new Set([index(Game.p)]),queue=[index(Game.p)];
         for(let i=0;i<queue.length;i++) {
@@ -102,14 +102,14 @@ test('two pointers move and sprint independently; cancellation and blur clear in
 
 test('ten-floor progression preserves equipment, floods only on pickup, and ends once',()=>{
     const {Game,MapSys,els,World}=setup();
-    Game.p.hp=4;Game.p.sight=600;Game.p.hasCompass=1;
+    Game.p.hp=4;Game.p.buffs.candle=20;Game.p.hasCompass=1;
     for(let floor=1;floor<=10;floor++) {
         assert.equal(Game.lvl,floor);assert.equal(Game.art,floor-1);
         if(!World.theme.water)assert.equal([...MapSys.t].filter(t=>t===2).length,0);
         Game.getArtifact();Game.getArtifact();assert.equal(Game.art,floor);
         assert.ok([...MapSys.t].some(t=>t===2));
         World.altars.forEach(a=>a.done=true);Game.showExitModal();Game.confirmNextLevel();
-        assert.equal(Game.p.hp,4);assert.equal(Game.p.sight,600);assert.equal(Game.p.hasCompass,1);
+        assert.equal(Game.p.hp,4);assert.equal(Game.p.buffs.candle,0);assert.equal(Game.p.hasCompass,1);
     }
     assert.equal(Game.running,0);assert.ok(els['victory-modal'].classList.contains('active'));
     Game.confirmNextLevel();assert.equal(Game.lvl,10);
@@ -181,4 +181,59 @@ test('interrupted Web Audio is resumed using the supported window constructor',a
     AudioSys.ctx.state='interrupted';Sound.unlock();await Promise.resolve();assert.equal(resumes,2);
     Sound.pause();assert.equal(AudioSys.ctx.state,'suspended');
     Sound.unlock();await Promise.resolve();assert.equal(AudioSys.ctx.state,'running');
+});
+
+test('four-way gait and footsteps follow distance, sprint cadence, water and wall collision',()=>{
+    const {Game,MapSys,Input,AudioSys}=setup();MapSys.t.fill(0);Game.ents=[Game.p];
+    const steps=[];AudioSys.playStep=(water,sprint)=>steps.push({water,sprint});
+    const walk=(x,y,frames=60)=>{Input.x=x;Input.y=y;Input.active=true;for(let i=0;i<frames;i++)Game.p.update(1/60);};
+    Game.p.x=500;Game.p.y=500;
+    for(const [x,y,direction] of [[0,1,0],[-1,0,1],[1,0,2],[0,-1,3]]){walk(x,y,12);assert.equal(Game.p.direction,direction);assert.equal(Game.p.moving,true);}
+    steps.length=0;Game.p.stepDistance=0;walk(1,0);const normal=steps.length;
+    Input.sprint=true;steps.length=0;Game.p.stepDistance=0;walk(1,0);assert.ok(steps.length>normal);assert.ok(steps.every(s=>s.sprint));
+    MapSys.t.fill(2);steps.length=0;walk(1,0);assert.ok(steps.length);assert.ok(steps.every(s=>s.water));
+    MapSys.t.fill(1);steps.length=0;const oldX=Game.p.x;walk(1,0);assert.equal(Game.p.x,oldX);assert.equal(steps.length,0);assert.equal(Game.p.moving,false);
+});
+
+test('lamp expires at 20 seconds, fades last two, and pause freezes oil consumption',()=>{
+    const {Game,World,MapSys,Input,tick}=setup();MapSys.t.fill(0);Game.ents=[Game.p];Input.active=false;
+    const base=World.sight();Game.getItem('item_candle');assert.equal(Game.p.buffs.candle,20);assert.equal(World.sight(),base+170);
+    for(let i=0;i<19*60;i++)Game.p.update(1/60);
+    assert.ok(Math.abs(World.sight()-(base+85))<.01);
+    tick(0);Game.togglePause();const oil=Game.p.buffs.candle;tick(5000);assert.equal(Game.p.buffs.candle,oil);
+    Game.togglePause();for(let i=0;i<61;i++)Game.p.update(1/60);
+    assert.equal(Game.p.buffs.candle,0);assert.equal(World.sight(),base);
+});
+
+test('zombies hop, land, telegraph melee, allow dodging and hit only once per strike',()=>{
+    const {Game,MapSys,Zombie}=setup();MapSys.t.fill(0);Game.p.x=500;Game.p.y=500;Game.p.inv=0;Game.ents=[Game.p];
+    const hopper=new Zombie(380,500,0);hopper.hopPhase=0;
+    hopper.update(.15,Game.p);assert.ok(hopper.hopHeight>5);assert.ok(hopper.x>380);
+    hopper.update(.43,Game.p);assert.equal(hopper.hopHeight,0);assert.ok(Game.ents.some(e=>e.effectType==='dust'));
+    const z=new Zombie(475,500,0);z.update(.01,Game.p);assert.equal(z.attackState,'windup');assert.equal(Game.p.hp,5);
+    Game.p.x=550;z.update(.39,Game.p);assert.equal(z.attackState,'strike');assert.equal(Game.p.hp,5);
+    const attacker=new Zombie(525,500,1);attacker.update(.01,Game.p);attacker.update(.39,Game.p);assert.equal(Game.p.hp,4);assert.equal(attacker.dead,0);
+    Game.p.inv=0;attacker.update(.05,Game.p);assert.equal(Game.p.hp,4);
+});
+
+test('spitter waits for windup and repel cancels attacks; trap recoil decays',()=>{
+    const {Game,MapSys,Zombie,Trap}=setup();MapSys.t.fill(0);Game.p.x=600;Game.p.y=600;Game.ents=[Game.p];
+    const z=new Zombie(500,600,2);z.update(.01,Game.p);assert.equal(z.attackState,'windup');assert.equal(Game.ents.length,1);
+    z.update(.3,Game.p);assert.equal(Game.ents.length,1);z.update(.31,Game.p);assert.ok(Game.ents.some(e=>e.pType==='VENOM'));
+    const cancelled=new Zombie(575,600,0);cancelled.update(.01,Game.p);Game.p.buffs.hoof=15;cancelled.update(.4,Game.p);assert.equal(cancelled.attackState,'');assert.equal(Game.p.hp,5);
+    const trap=new Trap(500,600,0);trap.cd=0;trap.update(.01,Game.p);trap.update(.81,Game.p);assert.ok(trap.recoil>0);assert.ok(Game.ents.some(e=>e.effectType==='muzzle'));
+    trap.update(.3,Game.p);assert.equal(trap.recoil,0);
+});
+
+test('footstep buffers contain non-clipping finite audio, cache variations and respect mute',()=>{
+    const {Sound,AudioSys}=setup();let plays=0;const buffers=[];
+    AudioSys.ctx={state:'running',sampleRate:22050,
+        createBuffer(channels,length,rate){const data=new Float32Array(length);const b={getChannelData:()=>data,length,rate};buffers.push(b);return b;},
+        createBufferSource(){return {playbackRate:{value:1},connect(){},disconnect(){},start(){plays++;}};},
+        createGain(){return {gain:{value:0},connect(){},disconnect(){}};}
+    };AudioSys.gain={};Sound.suspended=false;
+    for(let i=0;i<20;i++)Sound.footstep(i%2===0,i%3===0);
+    assert.equal(plays,20);assert.ok(buffers.length<=6);
+    for(const b of buffers){const samples=b.getChannelData();assert.ok(samples.some(v=>Math.abs(v)>.01));assert.ok(samples.every(v=>Number.isFinite(v)&&Math.abs(v)<1));}
+    AudioSys.muted=true;Sound.footstep();assert.equal(plays,20);AudioSys.muted=false;Sound.suspended=true;Sound.footstep();assert.equal(plays,20);
 });

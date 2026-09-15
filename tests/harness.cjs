@@ -11,6 +11,7 @@ function setup(seed=1) {
     assert.equal(new Set(ids).size,ids.length,'HTML IDs must be unique');
     const calls=[];
     const ctx=new Proxy({}, {get(target,key) {
+        if(key==='getImageData') return ()=>({data:new Uint8Array(16)});
         if(key==='createRadialGradient') return ()=>({addColorStop(){}});
         return target[key]??((...args)=>calls.push([key,...args]));
     },set(target,key,value){target[key]=value;return true;}});
@@ -40,9 +41,9 @@ function setup(seed=1) {
         requestAnimationFrame:fn=>{frames.set(++next,fn);return next;},cancelAnimationFrame:id=>frames.delete(id),
         setTimeout:fn=>{timers.set(++next,fn);return next;},clearTimeout:id=>timers.delete(id)
     });
-    vm.runInContext(source+'\nthis.api={Game,MapSys,Input,Player,Coffin,Zombie,Projectile,Effect,FloatText,AudioSys,CONFIG,TERRAIN,World,Art,Scene,Sound,THEMES};',context);
+    vm.runInContext(source+'\nthis.api={Game,MapSys,Input,Player,Coffin,Zombie,Trap,Projectile,Effect,FloatText,AudioSys,CONFIG,TERRAIN,World,Art,Scene,Sound,THEMES};',context);
     const api=context.api;
-    api.Art.ready=true;api.Art.sprites={};api.Art.tiles=Array(16).fill({});
+    api.Art.ready=true;api.Art.sprites={};api.Art.walker={};api.Art.zombies={};api.Art.traps={};api.Art.tiles=Array(16).fill({});
     api.Game.resize();api.Game.restart();
     const tick=t=>{const pending=[...frames.values()];frames.clear();pending.forEach(fn=>fn(t));};
     return {...api,els,frames,timers,tick,calls,windowEvents,documentEvents,context};

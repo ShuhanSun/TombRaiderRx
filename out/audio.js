@@ -32,6 +32,31 @@ const Sound = {
         if(AudioSys.ctx?.state!=='running') AudioSys.ctx?.resume().then(()=>this.status()).catch(()=>{this.issue='effects';this.status();});
         this.status();
     },
+    footstep(water=false,sprint=false) {
+        const ctx=AudioSys.ctx;
+        if(!ctx||ctx.state!=='running'||AudioSys.muted||this.suspended)return;
+        if(this.stepContext!==ctx) {this.stepContext=ctx;this.stepBuffers={};}
+        const variant=Math.floor(Math.random()*3),key=(water?'water':'stone')+variant;
+        let buffer=this.stepBuffers[key];
+        if(!buffer) {
+            const duration=water?.26:.17,rate=ctx.sampleRate;
+            buffer=ctx.createBuffer(1,Math.ceil(rate*duration),rate);
+            const data=buffer.getChannelData(0);let low=0,previous=0;
+            for(let i=0;i<data.length;i++) {
+                const t=i/rate,n=Math.random()*2-1;low=low*.82+n*.18;
+                const heel=Math.exp(-t*(water?25:58)),sole=t>.035?Math.exp(-(t-.035)*(water?19:38)):0;
+                const thud=Math.sin(2*Math.PI*(72+variant*8)*t)*Math.exp(-t*70);
+                data[i]=water?(n-previous)*.12*(heel+sole*.7)+low*.65*sole:
+                    thud*.38+low*.55*heel+n*.075*sole;
+                data[i]*=Math.min(1,t/.002)*Math.min(1,(duration-t)/.025);previous=n;
+            }
+            this.stepBuffers[key]=buffer;
+        }
+        const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=buffer;
+        source.playbackRate.value=.95+Math.random()*.1;
+        gain.gain.value=sprint?.72:.52;source.connect(gain);gain.connect(AudioSys.gain);
+        source.onended=()=>{source.disconnect();gain.disconnect();};source.start();
+    },
     pause() {
         this.suspended=true; this.music?.pause(); this.testClip?.pause();
         AudioSys.ctx?.suspend().catch(()=>{}); this.status();

@@ -9,8 +9,8 @@ const Art = {
     ],
     load() {
         const load=src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src;});
-        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png')]).then(([sprites,materials])=>{
-            this.sprites=sprites;this.materials=materials;
+        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png')]).then(([sprites,materials,walker,zombies,traps])=>{
+            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;
             const xs=[0,313,626,940,1254],ys=[0,302,618,918,1254];
             for(let i=0;i<16;i++) {
                 const c=document.createElement('canvas');c.width=c.height=100;
@@ -18,9 +18,43 @@ const Art = {
                 c.getContext('2d').drawImage(materials,xs[x]+2,ys[y]+2,xs[x+1]-xs[x]-4,ys[y+1]-ys[y]-4,0,0,100,100);
                 this.tiles.push(c);
             }
-            this.ready=true;
+            this.prepareWalker();this.ready=true;
         }).catch(()=>{this.failed=true;});
     },
+    prepareWalker(canvasFactory=()=>document.createElement('canvas')) {
+        const c=canvasFactory();c.width=this.walker.width;c.height=this.walker.height;
+        const ctx=c.getContext('2d');ctx.drawImage(this.walker,0,0);
+        const frame=ctx.getImageData(0,0,c.width,c.height),d=frame.data;
+        // This atlas uses neutral grey/white as a color key. Brown clothing is retained.
+        for(let i=0;i<d.length;i+=4) {
+            const lo=Math.min(d[i],d[i+1],d[i+2]),hi=Math.max(d[i],d[i+1],d[i+2]);
+            if(lo>145&&hi-lo<19)d[i+3]=0;
+        }
+        ctx.putImageData(frame,0,0);this.walker=c;
+    },
+    frame(ctx,atlas,index,x,y,w,h=w,feet=false) {
+        if(!atlas)return;
+        const bounds=[0,314,627,941,1254],col=index%4,row=Math.floor(index/4);
+        const rows=atlas===this.walker?[0,319,625,919,1254]:atlas===this.traps?[0,310,604,890,1254]:[0,330,636,954,1254];
+        let sy=rows[row],ey=rows[row+1];
+        if(atlas===this.zombies) {
+            const cuts=[[0,330,636,954,1254],[0,314,615,939,1254],[0,325,636,947,1254],[0,327,631,960,1254]][col];sy=cuts[row];ey=cuts[row+1];
+        }
+        ctx.drawImage(atlas,bounds[col],sy,bounds[col+1]-bounds[col],ey-sy,x-w/2,y-(feet?h*.94:h/2),w,h);
+    },
+    raider(ctx,e,x,y,size) {
+        const top=y-size*.94,split=top+size*.73;
+        // Stable torso plus an articulated boot section keeps the lantern consistent.
+        ctx.save();ctx.beginPath();ctx.rect(x-size/2,top,size,size*.73);ctx.clip();
+        this.frame(ctx,this.walker,e.direction*4,x,y,size,size,true);ctx.restore();
+        ctx.save();ctx.beginPath();ctx.rect(x-size/2,split,size,size*.32);ctx.clip();
+        ctx.translate(x,split);
+        const passing=e.moving&&(e.walkFrame===1||e.walkFrame===3),front=e.direction===0||e.direction===3;
+        const mirror=front&&e.moving&&e.walkFrame>=2?-1:1;
+        ctx.scale(mirror*(passing?.7:1),passing?.92:1);
+        this.frame(ctx,this.walker,e.direction*4+(front?0:e.moving?e.walkFrame:3),0,y-split,size,size,true);ctx.restore();
+    },
+
     sprite(ctx,index,x,y,size,flip=false) {
         if(!this.ready)return;
         const r=this.rects[index];ctx.save();ctx.translate(x,y);
@@ -69,13 +103,16 @@ const Scene = {
         }
         for(const hazard of World.hazards) {
             const phase=World.phase(hazard),active=phase>4.5,warn=phase>3.2;
-            ctx.save();ctx.translate(hazard.x,hazard.y);
-            ctx.fillStyle=active?'#d9562270':'#0e1515a0';ctx.beginPath();ctx.arc(0,0,25,0,Math.PI*2);ctx.fill();
-            ctx.strokeStyle=warn?(hazard.kind==='poison'?'#a6d74d':'#f39c61'):'#96917466';ctx.lineWidth=warn?3:1;
-            ctx.setLineDash(active?[]:[4,5]);ctx.beginPath();ctx.arc(0,0,28,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
-            if(active)Art.glow(ctx,0,0,50,hazard.kind==='poison'?'#91b94490':'#ff732680');
-            if(warn&&!active)Art.label(ctx,0,-36,curLang==='CN'?'避开':'MOVE','#ffc39b');
-            ctx.restore();
+            const kind=hazard.kind==='poison'?12:hazard.kind==='fire'?8:6;
+            const index=kind===6?6:kind+(active?2:warn?1:0);
+            if(active||warn)Art.glow(ctx,hazard.x,hazard.y,43,hazard.kind==='poison'?'#8bc85038':'#f99a4538');
+            Art.frame(ctx,Art.traps,index,hazard.x,hazard.y,62);
+            if(active&&kind===6) {
+                // Raise the spikes over the plate during the first 0.12 seconds.
+                ctx.save();ctx.globalAlpha=Math.min(1,(phase-4.5)/.12);
+                Art.frame(ctx,Art.traps,7,hazard.x,hazard.y-2,62);ctx.restore();
+            }
+            if(warn&&!active)Art.label(ctx,hazard.x,hazard.y-37,curLang==='CN'?'避开机关':'MOVE AWAY','#ffc39b');
         }
         const visible=e=>e.x>cx-100&&e.x<cx+w+100&&e.y>cy-100&&e.y<cy+h+100;
         const objects=[...World.props.map(e=>({...e,type:'decoration'})),...World.altars.map(e=>({...e,type:'altar'})),...game.ents.filter(e=>!e.dead),{...game.exitPos,type:'exit'}].filter(visible).sort((a,b)=>a.y-b.y);
@@ -110,15 +147,23 @@ const Scene = {
             if(e.progress>0&&!e.done)Art.progress(ctx,e.x,e.y-51,e.progress/1.2,col);return;
         }
         if(['player','zombie'].includes(e.type)) {
-            ctx.fillStyle='#0007';ctx.beginPath();ctx.ellipse(e.x,e.y+4,18,8,0,0,Math.PI*2);ctx.fill();
-            const player=e.type==='player',moving=player?Input.active:true;
-            const bob=moving?Math.sin(time*(player?12:e.zType===1?15:7))*1.8:0;
+            const player=e.type==='player',lift=player?0:e.hopHeight||0;
+            ctx.fillStyle='#0007';ctx.beginPath();ctx.ellipse(e.x,e.y+4,18-lift*.3,7-lift*.1,0,0,Math.PI*2);ctx.fill();
             if(player) {
-                Art.glow(ctx,e.x,e.y-12,85,'#f4bf5936');
+                if(e.buffs.candle>0)Art.glow(ctx,e.x,e.y-12,85,'#f4bf5945');
                 if(e.buffs.jade>0||e.buffs.hoof>0) {ctx.strokeStyle=e.buffs.jade>0?'#b8f0d2':'#d8b077';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(e.x,e.y,25,12,0,0,Math.PI*2);ctx.stroke();}
                 ctx.save();if(e.inv>0)ctx.globalAlpha=.6+.4*Math.sin(time*25)**2;
-                Art.sprite(ctx,0,e.x,e.y+bob,76,e.facingLeft);ctx.restore();
-            } else {Art.sprite(ctx,1+e.zType,e.x,e.y+bob,e.zType===1?78:74,e.x>game.p.x);}
+                const bob=e.moving?-Math.abs(Math.sin(e.stepPhase))*1.8:0;
+                Art.raider(ctx,e,e.x,e.y+bob,74);ctx.restore();
+            } else {
+                const pose=e.attackState==='windup'?2:e.attackState==='strike'?3:lift>2?1:0;
+                const lunge=e.attackState==='strike'?Math.sin((1-e.attackClock/.24)*Math.PI)*11:0;
+                ctx.save();ctx.translate(e.x+Math.cos(e.attackAim)*lunge,e.y-lift+Math.sin(e.attackAim)*lunge);
+                if(e.x>game.p.x)ctx.scale(-1,1);
+                if(e.landT>0)ctx.scale(1.06,.94);
+                Art.frame(ctx,Art.zombies,e.zType*4+pose,0,0,78,78,true);ctx.restore();
+                if(e.attackState==='windup')Art.label(ctx,e.x,e.y-77,cn?'!':'!','#ffae83');
+            }
             return;
         }
         if(e.type==='coffin') {
@@ -134,11 +179,28 @@ const Scene = {
             if(distance<95)Art.label(ctx,e.x,e.y-38,LANG[curLang].items[e.code.replace('item_','')].n);return;
         }
         if(e.type==='trap') {
-            Art.sprite(ctx,e.pType==='FIRE'?7:6,e.x,e.y,68);
+            const kick=(e.recoil||0)/.28*7;
+            ctx.save();ctx.translate(e.x-Math.cos(e.aim)*kick,e.y-Math.sin(e.aim)*kick);
+            if(e.windup>0)ctx.rotate(Math.sin(time*38)*.025);
+            Art.sprite(ctx,e.pType==='FIRE'?7:6,0,0,68);ctx.restore();
             if(e.windup>0) {
                 ctx.save();ctx.strokeStyle='#ff876bad';ctx.lineWidth=2;ctx.setLineDash([7,5]);ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.x+Math.cos(e.aim)*250,e.y+Math.sin(e.aim)*250);ctx.stroke();ctx.restore();
                 Art.glow(ctx,e.x,e.y-10,35,'#ff5a3966');
             }return;
+        }
+        if(e.type==='proj') {
+            const specs={ARROW:[0,42,42],STONE:[1,28,28],LOG:[2,44,28],FIRE:[3,42,42],VENOM:[4,30,30]};
+            const [index,sw,sh]=specs[e.pType]||specs.ARROW;
+            ctx.save();ctx.translate(e.x,e.y);ctx.rotate(e.ang+(e.pType==='STONE'?e.age*5:0));
+            if(e.pType==='FIRE'||e.pType==='VENOM')Art.glow(ctx,0,0,25,e.pType==='FIRE'?'#ed892a55':'#92c84344');
+            Art.frame(ctx,Art.traps,index,0,0,sw,sh);ctx.restore();return;
+        }
+        if(e.type==='effect'&&['dust','slash','spit','muzzle'].includes(e.effectType)) {
+            const index={dust:12,slash:13,spit:14,muzzle:15}[e.effectType],progress=1-e.life;
+            ctx.save();ctx.globalAlpha=Math.max(0,e.life)*(e.effectType==='dust'?.45:1);
+            ctx.translate(e.x,e.y);if(e.effectType!=='dust')ctx.rotate(e.angle||0);
+            const size=e.effectType==='slash'?48:e.effectType==='dust'?20+progress*35:28+progress*22;
+            Art.frame(ctx,Art.zombies,index,0,-(e.effectType==='dust'?progress*6:0),size);ctx.restore();return;
         }
         if(e.type==='effect'&&e.effectType==='gold') {ctx.save();ctx.globalAlpha=Math.max(0,e.life);Art.sprite(ctx,13,e.x,e.y-(1-e.life)*40,44);ctx.restore();return;}
         ctx.save();ctx.translate(e.x,e.y);if(e.draw)e.draw(ctx);ctx.restore();
