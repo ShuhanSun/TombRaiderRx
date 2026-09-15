@@ -48,15 +48,15 @@ const PROJ_TYPES = {
 const LANG = {
     CN: {
         title: "寻龙诀",
-        ver: "十层古墓 · 一盏孤灯",
-        p1: "传说中的古墓埋藏着无数金银财宝，但也由古代机关和复活的僵尸守卫。玩家扮演一名摸金校尉，需深入十层地下迷宫。每一层都有无数危险，只有开启棺材，<b>找到镇墓冥器</b>，才能打开通往下一层的盗洞，带着荣耀重返人间。",
+        ver: "古墓新篇 · 画境与回声",
+        p1: "一盏灯，十重墓。你要找到每层的<b>镇墓冥器</b>，在机关与守墓尸的追逐中寻到盗洞。供奉室留有补给，安息室可借祭火护身；越往深处，越要留意封印与地火。",
         startBtn: "点灯摸金",
         level: "第 %s 层 | %m",
         trapLabel: "机关",
         artLabel: "冥器",
         modalBtn: "收入囊中",
-        endTitle: "胜败乃兵家常事",
-        endDesc: "大侠请重新来过",
+        endTitle: "灯尽于此",
+        endDesc: "记住来路，下一次离天光更近。",
         endBtn: "再探古墓",
         winTitle: "摸金校尉 凯旋",
         winDesc: "找到冥器，逃出生天！",
@@ -71,15 +71,15 @@ const LANG = {
         msgs: {
             start: "进入第 %s 层",
             hurt: "受到伤害!",
-            empty: "空空如也...",
-            trap: "大凶! 机关触发!",
-            zombie: "起尸了!",
+            empty: "棺中只余尘土",
+            trap: "机括声起 · 速退",
+            zombie: "棺中有变 · 守墓尸苏醒",
             candle: "灯火通明!",
             compass: "罗盘在手! 寻龙分金!",
             heal: "生命恢复!",
             repel: "尸畏 15秒!",
             immune: "无敌 15秒!",
-            hole: "盗洞已开启! 水脉逆流!"
+            hole: "水脉倒灌 · 盗洞已开"
         },
         levelNames: LEVEL_NAMES_CN,
         trapNames: TRAP_NAMES_CN,
@@ -89,7 +89,7 @@ const LANG = {
     EN: {
         title: "Tomb Raider",
         ver: "TEN FLOORS · ONE FLAME",
-        p1: "Ancient tombs hold countless treasures. As a Raider, descend 10 levels. Find the <b>Artifact</b> to unlock the exit. Use the Feng Shui Compass to guide your way.",
+        p1: "One lantern. Ten buried floors. Find each <b>relic</b>, evade ancient traps, and reach the exit. Seek supplies and sanctuary altars; deeper chambers hide fire and seals.",
         startBtn: "Start Raid",
         level: "Level %s | %m",
         trapLabel: "Trap",
@@ -133,22 +133,9 @@ let curLang = 'CN';
 // --- Audio ---
 const AudioSys = {
     ctx: null, gain: null, lastHurt: 0, muted: false,
-    init: function() {
-        if(this.ctx) { this.ctx.resume().catch(()=>{}); return; }
-        try {
-            window.AudioContext = window.AudioContext || window.webkitAudioContext;
-            this.ctx = new AudioContext();
-            this.gain = this.ctx.createGain();
-            this.gain.gain.value = this.muted ? 0 : 0.5;
-            this.gain.connect(this.ctx.destination);
-            const d=this.ctx.createDelay(); d.delayTime.value=0.2;
-            const dg=this.ctx.createGain(); dg.gain.value=0.2;
-            this.gain.connect(d); d.connect(dg); dg.connect(this.ctx.destination);
-            this.ctx.resume().catch(()=>{});
-        } catch(e) {}
-    },
+    init: function() { Sound.unlock(); },
     tone: function(f, type, dur, vol=0.1, slide=null) {
-        if(!this.ctx) return;
+        if(!this.ctx||this.muted||this.ctx.state!=='running') return;
         const t = this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
         const g = this.ctx.createGain();
@@ -162,7 +149,7 @@ const AudioSys = {
     },
     playStep: function() { if(this.ctx) this.tone(60, 'square', 0.1, 0.15, 30); },
     playOpen: function() {
-        if(!this.ctx) return;
+        if(!this.ctx||this.muted||this.ctx.state!=='running') return;
         const t=this.ctx.currentTime, o=this.ctx.createOscillator(), g=this.ctx.createGain(), f=this.ctx.createBiquadFilter();
         o.type='triangle'; o.frequency.setValueAtTime(50,t); o.frequency.exponentialRampToValueAtTime(30,t+0.8);
         f.type='lowpass'; f.frequency.value=200;
@@ -286,6 +273,7 @@ class Entity { constructor(x,y,t){this.x=x;this.y=y;this.type=t;this.dead=0;} }
 class GroundItem extends Entity {
     constructor(x,y,code) { super(x,y,'ground_item'); this.code=code; }
     update(dt, p) {
+        if(this.code==='item_wine'&&p.hp>=5)return;
         if(Math.hypot(this.x-p.x, this.y-p.y) < 30) { Game.getItem(this.code); this.dead = 1; }
     }
     draw(ctx) {
@@ -325,6 +313,11 @@ class Coffin extends Entity {
                 Game.getArtifact();
                 Game.addText(this.x, this.y, ARTIFACTS[Game.lvl-1][curLang==='CN'?'n':'en'], '#ffd700');
                 Game.spawn(new Effect(this.x,this.y,'gold'));
+            }
+            else if(this.content === 'supply') {
+                Game.spawn(new GroundItem(this.x+35,this.y,'item_wine'));
+                Game.spawn(new GroundItem(this.x-35,this.y,'item_jade'));
+                Game.addText(this.x,this.y,curLang==='CN'?'供物尚存':'Offerings remain','#aaddbb');
             }
             else if(this.content === 'zombie') {
                 Game.spawn(new Zombie(this.x,this.y+20, 0));
@@ -403,7 +396,7 @@ class Zombie extends Entity {
         let repel = p.buffs.hoof > 0;
 
         if(this.zType === 0 || this.zType === 2) { // Blue or Green
-            let active = d<200 || (Input.active && d<350);
+            let active = d<160 || (Input.active && d<(Input.sprint?420:250));
             if(active || repel) {
                 let tx=dx, ty=dy, s=this.spd;
                 if(repel && d<350) { tx=-dx; ty=-dy; s=this.spd*1.5; }
@@ -425,7 +418,7 @@ class Zombie extends Entity {
             // Green Attack (Spit)
             if(this.zType === 2) {
                 this.attackCD -= dt;
-                if(!repel && d < 250 && this.attackCD <= 0) {
+                if(!repel && d < 250 && this.attackCD <= 0 && MapSys.lineClear(this.x,this.y,p.x,p.y)) {
                     const ang = Math.atan2(dy, dx);
                     Game.spawn(new Projectile(this.x, this.y, ang, 'VENOM'));
                     AudioSys.playTrap(d);
@@ -474,7 +467,7 @@ class Zombie extends Entity {
 class Trap extends Entity {
     constructor(x,y,lvlIndex){
         super(x,y,'trap');
-        this.life=3; this.cd=Math.random();
+        this.life=3; this.cd=1.5+Math.random(); this.windup=0;this.aim=0;
         const data = LEVELS_DATA[Math.min(lvlIndex,9)];
         this.pType = data.type === 'MIX' ? Object.keys(PROJ_TYPES)[Math.floor(Math.random()*4)] : data.type;
         this.color = data.col;
@@ -482,15 +475,17 @@ class Trap extends Entity {
         this.lvlIdx = Math.min(lvlIndex,9);
     }
     update(dt,p){
-        const dist = Math.hypot(this.x-p.x, this.y-p.y);
-        if(dist < 400) {
-            this.cd-=dt;
-            if(this.cd<0){
-                this.cd = LEVELS_DATA[this.lvlIdx].delay + Math.random()*0.3;
-                const pdx=p.x-this.x, pdy=p.y-this.y, ang=Math.atan2(pdy,pdx);
-                Game.spawn(new Projectile(this.x,this.y,ang,this.pType));
+        const dist=Math.hypot(this.x-p.x,this.y-p.y);
+        if(this.windup>0) {
+            this.windup-=dt;
+            if(this.windup<=0) {
+                Game.spawn(new Projectile(this.x,this.y,this.aim,this.pType));
                 AudioSys.playTrap(dist);
+                this.cd=LEVELS_DATA[this.lvlIdx].delay+0.4;
             }
+        } else if(dist<400&&MapSys.lineClear(this.x,this.y,p.x,p.y)) {
+            this.cd-=dt;
+            if(this.cd<=0) {this.windup=.8;this.aim=Math.atan2(p.y-this.y,p.x-this.x);}
         }
     }
     draw(ctx){
@@ -538,6 +533,7 @@ class Player extends Entity {
         if(MapSys.get(this.x,this.y)===TERRAIN.WATER) s*=0.5;
 
         if(Input.active){
+            if(Math.abs(Input.x)>.08)this.facingLeft=Input.x<0;
             const nx=this.x+Input.x*s*dt, ny=this.y+Input.y*s*dt;
 
             if(MapSys.canOccupy(nx,this.y,10))this.x=nx;
@@ -583,8 +579,9 @@ const MapSys = {
     gen: function(l){
         this.t=new Uint8Array(this.w*this.h).fill(1);
         const rms=[];
-        for(let i=0;i<250 && rms.length<7+l;i++){
-            const w=6+Math.floor(Math.random()*6), h=6+Math.floor(Math.random()*6);
+        for(let i=0;i<350 && rms.length<(l===5?18:l===9?8:7+l);i++){
+            const w=(l===2?4:l===9?9:6)+Math.floor(Math.random()*(l===5?2:6));
+            const h=(l===2?9:l===6?5:6)+Math.floor(Math.random()*(l===5?2:5));
             const x=2+Math.floor(Math.random()*(this.w-w-4)), y=2+Math.floor(Math.random()*(this.h-h-4));
             if(!rms.some(r=>x<r.x+r.w+1 && x+w+1>r.x && y<r.y+r.h+1 && y+h+1>r.y)){
                 rms.push({x,y,w,h});
@@ -606,6 +603,11 @@ const MapSys = {
             for(let x=8;x<48;x++) this.t[28*this.w+x]=TERRAIN.FLOOR;
         }
         return rms;
+    },
+    lineClear: function(x1,y1,x2,y2) {
+        const steps=Math.ceil(Math.hypot(x2-x1,y2-y1)/12);
+        for(let i=1;i<steps;i++)if(this.get(x1+(x2-x1)*i/steps,y1+(y2-y1)*i/steps)===TERRAIN.WALL)return false;
+        return true;
     },
     canOccupy: function(x,y,radius) {
         return [[-radius,-radius],[radius,-radius],[-radius,radius],[radius,radius]].every(([dx,dy])=>this.get(x+dx,y+dy)!==TERRAIN.WALL);
@@ -661,10 +663,15 @@ const Game = {
         for(const [id,value] of Object.entries(labels)) document.getElementById(id).textContent=value;
         document.getElementById('pause-btn').setAttribute('aria-label',cn?'暂停':'Pause');
         this.updateSoundButton();
-        if(this.p) this.updateHUD();
+        Sound.status();
+        document.getElementById('sound-test-btn').textContent=cn?'开启 / 试音':'Enable / Test sound';
+        document.getElementById('pause-sound-btn').textContent=cn?'开启 / 试音':'Enable / Test sound';
+        document.getElementById('game-ver').textContent=cn?'古墓新篇 · 画境与回声':'EXPEDITION · STONE & ECHO';
+        if(this.p) { this.updateHUD();World.room=null;World.updateRoom(); }
     },
 
     init: function(){
+        if(!Art.ready&&!Art.failed)return;
         this.resize(); window.onresize=()=>this.resize();
         document.getElementById('start-screen').style.display='none';
         AudioSys.init();
@@ -672,6 +679,7 @@ const Game = {
     },
 
     restart: function() {
+        AudioSys.init();
         this.lvl = 1; this.art = 0; this.saved = null; this.items = [];
         document.getElementById('game-over-modal').classList.remove('active');
         document.getElementById('victory-modal').classList.remove('active');
@@ -695,14 +703,10 @@ const Game = {
         if(force&&this.pause) return;
         this.pause=force||!this.pause; Input.reset(); this.lastTime=null; this.accumulator=0;
         document.getElementById('pause-modal').classList.toggle('active',!!this.pause);
-        if(this.pause) document.getElementById('resume-btn').focus();
-        else document.getElementById('pause-btn').focus();
+        if(this.pause) {Sound.pause();document.getElementById('resume-btn').focus();}
+        else {Sound.unlock();document.getElementById('pause-btn').focus();}
     },
-    toggleSound: function() {
-        AudioSys.muted=!AudioSys.muted;
-        if(AudioSys.gain) AudioSys.gain.gain.value=AudioSys.muted?0:0.5;
-        this.updateSoundButton();
-    },
+    toggleSound: function() { Sound.toggle(); },
     updateSoundButton: function() {
         const btn=document.getElementById('sound-btn');
         btn.textContent=AudioSys.muted?'×♪':'♪';
@@ -712,13 +716,13 @@ const Game = {
 
     showExitModal: function() {
         document.getElementById('exit-modal').classList.add('active');
-        this.pause = true; Input.reset();
+        this.pause = true; Input.reset();Sound.pause();
         document.getElementById('exit-confirm-btn').focus();
     },
     confirmNextLevel: function() {
-        if(!this.running||!this.exit||!document.getElementById('exit-modal').classList.contains('active')) return;
+        if(!this.running||!World.canExit()||!document.getElementById('exit-modal').classList.contains('active')) return;
         document.getElementById('exit-modal').classList.remove('active');
-        this.pause = false;
+        this.pause = false;Sound.unlock();
         if(this.lvl>=10){ this.victory(); }
         else {
             this.saved={hp:this.p.hp,sight:this.p.sight,hasCompass:this.p.hasCompass};
@@ -774,8 +778,8 @@ const Game = {
         let trapsPlaced = 0;
         while(trapsPlaced < trapCount) {
              const r=rms[1+Math.floor(Math.random()*(rms.length-1))];
-             const tx = (r.x + 1 + Math.floor(Math.random()*(r.w-2))) * CONFIG.TILE;
-             const ty = r.y * CONFIG.TILE;
+             const tx = (r.x + 1.5 + Math.floor(Math.random()*(r.w-2))) * CONFIG.TILE;
+             const ty = (r.y+.5) * CONFIG.TILE;
              this.ents.push(new Trap(tx, ty, l-1));
              trapsPlaced++;
         }
@@ -790,13 +794,15 @@ const Game = {
             const zType = isSprinter ? 1 : (isGreen ? 2 : 0);
             this.ents.push(new Zombie((r.x+2)*CONFIG.TILE, (r.y+2)*CONFIG.TILE, zType));
         }
+        World.setup(rms);
+        document.getElementById('level-note').textContent=curLang==='CN'?World.theme.note:World.theme.enNote;
         clearTimeout(this.msgTimer); document.getElementById('msg-box').classList.remove('msg-show');
         this.updateHUD(); this.refreshBuffs(); this.refreshExploration(); this.drawMinimap();
 
         const lName = LANG[curLang].levelNames[Math.min(l-1,9)];
         const splash = document.getElementById('level-title-text');
         const levelStr = LANG[curLang].level.replace('%s', l).split('|')[0].trim();
-        splash.innerText = `${levelStr} | ${lName}`;
+        splash.innerText = `${levelStr} · ${lName}`;
         document.getElementById('level-title-box').classList.remove('show-level-title');
         void document.getElementById('level-title-box').offsetWidth;
         document.getElementById('level-title-box').classList.add('show-level-title');
@@ -811,7 +817,7 @@ const Game = {
 
 
         this.art++; this.exit=1;
-        this.msg(`${name} · ${LANG[curLang].msgs.hole}`, "#dfc58c");
+        this.msg(`${name} · ${World.remaining()?(curLang==='CN'?'冥器入囊，还需解除封印':'Relic secured. Break the remaining seals.'):LANG[curLang].msgs.hole}`, "#dfc58c");
         this.updateHUD();
 
         const r = this.exitRoom;
@@ -850,17 +856,17 @@ const Game = {
 
         document.getElementById('artifact-bar').innerText = `${LANG[curLang].artLabel}: ${this.art}/10`;
         const cn=curLang==='CN';
-        document.getElementById('objective').textContent=this.exit?(cn?'盗洞已开启 · 前往金色标记':'Exit unlocked · reach the gold marker'):(cn?'寻找镇墓冥器 · 靠近石棺自动开启':'Find the relic · stay beside a coffin to open');
+        document.getElementById('objective').textContent=World.remaining()&&this.exit?(cn?`冥器已得 · 还需破除 ${World.remaining()} 道封印`:`Relic secured · ${World.remaining()} seals remain`):this.exit?(cn?'盗洞已开启 · 循罗盘离开':'Exit open · follow the compass'):(cn?'寻找镇墓冥器 · 驻足开棺':'Find the relic · stay beside coffins');
         document.getElementById('exit-confirm-btn').textContent=this.lvl===10?(cn?'逃出生天':'Escape the tomb'):LANG[curLang].exitModal.yes;
     },
     over: function(){
-        this.running=0; Input.reset();
+        this.running=0; Input.reset();Sound.pause();
         document.getElementById('end-desc').textContent=this.runSummary();
         document.getElementById('game-over-modal').classList.add('active');
         document.getElementById('end-btn').focus();
     },
     victory: function(){
-        this.running=0; Input.reset();
+        this.running=0; Input.reset();Sound.pause();
         document.getElementById('win-desc').textContent=this.runSummary();
         document.getElementById('victory-modal').classList.add('active');
         document.getElementById('win-btn').focus();
@@ -901,9 +907,11 @@ const Game = {
         this.texts=this.texts.filter(t=>t.life>0);
         this.texts.forEach(t=>t.update(dt));
         if(!this.running) return;
+        World.update(dt);
+        if(!this.running)return;
         this.hudTimer-=dt;
         if(this.hudTimer<=0) { this.refreshExploration(); this.refreshBuffs(); this.drawMinimap(); this.hudTimer=0.1; }
-        if(this.exit&&Math.hypot(this.exitPos.x-this.p.x,this.exitPos.y-this.p.y)<30) this.showExitModal();
+        if(World.canExit()&&Math.hypot(this.exitPos.x-this.p.x,this.exitPos.y-this.p.y)<30) this.showExitModal();
     },
     refreshBuffs: function() {
         let html='';
@@ -918,7 +926,7 @@ const Game = {
     },
     refreshExploration: function() {
         const px=Math.floor(this.p.x/CONFIG.TILE), py=Math.floor(this.p.y/CONFIG.TILE);
-        const radius=Math.max(2,Math.floor(this.p.sight/CONFIG.TILE*0.65));
+        const radius=Math.max(2,Math.floor(World.sight()/CONFIG.TILE*0.65));
         for(let y=Math.max(0,py-radius);y<=Math.min(MapSys.h-1,py+radius);y++) {
             for(let x=Math.max(0,px-radius);x<=Math.min(MapSys.w-1,px+radius);x++) {
                 if(Math.hypot(x-px,y-py)<=radius) this.explored[y*MapSys.w+x]=1;
@@ -938,12 +946,17 @@ const Game = {
             const index=Math.floor(e.y/CONFIG.TILE)*MapSys.w+Math.floor(e.x/CONFIG.TILE);
             if(e.type==='coffin'&&!e.opened&&this.explored[index]) dot(e,'#c3aa8a',2);
         }
-        const target=this.exit?this.exitPos:this.artifactPos;
+        const target=World.target();
         if(target&&(this.exit||this.p.hasCompass)) dot(target,'#ffd47d',3);
+        for(const a of World.altars) {
+            const index=Math.floor(a.y/50)*60+Math.floor(a.x/50);
+            if(!a.done&&(this.explored[index]||(this.exit&&a.kind==='seal')))dot(a,a.kind==='seal'?'#e9bd75':'#80dcb9',2.5);
+        }
         dot(this.p,'#c3ffe5',3);
     },
 
     render: function(){
+        if(Art.ready) {Scene.draw(this);return;}
         const w=this.width, h=this.height, ctx=this.ctx;
         ctx.setTransform(this.dpr,0,0,this.dpr,0,0);
         let cx=this.p.x-w/2 + (Math.random()-.5)*this.shake, cy=this.p.y-h/2 + (Math.random()-.5)*this.shake;
@@ -1028,3 +1041,11 @@ const Game = {
 };
 
 Game.updateUI();
+const startButton=document.getElementById('start-btn-text');
+startButton.disabled=true;
+const assetStatus=document.getElementById('asset-status');
+assetStatus.textContent=curLang==='CN'?'正在整理行装…':'Preparing expedition…';
+Art.load().then(()=>{
+    startButton.disabled=Art.failed;
+    assetStatus.textContent=Art.failed?(curLang==='CN'?'图案未加载完成，请刷新页面后重试。':'Artwork failed to load. Refresh the page to retry.'):(curLang==='CN'?'行装已备 · 点灯入墓':'Ready · light your lantern');
+});

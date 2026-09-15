@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>寻龙诀 · 十层古墓</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=2">
 
 </head>
 <body>
@@ -19,13 +19,14 @@
         </div>
     </div>
     <div id="objective" class="hud"></div>
+    <div id="room-panel"><strong id="room-name"></strong><p id="room-hint"></p></div>
     <div id="game-actions"><button id="pause-btn" class="icon-btn" onclick="Game.togglePause()" aria-label="暂停">Ⅱ</button><button id="sound-btn" class="icon-btn" onclick="Game.toggleSound()" aria-label="静音">♪</button></div>
     <div id="map-panel"><canvas id="minimap" width="180" height="180" aria-label="已探索区域地图"></canvas><div id="map-caption">探索地图 · 金点为目标</div></div>
     <div id="control-hint" class="hud"></div>
     <div id="item-bar"></div>
     <div id="buff-bar"></div>
     <div id="msg-box" role="status" aria-live="polite"></div>
-    <div id="level-title-box"><div id="level-title-text"></div></div>
+    <div id="level-title-box"><div id="level-title-text"></div><p id="level-note"></p></div>
 
     <!-- Controls -->
     <div id="joystick-zone"><div id="joystick-knob"></div></div>
@@ -42,7 +43,7 @@
 </div>
 
 <div id="pause-modal" class="overlay" role="dialog" aria-modal="true" aria-labelledby="pause-title">
-    <div class="pause-card"><div class="eyebrow">TOMB RAIDER</div><h2 id="pause-title">灯火未熄</h2><p id="pause-desc">歇息片刻，古墓中的时间已暂停。</p><button id="resume-btn" class="btn" onclick="Game.togglePause()">继续探索</button></div>
+    <div class="pause-card"><div class="eyebrow">TOMB RAIDER</div><h2 id="pause-title">灯火未熄</h2><p id="pause-desc">歇息片刻，古墓中的时间已暂停。</p><button id="resume-btn" class="btn" onclick="Game.togglePause()">继续探索</button><button id="pause-sound-btn" class="btn secondary" onclick="Sound.test()">开启 / 试音</button><p id="pause-audio-status" role="status"></p></div>
 </div>
 <!-- Game Over Screen -->
 <div id="game-over-modal" class="overlay">
@@ -75,12 +76,17 @@
     <div class="guide-grid"><div><span>01</span><strong id="guide-move">循光探路</strong><p id="guide-move-desc">WASD / 方向键移动，Shift 疾行；手机使用摇杆。</p></div><div><span>02</span><strong id="guide-find">驻足开棺</strong><p id="guide-find-desc">靠近石棺停留片刻，寻找本层唯一的镇墓冥器。</p></div><div><span>03</span><strong id="guide-exit">寻龙脱身</strong><p id="guide-exit-desc">拾取罗盘指引方向，取得冥器后前往盗洞。</p></div></div>
     <button class="btn start-cta" style="margin-top:30px" onclick="Game.init()" id="start-btn-text">点灯摸金</button>
 
+    <div class="audio-check"><button id="sound-test-btn" class="btn secondary" onclick="Sound.test()">开启 / 试音</button><p id="audio-status" role="status"></p></div>
+    <p id="asset-status" role="status"></p>
     <div class="footer">
         © 2025 Shuhan Sun. All Rights Reserved.<br>
         Developed for TombRaider Survival Project.
     </div>
 </div>
 
-<script src="game.js"></script>
+<script src="audio.js?v=2"></script>
+<script src="world.js?v=2"></script>
+<script src="art.js?v=2"></script>
+<script src="game.js?v=2"></script>
 </body>
 </html>

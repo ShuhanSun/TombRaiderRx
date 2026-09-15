@@ -177,3 +177,68 @@ h1 { font-size:clamp(52px,9vw,84px); letter-spacing:16px; margin:28px 0 0; color
 @media (prefers-reduced-motion:reduce) { *, *::before { animation:none !important; transition:none !important; } }
 
 html[lang='en'] h1 { font-size:clamp(32px,7vw,68px); letter-spacing:4px; }
+
+/* Expedition v2: top-mounted navigation leaves both thumbs unobstructed. */
+#map-panel { top:90px; right:18px; bottom:auto; left:auto; padding:7px; background:#080f14e8; border-color:#8e9c7b70; }
+#minimap { width:140px; height:140px; }
+#map-caption { font-size:11px; max-width:140px; }
+#room-panel { position:absolute; top:104px; left:20px; width:min(280px,calc(100vw - 210px)); color:#cbd0bb; text-shadow:0 2px 4px #000; }
+#room-name { font-size:16px; font-weight:500; color:#e5d3a8; letter-spacing:2px; }
+#room-hint { font-size:12px; line-height:1.65; margin:7px 0; color:#bdc4b5; }
+#item-bar { top:198px; }
+#buff-bar { top:239px; }
+#level-note { margin:18px auto 0; max-width:min(85vw,580px); font-size:15px; color:#f0dfbc; line-height:1.7; text-shadow:0 2px 8px #000; }
+#control-hint { left:20px; bottom:24px; }
+#start-screen { background:radial-gradient(ellipse at 50% 20%,#383322d9,#091116f7 65%),url('assets/tomb-materials.png') center/700px; }
+#start-screen::before { display:none; }
+#start-screen .intro-text { font-size:15px; }
+.guide-grid p { font-size:13px; }
+.btn.secondary { background:transparent; border-color:#8d9b7659; color:#c2cbbb; font-size:14px; padding:9px 16px; }
+.audio-check { margin-top:18px; max-width:440px; }
+#audio-status { color:#b2bbaf; font-size:12px; line-height:1.7; margin:8px 0 0; }
+#asset-status { font-size:12px; color:#b9b89d; margin:10px 0 0; }
+#pause-sound-btn { display:block; margin:16px auto 0; }
+.btn:disabled { opacity:.45; cursor:wait; }
+#start-screen .footer { margin-top:18px; }
+#joystick-zone { background:radial-gradient(circle,#202c2955,#0b1217aa); border-color:#b9be9266; }
+#joystick-knob { background:radial-gradient(circle at 35% 25%,#c1b48d,#6d694a); border-color:#e1d5af88; }
+#sprint-btn { background:#18221bcc; color:#e9d8b7; font-weight:600; }
+#msg-box { top:29%; }
+@media (max-width:600px) {
+    #map-panel { top:104px; right:12px; bottom:auto; left:auto; padding:5px; }
+    #minimap { width:106px; height:106px; }
+    #map-caption { max-width:106px; font-size:10px; }
+    #room-panel { top:104px; left:12px; width:calc(100vw - 150px); max-width:240px; }
+    #room-name { font-size:14px; }
+    #room-hint { font-size:12px; line-height:1.6; }
+    #item-bar { top:196px; gap:5px; }
+    #buff-bar { top:232px; }
+    .buff { font-size:12px; padding:4px 7px; }
+    .item-slot { font-size:12px; padding:4px 7px; }
+    #start-screen { padding:62px 20px 24px; }
+    #start-screen h1 { font-size:56px; margin-top:18px; }
+    #start-screen #game-ver { margin:12px 0 16px; }
+    #start-screen .intro-text { font-size:14px; margin:0; }
+    .guide-grid { grid-template-columns:1fr; width:100%; max-width:390px; gap:0; }
+    .guide-grid > div { border:0; border-bottom:1px solid #9f815025; border-radius:0; padding:10px 0; background:transparent; display:grid; grid-template-columns:26px 88px 1fr; align-items:center; gap:8px; }
+    .guide-grid span { margin:0; }
+    .guide-grid p { margin:0; font-size:12px; }
+    .start-cta { margin-top:20px !important; }
+    .audio-check { margin-top:12px; }
+    html[lang='en'] #start-screen h1 { font-size:36px; letter-spacing:3px; }
+    html[lang='en'] .guide-grid > div { grid-template-columns:22px 92px 1fr; }
+}
+@media (max-height:500px) {
+    #map-panel { top:72px; right:12px; bottom:auto; left:auto; }
+    #minimap { width:78px; height:78px; }
+    #map-caption { display:none; }
+    #room-panel { top:83px; max-width:280px; }
+    #room-hint { display:none; }
+    #item-bar { top:115px; }
+    #buff-bar { top:148px; }
+    #level-title-box { top:36%; }
+    #level-title-text { font-size:26px; }
+    #level-note { margin-top:10px; font-size:13px; }
+}
+
+#pause-audio-status { font-size:12px; color:#bec6b6; line-height:1.7; margin-bottom:0; }
