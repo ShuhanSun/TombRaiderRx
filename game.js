@@ -48,38 +48,39 @@ const PROJ_TYPES = {
 const LANG = {
     CN: {
         title: "寻龙诀",
-        ver: "十层古墓 · 一盏孤灯",
-        p1: "传说中的古墓埋藏着无数金银财宝，但也由古代机关和复活的僵尸守卫。玩家扮演一名摸金校尉，需深入十层地下迷宫。每一层都有无数危险，只有开启棺材，<b>找到镇墓冥器</b>，才能打开通往下一层的盗洞，带着荣耀重返人间。",
+        ver: "古墓新篇 · 画境与回声",
+        p1: "一盏灯，十重墓。你要找到每层的<b>镇墓冥器</b>，在机关与守墓尸的追逐中寻到盗洞。供奉室留有补给，安息室可借祭火护身；越往深处，越要留意封印与地火。",
         startBtn: "点灯摸金",
         level: "第 %s 层 | %m",
         trapLabel: "机关",
         artLabel: "冥器",
         modalBtn: "收入囊中",
-        endTitle: "胜败乃兵家常事",
-        endDesc: "大侠请重新来过",
+        endTitle: "灯尽于此",
+        endDesc: "记住来路，下一次离天光更近。",
         endBtn: "再探古墓",
         winTitle: "摸金校尉 凯旋",
         winDesc: "找到冥器，逃出生天！",
         winBtn: "再来一局",
         items: {
-            candle: {n:"千年油灯", d:"<b>长明不灭</b>: 视野大幅扩大。"},
+            shovel: {n:"兵工铲", d:"近战武器：点击攻击按钮，挥击身边的僵尸。"},
+            candle: {n:"残油铜灯", d:"<b>添油续火</b>: 扩大视野 20 秒，每层仅一盏。"},
             wine: {n:"糯米酒", d:"<b>祛阴补阳</b>: 恢复 1 点生命值。"},
             hoof: {n:"黑驴蹄子", d:"<b>生人勿近</b>: 僵尸退避 15 秒。"},
-            jade: {n:"金缕玉衣", d:"<b>刀枪不入</b>: 免疫所有伤害 15 秒。"},
-            compass: {n:"风水罗盘", d:"<b>寻龙分金</b>: 指向冥器棺材，得手后指向盗洞。"}
+            jade: {n:"金缕玉衣", d:"<b>刀枪不入</b>: 抵挡下一次伤害后破损，不叠加。"},
+            compass: {n:"风水罗盘", d:"<b>寻龙分金</b>: 持有时显示小地图并指引目标；受伤可能掉落。"}
         },
         msgs: {
             start: "进入第 %s 层",
             hurt: "受到伤害!",
-            empty: "空空如也...",
-            trap: "大凶! 机关触发!",
-            zombie: "起尸了!",
-            candle: "灯火通明!",
+            empty: "棺中只余尘土",
+            trap: "机括声起 · 速退",
+            zombie: "棺中有变 · 守墓尸苏醒",
+            candle: "添油续火 · 照明 20 秒",
             compass: "罗盘在手! 寻龙分金!",
             heal: "生命恢复!",
             repel: "尸畏 15秒!",
-            immune: "无敌 15秒!",
-            hole: "盗洞已开启! 水脉逆流!"
+            immune: "玉衣护身 · 可抵挡一次伤害",
+            hole: "水脉倒灌 · 盗洞已开"
         },
         levelNames: LEVEL_NAMES_CN,
         trapNames: TRAP_NAMES_CN,
@@ -89,7 +90,7 @@ const LANG = {
     EN: {
         title: "Tomb Raider",
         ver: "TEN FLOORS · ONE FLAME",
-        p1: "Ancient tombs hold countless treasures. As a Raider, descend 10 levels. Find the <b>Artifact</b> to unlock the exit. Use the Feng Shui Compass to guide your way.",
+        p1: "One lantern. Ten buried floors. Find each <b>relic</b>, evade ancient traps, and reach the exit. Seek supplies and sanctuary altars; deeper chambers hide fire and seals.",
         startBtn: "Start Raid",
         level: "Level %s | %m",
         trapLabel: "Trap",
@@ -102,11 +103,12 @@ const LANG = {
         winDesc: "Artifacts found. You survived!",
         winBtn: "Play Again",
         items: {
-            candle: {n:"Ancient Lamp", d:"<b>Eternal Flame</b>: Max Vision Range."},
+            shovel: {n:"Entrenching Shovel", d:"Tap ATTACK to strike nearby zombies."},
+            candle: {n:"Oil Lamp", d:"<b>Last Oil</b>: Wider sight for 20 seconds. One lamp per floor."},
             wine: {n:"Rice Wine", d:"<b>Vitality</b>: Restore 1 HP."},
             hoof: {n:"Donkey Hoof", d:"<b>Repel</b>: Zombies fear you for 15s."},
-            jade: {n:"Jade Suit", d:"<b>Invincible</b>: Immune to ALL damage for 15s."},
-            compass: {n:"Compass", d:"<b>Feng Shui</b>: Points to Artifact, then Exit."}
+            jade: {n:"Jade Suit", d:"<b>Invincible</b>: Blocks one hit, then breaks. Does not stack."},
+            compass: {n:"Compass", d:"<b>Feng Shui</b>: Unlocks the minimap and guides you. May drop when hurt."}
         },
         msgs: {
             start: "Entered Level %s",
@@ -114,11 +116,11 @@ const LANG = {
             empty: "Empty...",
             trap: "Trap Triggered!",
             zombie: "Zombie Rise!",
-            candle: "Lamp Lit!",
+            candle: "Lamp lit · 20 seconds",
             compass: "Compass Active!",
             heal: "HP Restored!",
             repel: "Repel 15s!",
-            immune: "Invincible 15s!",
+            immune: "Jade suit · blocks one hit",
             hole: "Exit Opened! Water Rising!"
         },
         levelNames: LEVEL_NAMES_EN,
@@ -133,22 +135,9 @@ let curLang = 'CN';
 // --- Audio ---
 const AudioSys = {
     ctx: null, gain: null, lastHurt: 0, muted: false,
-    init: function() {
-        if(this.ctx) { this.ctx.resume().catch(()=>{}); return; }
-        try {
-            window.AudioContext = window.AudioContext || window.webkitAudioContext;
-            this.ctx = new AudioContext();
-            this.gain = this.ctx.createGain();
-            this.gain.gain.value = this.muted ? 0 : 0.5;
-            this.gain.connect(this.ctx.destination);
-            const d=this.ctx.createDelay(); d.delayTime.value=0.2;
-            const dg=this.ctx.createGain(); dg.gain.value=0.2;
-            this.gain.connect(d); d.connect(dg); dg.connect(this.ctx.destination);
-            this.ctx.resume().catch(()=>{});
-        } catch(e) {}
-    },
+    init: function() { Sound.unlock(); },
     tone: function(f, type, dur, vol=0.1, slide=null) {
-        if(!this.ctx) return;
+        if(!this.ctx||this.muted||this.ctx.state!=='running') return;
         const t = this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
         const g = this.ctx.createGain();
@@ -160,9 +149,18 @@ const AudioSys = {
         osc.connect(g); g.connect(this.gain);
         osc.start(t); osc.stop(t+dur+0.2);
     },
-    playStep: function() { if(this.ctx) this.tone(60, 'square', 0.1, 0.15, 30); },
+    playStomp: function() {
+        if(!this.ctx||this.muted||this.ctx.state!=='running')return;
+        const t=this.ctx.currentTime,buffer=this.ctx.createBuffer(1,Math.ceil(this.ctx.sampleRate*.12),this.ctx.sampleRate),data=buffer.getChannelData(0);
+        for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.exp(-i/data.length*5);
+        const source=this.ctx.createBufferSource(),filter=this.ctx.createBiquadFilter(),gain=this.ctx.createGain();
+        source.buffer=buffer;filter.type='lowpass';filter.frequency.value=1700;gain.gain.setValueAtTime(.32,t);gain.gain.exponentialRampToValueAtTime(.001,t+.12);
+        source.connect(filter);filter.connect(gain);gain.connect(this.gain);source.start(t);source.stop(t+.13);
+        this.tone(85,'sine',.09,.14,38);
+    },
+    playStep: function(water=false,sprint=false) { /* Footstep and wading audio disabled by request. */ },
     playOpen: function() {
-        if(!this.ctx) return;
+        if(!this.ctx||this.muted||this.ctx.state!=='running') return;
         const t=this.ctx.currentTime, o=this.ctx.createOscillator(), g=this.ctx.createGain(), f=this.ctx.createBiquadFilter();
         o.type='triangle'; o.frequency.setValueAtTime(50,t); o.frequency.exponentialRampToValueAtTime(30,t+0.8);
         f.type='lowpass'; f.frequency.value=200;
@@ -207,7 +205,7 @@ const Input = {
     reset() {
         this.keys={}; this.pointer=null; this.sprintPointer=null;
         this.touchX=0; this.touchY=0; this.update();
-        document.getElementById('joystick-knob').style.transform='translate(-50%,-50%)';
+        document.getElementById('joystick-zone').classList.remove('steering');
         document.getElementById('sprint-btn').classList.remove('pressed');
     }
 };
@@ -215,23 +213,25 @@ const Input = {
     const zone=document.getElementById('joystick-zone'), knob=document.getElementById('joystick-knob');
     const move=e=>{
         if(e.pointerId!==Input.pointer) return;
-        const r=zone.getBoundingClientRect(), radius=r.width/2;
-        const dx=e.clientX-r.left-radius, dy=e.clientY-r.top-r.height/2;
-        const distance=Math.hypot(dx,dy), scale=distance>radius?radius/distance:1;
-        Input.touchX=dx*scale/radius; Input.touchY=dy*scale/radius; Input.update();
-        knob.style.transform=`translate(calc(-50% + ${Input.touchX*radius}px), calc(-50% + ${Input.touchY*radius}px))`;
+        const dx=e.clientX-Input.originX,dy=e.clientY-Input.originY,distance=Math.hypot(dx,dy);
+        const power=Math.min(1,Math.max(0,(distance-7)/32));
+        Input.touchX=distance?dx/distance*power:0;Input.touchY=distance?dy/distance*power:0;Input.update();
+        if(distance>65){Input.originX=e.clientX-dx/distance*65;Input.originY=e.clientY-dy/distance*65;}
+        knob.style.left=Input.originX+'px';knob.style.top=Input.originY+'px';
+        knob.style.transform=`translate(-50%,-50%) rotate(${Math.atan2(dy,dx)}rad)`;
     };
     zone.addEventListener('pointerdown',e=>{
         if(!Game.running||Game.pause||Input.pointer!==null) return;
-        e.preventDefault(); Input.pointer=e.pointerId; zone.setPointerCapture(e.pointerId); move(e);
+        e.preventDefault(); Input.pointer=e.pointerId;Input.originX=e.clientX;Input.originY=e.clientY;zone.classList.add('steering');zone.setPointerCapture(e.pointerId);move(e);
     });
     zone.addEventListener('pointermove',move);
     const release=e=>{
         if(e.pointerId!==Input.pointer) return;
         Input.pointer=null; Input.touchX=0; Input.touchY=0; Input.update();
-        knob.style.transform='translate(-50%,-50%)';
+        zone.classList.remove('steering');
     };
     ['pointerup','pointercancel','lostpointercapture'].forEach(name=>zone.addEventListener(name,release));
+    document.getElementById('attack-btn').addEventListener('click',()=>Game.p?.attack());
     const sprint=document.getElementById('sprint-btn');
     sprint.addEventListener('pointerdown',e=>{
         if(!Game.running||Game.pause||Input.sprintPointer!==null) return;
@@ -245,6 +245,7 @@ const Input = {
     ['pointerup','pointercancel','lostpointercapture'].forEach(name=>sprint.addEventListener(name,releaseSprint));
     const movement=['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','ShiftLeft','ShiftRight'];
     window.addEventListener('keydown',e=>{
+        if(['Space','KeyJ'].includes(e.code)&&Game.running&&!Game.pause){e.preventDefault();if(!e.repeat)Game.p.attack();return;}
         if(e.code==='Escape'&&!e.repeat) { Game.togglePause(); return; }
         if(e.code==='KeyM'&&!e.repeat) { Game.toggleSound(); return; }
         if(!Game.running||Game.pause||!movement.includes(e.code)) return;
@@ -286,13 +287,16 @@ class Entity { constructor(x,y,t){this.x=x;this.y=y;this.type=t;this.dead=0;} }
 class GroundItem extends Entity {
     constructor(x,y,code) { super(x,y,'ground_item'); this.code=code; }
     update(dt, p) {
-        if(Math.hypot(this.x-p.x, this.y-p.y) < 30) { Game.getItem(this.code); this.dead = 1; }
+        if(this.dead)return;
+        if(this.pickupDelay>0){this.pickupDelay=Math.max(0,this.pickupDelay-dt);return;}
+        const key=this.code.replace('item_','');
+        if(Math.hypot(this.x-p.x, this.y-p.y) < 30) { const previous=p.buffs[key]||0;Game.getItem(this.code);if(this.remaining!==undefined&&key!=='compass')p.buffs[key]=Math.max(previous,this.remaining); this.dead = 1; }
     }
     draw(ctx) {
         const iKey = this.code.replace('item_', '');
-        const colors = {candle:'#ff8a80', wine:'#fff', hoof:'#a1887f', jade:'#a5d6a7', compass:'#ffd700'};
+        const colors = {candle:'#ff8a80', wine:'#fff', hoof:'#a1887f', jade:'#a5d6a7', compass:'#ffd700',shovel:'#c9d5cf'};
         const yOff = Math.sin(Date.now()/300)*5;
-        const iconMap = {candle:'🪔', wine:'🍶', hoof:'🐴', jade:'🥋', compass:'🧭'};
+        const iconMap = {candle:'🪔', wine:'🍶', hoof:'🐴', jade:'🥋', compass:'🧭',shovel:'⚒'};
         ctx.font = "24px serif"; ctx.textAlign = "center";
         ctx.fillText(iconMap[iKey], 0, yOff);
         ctx.fillStyle = '#fff'; ctx.font = "12px serif";
@@ -306,7 +310,7 @@ class GroundItem extends Entity {
 class Coffin extends Entity {
     constructor(x,y,c){super(x,y,'coffin');this.content=c;this.opened=0;this.shake=0;this.lidOffset=0;this.interactTimer=0;this.revealTimer=0;}
     interact(dt, p) {
-        if(this.opened) return;
+        if(this.opened||this.hidden||this.rising||this.locked) return;
         if(Math.hypot(this.x-p.x, this.y-p.y) < 45) {
             this.interactTimer += dt;
             if(this.interactTimer > 0.6) {
@@ -317,23 +321,30 @@ class Coffin extends Entity {
         }
     }
     open() {
-        if(this.opened) return;
-        this.opened = 1; this.shake = 0.5; this.revealTimer = 0.6; AudioSys.playOpen();
+        if(this.opened||this.hidden||this.rising||this.locked) return;
+        this.opened = 1;TombDangers.coffinFX(this); this.shake = 0.5; this.revealTimer = 0.6; AudioSys.playOpen();
     }
     reveal() {
+            if(this.revealed)return;this.revealed=true;
+            if(Expedition.reveal(this))return;
             if(this.content === 'artifact') {
                 Game.getArtifact();
                 Game.addText(this.x, this.y, ARTIFACTS[Game.lvl-1][curLang==='CN'?'n':'en'], '#ffd700');
                 Game.spawn(new Effect(this.x,this.y,'gold'));
             }
+            else if(this.content === 'supply') {
+                Game.spawn(new GroundItem(this.x+35,this.y,'item_wine'));
+                Game.spawn(new GroundItem(this.x-35,this.y,'item_jade'));
+                Game.addText(this.x,this.y,curLang==='CN'?'供物尚存':'Offerings remain','#aaddbb');
+            }
             else if(this.content === 'zombie') {
-                Game.spawn(new Zombie(this.x,this.y+20, 0));
+                Game.spawn(new Zombie(this.x,this.y+20));
                 Game.addText(this.x, this.y, LANG[curLang].msgs.zombie, '#f44336');
                 Game.spawn(new Effect(this.x,this.y,'burst'));
                 AudioSys.playAttack();
             }
             else if(this.content === 'trap') {
-                 Game.spawn(new Trap(this.x,this.y+40, Game.lvl-1));
+                 const launcher=new Trap(this.x,this.y+40, Game.lvl-1);World.mountTrap(launcher);Game.spawn(launcher);
                  Game.addText(this.x, this.y, LANG[curLang].msgs.trap, '#f44336');
                  AudioSys.playTrap(0);
             }
@@ -391,63 +402,67 @@ class Coffin extends Entity {
 }
 
 class Zombie extends Entity {
-    constructor(x,y,type=0){super(x,y,'zombie');
+    constructor(x,y,type=SPECIES[Game.lvl-1].type){super(x,y,'zombie');
         this.zType = type; // 0: Blue, 1: Red (Sprinter), 2: Green (Spitter)
-        this.spd = type===1 ? CONFIG.SPRINTER_SPD : (type===2 ? CONFIG.GREEN_SPD : CONFIG.ZOMBIE_SPD + Game.lvl*5);
+        this.species={...SPECIES[Game.lvl-1],windup:type===SPECIES[Game.lvl-1].type?SPECIES[Game.lvl-1].windup:type===2?.6:.38};this.zType=type;this.spd=this.species.speed;
         this.dir = Math.random()*6.28; this.changeDirT = 0;
-        this.attackCD = 0;
+        this.attackCD=0;this.attackState='';this.attackClock=0;this.attackAim=0;this.hopPhase=Math.random();this.hopHeight=0;this.landT=0;this.moving=false;
     }
     update(dt,p) {
-        const oldX=this.x, oldY=this.y;
-        const dx=p.x-this.x, dy=p.y-this.y, d=Math.hypot(dx,dy);
-        let repel = p.buffs.hoof > 0;
-
-        if(this.zType === 0 || this.zType === 2) { // Blue or Green
-            let active = d<200 || (Input.active && d<350);
-            if(active || repel) {
-                let tx=dx, ty=dy, s=this.spd;
-                if(repel && d<350) { tx=-dx; ty=-dy; s=this.spd*1.5; }
-                if(MapSys.get(this.x,this.y)===TERRAIN.WATER) s*=0.4;
-                if(!repel || d<350) {
-                    this.x += (tx/(d||1))*s*dt; if(MapSys.get(this.x,this.y)===TERRAIN.WALL) this.x=oldX;
-                    this.y += (ty/(d||1))*s*dt; if(MapSys.get(this.x,this.y)===TERRAIN.WALL) this.y=oldY;
-                }
+        const dx=p.x-this.x,dy=p.y-this.y,d=Math.hypot(dx,dy),repel=p.buffs.hoof>0;
+        this.attackCD=Math.max(0,this.attackCD-dt);
+        this.landT=Math.max(0,this.landT-dt);this.moving=false;
+        if(repel&&this.attackState) {this.attackState='';this.attackClock=0;this.attackCD=.6;}
+        if(this.attackState) {
+            this.hopHeight=0;this.attackClock-=dt;
+            if(this.attackClock<=0) {
+                if(this.attackState==='windup') {
+                    this.attackState='strike';this.attackClock=.24;
+                    if(this.zType===2) {
+                        Game.spawn(new Projectile(this.x,this.y,this.attackAim,this.species.shot||'VENOM','enemy'));
+                        const fx=new Effect(this.x,this.y,'spit');fx.angle=this.attackAim;Game.spawn(fx);
+                        AudioSys.playTrap(d);
+                    } else {
+                        const facing=(dx*Math.cos(this.attackAim)+dy*Math.sin(this.attackAim))/(d||1);
+                        if(d<43&&(facing>.3||d<18)&&MapSys.lineClear(this.x,this.y,p.x,p.y))p.hit();
+                        const fx=new Effect(this.x+Math.cos(this.attackAim)*20,this.y+Math.sin(this.attackAim)*20,'slash');fx.angle=this.attackAim;Game.spawn(fx);
+                        if(d<220)AudioSys.playAttack();
+                    }
+                } else if(this.attackState==='strike') {this.attackState='recover';this.attackClock=.32;}
+                else {this.attackState='';this.attackCD=this.zType===2?1.8:this.zType===1?1.1:1.4;}
             }
-
-            // Blue Attack
-            if(this.zType === 0) {
-                if(this.attackCD > 0) this.attackCD -= dt;
-                if(!repel && d<20 && this.attackCD <= 0) {
-                    p.hit(); AudioSys.playAttack(); this.attackCD = 1.0;
-                }
-            }
-
-            // Green Attack (Spit)
-            if(this.zType === 2) {
-                this.attackCD -= dt;
-                if(!repel && d < 250 && this.attackCD <= 0) {
-                    const ang = Math.atan2(dy, dx);
-                    Game.spawn(new Projectile(this.x, this.y, ang, 'VENOM'));
-                    AudioSys.playTrap(d);
-                    this.attackCD = 2.0 + Math.random();
-                }
-            }
-
-        } else { // Red Sprinter
-            this.changeDirT -= dt;
-            if(this.changeDirT <= 0) { this.changeDirT = 1.0 + Math.random(); this.dir = Math.random() * 6.28; }
-            let vx = Math.cos(this.dir) * this.spd; let vy = Math.sin(this.dir) * this.spd;
-            this.x += vx * dt; if(MapSys.get(this.x, this.y) === TERRAIN.WALL) { this.x = oldX; this.dir = Math.PI - this.dir; }
-            this.y += vy * dt; if(MapSys.get(this.x, this.y) === TERRAIN.WALL) { this.y = oldY; this.dir = -this.dir; }
-
-            if(!repel && d<20) {
-                p.hit();
-                Game.spawn(new Effect(this.x, this.y, 'burst'));
-                AudioSys.playAttack();
-                this.dead = 1;
-            }
+            return;
         }
-        this.hop = Math.abs(Math.sin(Date.now()/(this.zType===1?100:200)))*-8;
+        const inRange=this.zType===2?d<this.species.sense:d<36;
+        if(!repel&&inRange&&this.attackCD<=0&&MapSys.lineClear(this.x,this.y,p.x,p.y)) {
+            this.attackState='windup';this.attackClock=this.species.windup;
+            this.attackAim=Math.atan2(dy,dx);this.hopHeight=0;return;
+        }
+        let vx=0,vy=0;
+        if(repel&&d<350) {vx=-dx/(d||1);vy=-dy/(d||1);}
+        else if(this.zType===1) {
+            if(d<this.species.sense) {vx=dx/(d||1);vy=dy/(d||1);}
+            else {
+                this.changeDirT-=dt;
+                if(this.changeDirT<=0){this.changeDirT=1+Math.random();this.dir=Math.random()*Math.PI*2;}
+                vx=Math.cos(this.dir);vy=Math.sin(this.dir);
+            }
+        } else if(d<this.species.sense||(Input.active&&d<(Input.sprint?420:250))) {vx=dx/(d||1);vy=dy/(d||1);}
+        if(Math.hypot(vx,vy)<.01) {this.hopHeight=0;this.hopPhase=0;return;}
+        const period=this.species.hop,previous=this.hopPhase;
+        this.hopPhase=(this.hopPhase+dt/period)%1;
+        const airborne=this.hopPhase<.68;
+        this.hopHeight=airborne?Math.sin(this.hopPhase/.68*Math.PI)*(this.zType===1?17:13):0;
+        const speed=this.spd*(repel?1.5:1)*(MapSys.get(this.x,this.y)===TERRAIN.WATER&&!this.species.aquatic?.45:1);
+        const distance=airborne?speed*dt/.68:0,oldX=this.x,oldY=this.y;
+        const nx=this.x+vx*distance,ny=this.y+vy*distance;
+        if(MapSys.canOccupy(nx,this.y,9))this.x=nx;else if(this.zType===1)this.dir=Math.PI-this.dir;
+        if(MapSys.canOccupy(this.x,ny,9))this.y=ny;else if(this.zType===1)this.dir=-this.dir;
+        this.moving=Math.hypot(this.x-oldX,this.y-oldY)>.001||airborne;
+        if(previous<.68&&this.hopPhase>=.68) {
+            this.landT=.13;
+            if(d<280)Game.spawn(new Effect(this.x,this.y+4,'dust'));
+        }
     }
     draw(ctx){
         ctx.translate(0,this.hop||0);
@@ -474,7 +489,7 @@ class Zombie extends Entity {
 class Trap extends Entity {
     constructor(x,y,lvlIndex){
         super(x,y,'trap');
-        this.life=3; this.cd=Math.random();
+        this.life=3; this.cd=1.5+Math.random(); this.windup=0;this.aim=0;this.displayAim=0;this.recoil=0;
         const data = LEVELS_DATA[Math.min(lvlIndex,9)];
         this.pType = data.type === 'MIX' ? Object.keys(PROJ_TYPES)[Math.floor(Math.random()*4)] : data.type;
         this.color = data.col;
@@ -482,15 +497,26 @@ class Trap extends Entity {
         this.lvlIdx = Math.min(lvlIndex,9);
     }
     update(dt,p){
-        const dist = Math.hypot(this.x-p.x, this.y-p.y);
-        if(dist < 400) {
-            this.cd-=dt;
-            if(this.cd<0){
-                this.cd = LEVELS_DATA[this.lvlIdx].delay + Math.random()*0.3;
-                const pdx=p.x-this.x, pdy=p.y-this.y, ang=Math.atan2(pdy,pdx);
-                Game.spawn(new Projectile(this.x,this.y,ang,this.pType));
+        if(this.vent)return;
+        const dist=Math.hypot(this.x-p.x,this.y-p.y);
+        this.recoil=Math.max(0,this.recoil-dt);
+        if(this.windup<=0&&this.recoil<=0&&dist<400&&MapSys.lineClear(this.x,this.y,p.x,p.y))this.aim=Math.atan2(p.y-this.y,p.x-this.x);
+        const turn=Math.atan2(Math.sin(this.aim-this.displayAim),Math.cos(this.aim-this.displayAim));
+        this.displayAim+=Math.sign(turn)*Math.min(Math.abs(turn),dt*3.8);
+        if(this.windup>0) {
+            this.windup-=dt;
+            if(this.windup<=0&&Math.abs(Math.atan2(Math.sin(this.aim-this.displayAim),Math.cos(this.aim-this.displayAim)))>.01)this.windup=.001;
+            if(this.windup<=0) {
+                this.displayAim=this.aim;
+                Game.spawn(new Projectile(this.x+Math.cos(this.aim)*20,this.y+Math.sin(this.aim)*20,this.aim,this.pType));
+                this.recoil=.28;
+                const fx=new Effect(this.x+Math.cos(this.aim)*20,this.y+Math.sin(this.aim)*20,'muzzle');fx.angle=this.aim;Game.spawn(fx);
                 AudioSys.playTrap(dist);
+                this.cd=LEVELS_DATA[this.lvlIdx].delay+0.4;
             }
+        } else if(dist<400&&MapSys.lineClear(this.x,this.y,p.x,p.y)) {
+            this.cd-=dt;
+            if(this.cd<=0) {this.windup=.8;this.aim=Math.atan2(p.y-this.y,p.x-this.x);}
         }
     }
     draw(ctx){
@@ -503,18 +529,23 @@ class Trap extends Entity {
 }
 
 class Projectile extends Entity {
-    constructor(x,y,a,type){super(x,y,'proj');
-        this.info = PROJ_TYPES[type] || PROJ_TYPES.ARROW;
+    constructor(x,y,a,type,source='trap'){super(x,y,'proj');
+        this.source=source;this.pType=type;this.age=0;this.info = PROJ_TYPES[type] || PROJ_TYPES.ARROW;
         this.vx=Math.cos(a)*this.info.spd; this.vy=Math.sin(a)*this.info.spd;
         this.life=3.0; this.ang=a;
     }
     update(dt,p){
-        this.life-=dt; if(this.life<0)this.dead=1;
-        this.x+=this.vx*dt; this.y+=this.vy*dt;
-        if(Math.hypot(this.x-p.x,this.y-p.y)<this.info.size+10){
-            if(p.buffs.jade > 0) this.dead = 1; else { p.hit(); this.dead=1; }
+        this.age+=dt;this.life-=dt; if(this.life<0){this.dead=1;return;}
+        const steps=Math.max(1,Math.ceil(Math.hypot(this.vx*dt,this.vy*dt)/8));
+        for(let i=0;i<steps&&!this.dead;i++){
+            this.x+=this.vx*dt/steps;this.y+=this.vy*dt/steps;
+            if(MapSys.get(this.x,this.y)===TERRAIN.WALL){this.dead=1;Game.spawn(new Effect(this.x,this.y,'dust'));break;}
+            if(this.source==='trap'){
+                const victim=TombDangers.enemies().find(e=>Math.hypot(this.x-e.x,this.y-e.y)<this.info.size+13);
+                if(victim){TombDangers.hurt(victim,this.pType==='STONE'||this.pType==='LOG'?2:1);this.dead=1;break;}
+            }
+            if(Math.hypot(this.x-p.x,this.y-p.y)<this.info.size+10){p.hit();this.dead=1;}
         }
-        if(MapSys.get(this.x,this.y)===TERRAIN.WALL) this.dead=1;
     }
     draw(ctx){
         ctx.rotate(this.ang); ctx.fillStyle=this.info.col;
@@ -525,19 +556,40 @@ class Projectile extends Entity {
 }
 
 class Player extends Entity {
-    constructor(x,y){super(x,y,'player');this.hp=5;this.sight=CONFIG.BASE_SIGHT;this.inv=0;this.buffs={hoof:0,candle:0,jade:0};this.walkT=0;this.hasCompass=0;this.stepPhase=0;}
+    constructor(x,y){super(x,y,'player');this.hp=5;this.sight=CONFIG.BASE_SIGHT;this.inv=0;this.buffs={hoof:0,candle:0,jade:0};this.walkT=0;this.hasCompass=0;this.hasShovel=false;this.attackCooldown=0;this.attackT=0;this.attackAngle=0;this.stepPhase=0;this.direction=0;this.walkFrame=1;this.walkDistance=0;this.stepDistance=0;this.moving=false;this.inWater=MapSys.get(x,y)===TERRAIN.WATER;}
+    attack(){
+        if(!Game.running||Game.pause||!this.hasShovel||this.attackCooldown>0||this.rollTime>0)return false;
+        this.attackCooldown=.6;this.attackT=.28;
+        const target=Game.ents.filter(e=>!e.dead&&e.type==='zombie'&&Math.hypot(e.x-this.x,e.y-this.y)<=78&&MapSys.lineClear(this.x,this.y,e.x,e.y)).sort((a,b)=>Math.hypot(a.x-this.x,a.y-this.y)-Math.hypot(b.x-this.x,b.y-this.y))[0];
+        this.attackAngle=target?Math.atan2(target.y-this.y,target.x-this.x):[Math.PI/2,Math.PI,0,-Math.PI/2][this.direction];
+        AudioSys.tone(220,'triangle',.1,.09,70);
+        if(target&&TombDangers.hurt(target,1)){Game.spawn(new Effect(target.x,target.y,'dust'));AudioSys.playStomp();}
+        return true;
+    }
     update(dt){
+        this.attackCooldown=Math.max(0,this.attackCooldown-dt);this.attackT=Math.max(0,this.attackT-dt);
         if(this.inv>0)this.inv-=dt;
         if(this.buffs.hoof>0) this.buffs.hoof-=dt;
-        if(this.buffs.candle>0) this.buffs.candle-=dt;
-        if(this.buffs.jade>0) this.buffs.jade-=dt;
+        if(this.buffs.candle>0) this.buffs.candle=Math.max(0,this.buffs.candle-dt);
 
+
+        if(this.rollTime>0){
+            const step=Math.min(dt,this.rollTime),parts=Math.max(1,Math.ceil(290*step/6));this.rollTime=Math.max(0,this.rollTime-dt);
+            const clear=(x,y)=>MapSys.canOccupy(x,y,10)&&!Game.ents.some(e=>e.type==='coffin'&&!e.hidden&&!e.rising&&Math.hypot(e.x-x,e.y-y)<30);
+            for(let i=0;i<parts;i++){
+                const nx=this.x+this.rollVX*step/parts,ny=this.y+this.rollVY*step/parts;
+                if(clear(nx,this.y))this.x=nx;if(clear(this.x,ny))this.y=ny;
+            }
+            this.moving=true;this.stepPhase+=dt*20;return;
+        }
         const oldX=this.x, oldY=this.y;
-        let s=160;
+        let s=160*ExitGate.speed();
         if(Input.sprint) s *= 1.5; // Sprint!
         if(MapSys.get(this.x,this.y)===TERRAIN.WATER) s*=0.5;
 
         if(Input.active){
+            this.direction=Math.abs(Input.x)>Math.abs(Input.y)?(Input.x<0?1:2):(Input.y<0?3:0);
+            if(Math.abs(Input.x)>.08)this.facingLeft=Input.x<0;
             const nx=this.x+Input.x*s*dt, ny=this.y+Input.y*s*dt;
 
             if(MapSys.canOccupy(nx,this.y,10))this.x=nx;
@@ -545,21 +597,39 @@ class Player extends Entity {
 
             // Coffin Collision
             Game.ents.forEach(e => {
-                if(e.type === 'coffin') {
+                if(e.type === 'coffin'&&!e.hidden&&!e.rising) {
                     if(Math.hypot(this.x-e.x, this.y-e.y) < 30) {
                         this.x = oldX; this.y = oldY;
                     }
                 }
             });
 
-            this.stepPhase += dt * 10;
-            this.walkT+=dt; if(this.walkT > 0.4) { AudioSys.playStep(); this.walkT=0; }
-        } else { this.stepPhase = 0; }
+        }
+        const moved=Math.hypot(this.x-oldX,this.y-oldY);this.moving=moved>.01;
+        const water=MapSys.get(this.x,this.y)===TERRAIN.WATER,enteredWater=water&&!this.inWater;
+        this.inWater=water;
+        if(enteredWater&&this.moving){AudioSys.playStep(true,Input.sprint);this.stepDistance=0;}
+        if(this.moving) {
+            this.walkDistance+=moved;this.stepDistance+=moved;
+            this.walkFrame=Math.floor(this.walkDistance/28)%4;this.stepPhase=this.walkDistance/112*Math.PI*2;
+            const stride=water?26:56;
+            if(!enteredWater&&this.stepDistance>=stride) {this.stepDistance%=stride;AudioSys.playStep(water,Input.sprint);}
+        } else {this.walkFrame=1;this.stepPhase=0;this.stepDistance=0;}
+
     }
     hit(){
-        if(!Game.running || this.inv>0 || this.buffs.jade>0)return;
+        if(!Game.running || this.inv>0)return;
+        if(this.buffs.jade>0){this.buffs.jade=0;this.inv=1.5;Game.msg(curLang==='CN'?'玉衣碎裂 · 抵挡了一次伤害':'Jade suit shattered · one hit blocked','#a5d6a7');Game.refreshBuffs();return;}
         this.hp--; this.inv=1.5; Game.shake=10; AudioSys.playHurt();
         Game.updateHUD(); Game.msg(LANG[curLang].msgs.hurt,"#f00");
+        const held=[...(this.hasCompass?['compass']:[]),...['candle','hoof'].filter(k=>this.buffs[k]>0)];
+        if(held.length&&Math.random()<.35){
+            const key=held[Math.floor(Math.random()*held.length)],remaining=this.buffs[key];
+            if(key==='compass')this.hasCompass=0;else this.buffs[key]=0;
+            const item=new GroundItem(this.x,this.y,'item_'+key);item.pickupDelay=2;item.remaining=remaining;Game.spawn(item);
+            Game.msg(curLang==='CN'?`受伤掉落：${LANG.CN.items[key].n} · 可返回拾回`:`Dropped ${key} · recover it from the ground`,'#e5b779');
+        }
+        Game.drawMinimap();Game.refreshBuffs();
         if(this.hp<=0)Game.over();
     }
     draw(ctx){
@@ -583,8 +653,9 @@ const MapSys = {
     gen: function(l){
         this.t=new Uint8Array(this.w*this.h).fill(1);
         const rms=[];
-        for(let i=0;i<250 && rms.length<7+l;i++){
-            const w=6+Math.floor(Math.random()*6), h=6+Math.floor(Math.random()*6);
+        for(let i=0;i<350 && rms.length<(l===5?18:l===9?8:7+l);i++){
+            const w=(l===2?4:l===9?9:6)+Math.floor(Math.random()*(l===5?2:6));
+            const h=(l===2?9:l===6?5:6)+Math.floor(Math.random()*(l===5?2:5));
             const x=2+Math.floor(Math.random()*(this.w-w-4)), y=2+Math.floor(Math.random()*(this.h-h-4));
             if(!rms.some(r=>x<r.x+r.w+1 && x+w+1>r.x && y<r.y+r.h+1 && y+h+1>r.y)){
                 rms.push({x,y,w,h});
@@ -605,7 +676,14 @@ const MapSys = {
             }
             for(let x=8;x<48;x++) this.t[28*this.w+x]=TERRAIN.FLOOR;
         }
+        let main=1;for(let i=2;i<rms.length;i++)if(rms[i].w*rms[i].h>rms[main].w*rms[main].h)main=i;
+        [rms[main],rms[rms.length-1]]=[rms[rms.length-1],rms[main]];
         return rms;
+    },
+    lineClear: function(x1,y1,x2,y2) {
+        const steps=Math.ceil(Math.hypot(x2-x1,y2-y1)/12);
+        for(let i=1;i<steps;i++)if(this.get(x1+(x2-x1)*i/steps,y1+(y2-y1)*i/steps)===TERRAIN.WALL)return false;
+        return true;
     },
     canOccupy: function(x,y,radius) {
         return [[-radius,-radius],[radius,-radius],[-radius,radius],[radius,radius]].every(([dx,dy])=>this.get(x+dx,y+dy)!==TERRAIN.WALL);
@@ -646,11 +724,11 @@ const Game = {
         const cn=curLang==='CN';
         const labels={
             'guide-move':cn?'循光探路':'EXPLORE',
-            'guide-move-desc':cn?'WASD / 方向键移动，Shift 疾行；手机使用摇杆。':'Move with WASD / arrows. Hold Shift to sprint, or use touch controls.',
+            'guide-move-desc':cn?'WASD / 方向键移动，Shift 疾行；手机在画面上按住拖动，松手停下。':'Move with WASD / arrows. Hold Shift to sprint, or use touch controls.',
             'guide-find':cn?'驻足开棺':'DISCOVER',
-            'guide-find-desc':cn?'靠近石棺停留片刻，寻找本层唯一的镇墓冥器。':'Stay beside a coffin to open it. Find the relic on each floor.',
+            'guide-find-desc':cn?'驻足开棺寻找钥匙与补给，主墓室中藏着冥器。':'Stay beside a coffin to open it. Find the relic on each floor.',
             'guide-exit':cn?'寻龙脱身':'ESCAPE',
-            'guide-exit-desc':cn?'拾取罗盘指引方向，取得冥器后前往盗洞。':'Collect a compass to locate the relic, then follow it to the exit.',
+            'guide-exit-desc':cn?'棺中寻钥匙，主棺取冥器；解印拉闸后，25秒内回主墓室。':'Find the relic, break seals, then turn the crank. Reach the exit within 25 seconds.',
             'pause-title':cn?'灯火未熄':'The flame awaits',
             'pause-desc':cn?'歇息片刻，古墓中的时间已暂停。':'Take a breath. The tomb is paused.',
             'resume-btn':cn?'继续探索':'Resume exploration',
@@ -661,18 +739,39 @@ const Game = {
         for(const [id,value] of Object.entries(labels)) document.getElementById(id).textContent=value;
         document.getElementById('pause-btn').setAttribute('aria-label',cn?'暂停':'Pause');
         this.updateSoundButton();
-        if(this.p) this.updateHUD();
+        Sound.status();
+        document.getElementById('sound-test-btn').textContent=cn?'开启 / 试音':'Enable / Test sound';
+        document.getElementById('pause-sound-btn').textContent=cn?'开启 / 试音':'Enable / Test sound';
+        document.getElementById('game-ver').textContent=cn?'古墓新篇 · 画境与回声':'EXPEDITION · STONE & ECHO';
+        if(this.p) { this.updateHUD();World.room=null;World.updateRoom(); }
     },
 
     init: function(){
+        if(!Art.ready&&!Art.failed)return;
         this.resize(); window.onresize=()=>this.resize();
         document.getElementById('start-screen').style.display='none';
         AudioSys.init();
         this.restart();
     },
 
+    debugTap: function() {
+        const now=Date.now();this.debugTaps=now-(this.debugLast||0)<900?(this.debugTaps||0)+1:1;this.debugLast=now;
+        if(this.debugTaps<5)return;this.debugTaps=0;
+        this.debugWasPaused=this.pause;this.pause=true;Input.reset();
+        document.getElementById('test-levels').innerHTML=THEMES.map((t,i)=>`<button class="btn" onclick="Game.testLevel(${i+1})">${i+1} · ${curLang==='CN'?t.name:t.en}</button>`).join('');
+        document.getElementById('test-modal').classList.add('active');
+    },
+    closeTest: function(){document.getElementById('test-modal').classList.remove('active');this.pause=!!this.debugWasPaused;this.lastTime=null;},
+    testLevel: function(level){
+        if(!Number.isInteger(level)||level<1||level>10)return;
+        if(!Art.ready){this.msg(curLang==='CN'?'墓室图案加载中，请稍后再选':'Artwork loading; try again shortly','#d7c49e');return;}
+        this.resize();window.onresize=()=>this.resize();
+        document.getElementById('start-screen').style.display='none';this.restart();this.art=0;this.load(level);
+        this.msg(curLang==='CN'?'测试选关 · 全新装备与物资':'Test floor · fresh equipment','#d7c49e');
+    },
     restart: function() {
-        this.lvl = 1; this.art = 0; this.saved = null; this.items = [];
+        AudioSys.init();
+        Passage.reset();this.lvl = 1; this.art = 0; this.collected=[]; this.saved = null; this.items = [];
         document.getElementById('game-over-modal').classList.remove('active');
         document.getElementById('victory-modal').classList.remove('active');
         this.running = 1;
@@ -695,14 +794,10 @@ const Game = {
         if(force&&this.pause) return;
         this.pause=force||!this.pause; Input.reset(); this.lastTime=null; this.accumulator=0;
         document.getElementById('pause-modal').classList.toggle('active',!!this.pause);
-        if(this.pause) document.getElementById('resume-btn').focus();
-        else document.getElementById('pause-btn').focus();
+        if(this.pause) {Sound.pause();document.getElementById('resume-btn').focus();}
+        else {Sound.unlock();document.getElementById('pause-btn').focus();}
     },
-    toggleSound: function() {
-        AudioSys.muted=!AudioSys.muted;
-        if(AudioSys.gain) AudioSys.gain.gain.value=AudioSys.muted?0:0.5;
-        this.updateSoundButton();
-    },
+    toggleSound: function() { Sound.toggle(); },
     updateSoundButton: function() {
         const btn=document.getElementById('sound-btn');
         btn.textContent=AudioSys.muted?'×♪':'♪';
@@ -711,17 +806,21 @@ const Game = {
     },
 
     showExitModal: function() {
-        document.getElementById('exit-modal').classList.add('active');
-        this.pause = true; Input.reset();
+        if(!World.canExit())return;
+        Passage.open(this.lvl);document.getElementById('exit-modal').classList.add('active');
+        this.pause = true; Input.reset();Sound.pause();
         document.getElementById('exit-confirm-btn').focus();
     },
     confirmNextLevel: function() {
-        if(!this.running||!this.exit||!document.getElementById('exit-modal').classList.contains('active')) return;
+        if(!this.running||!World.canExit()||!document.getElementById('exit-modal').classList.contains('active')) return;
+        Sound.unlock();Passage.depart();
+    },
+    finishNextLevel: function() {
         document.getElementById('exit-modal').classList.remove('active');
-        this.pause = false;
+        this.pause = false;Sound.unlock();
         if(this.lvl>=10){ this.victory(); }
         else {
-            this.saved={hp:this.p.hp,sight:this.p.sight,hasCompass:this.p.hasCompass};
+            this.saved={hp:this.p.hp,hasCompass:this.p.hasCompass,hasShovel:this.p.hasShovel};
             this.load(this.lvl+1);
         }
     },
@@ -741,62 +840,28 @@ const Game = {
         this.p.inv=2; // Safe arrival on every floor.
         this.ents.push(this.p);
 
-        const corners=[];
-        rms.forEach(r => {
-             corners.push({x:r.x*CONFIG.TILE+25, y:r.y*CONFIG.TILE+25});
-             corners.push({x:(r.x+r.w)*CONFIG.TILE-25, y:(r.y+r.h)*CONFIG.TILE-25});
-        });
-
-        ['item_compass', 'item_wine', 'item_hoof', 'item_jade', 'item_candle', 'item_candle', 'item_candle'].forEach(code => {
-             if(corners.length>0) {
-                 const ri = Math.floor(Math.random()*corners.length);
-                 this.ents.push(new GroundItem(corners[ri].x, corners[ri].y, code));
-                 corners.splice(ri,1);
-             }
-        });
-
-        const spots=[];
-        for(let i=1;i<rms.length-1;i++) spots.push({x:(rms[i].x+rms[i].w/2)*CONFIG.TILE, y:(rms[i].y+rms[i].h/2)*CONFIG.TILE});
-
-        if(spots.length>0) {
-            const ai = Math.floor(Math.random()*spots.length);
-            this.ents.push(new Coffin(spots[ai].x, spots[ai].y, 'artifact'));
-            this.artifactPos = {x: spots[ai].x, y: spots[ai].y};
-            spots.splice(ai,1);
-        }
-
-        spots.forEach(p => {
-             const c = Math.random()<0.5?'empty':'zombie';
-             this.ents.push(new Coffin(p.x, p.y, c));
-        });
-
-        const trapCount = Math.floor(1 + Math.pow(l, 1.2));
+        const trapCount = Math.min(6,1+Math.floor(l/2));
         let trapsPlaced = 0;
         while(trapsPlaced < trapCount) {
              const r=rms[1+Math.floor(Math.random()*(rms.length-1))];
-             const tx = (r.x + 1 + Math.floor(Math.random()*(r.w-2))) * CONFIG.TILE;
-             const ty = r.y * CONFIG.TILE;
+             const tx = (r.x + 1.5 + Math.floor(Math.random()*(r.w-2))) * CONFIG.TILE;
+             const ty = (r.y+.5) * CONFIG.TILE;
              this.ents.push(new Trap(tx, ty, l-1));
              trapsPlaced++;
         }
 
         this.exitRoom = e;
-        this.exitPos = {x:(e.x+e.w/2)*CONFIG.TILE, y:(e.y+0.5)*CONFIG.TILE};
+        this.exitPos = {x:(e.x+Math.floor(e.w/2)+.5)*CONFIG.TILE, y:(e.y+Math.floor(e.h/2)+.5)*CONFIG.TILE};
 
-        for(let i=0;i<4+l*2;i++){
-            const r=rms[1+Math.floor(Math.random()*(rms.length-1))];
-            const isSprinter = Math.random() < 0.2 ? 1 : 0;
-            const isGreen = Math.random() < 0.1 ? 2 : 0;
-            const zType = isSprinter ? 1 : (isGreen ? 2 : 0);
-            this.ents.push(new Zombie((r.x+2)*CONFIG.TILE, (r.y+2)*CONFIG.TILE, zType));
-        }
+        World.setup(rms);
+        document.getElementById('level-note').textContent=curLang==='CN'?World.theme.note:World.theme.enNote;
         clearTimeout(this.msgTimer); document.getElementById('msg-box').classList.remove('msg-show');
         this.updateHUD(); this.refreshBuffs(); this.refreshExploration(); this.drawMinimap();
 
         const lName = LANG[curLang].levelNames[Math.min(l-1,9)];
         const splash = document.getElementById('level-title-text');
         const levelStr = LANG[curLang].level.replace('%s', l).split('|')[0].trim();
-        splash.innerText = `${levelStr} | ${lName}`;
+        splash.innerText = `${levelStr} · ${lName}`;
         document.getElementById('level-title-box').classList.remove('show-level-title');
         void document.getElementById('level-title-box').offsetWidth;
         document.getElementById('level-title-box').classList.add('show-level-title');
@@ -810,33 +875,27 @@ const Game = {
 
 
 
-        this.art++; this.exit=1;
-        this.msg(`${name} · ${LANG[curLang].msgs.hole}`, "#dfc58c");
+        this.art++; this.exit=1;if(!this.collected)this.collected=[];if(!this.collected.includes(this.lvl-1))this.collected.push(this.lvl-1);
+        this.msg(`${name} · ${World.remaining()?(curLang==='CN'?'冥器入囊，还需解除封印':'Relic secured. Break the remaining seals.'):(curLang==='CN'?'寻找机械开关，拉闸开启盗洞':'Find the mechanical crank to open the exit')}`, "#dfc58c");
         this.updateHUD();
 
-        const r = this.exitRoom;
-        for(let y=r.y; y<r.y+r.h; y++){
-            for(let x=r.x; x<r.x+r.w; x++){
-                 if(MapSys.get(x*CONFIG.TILE, y*CONFIG.TILE) === TERRAIN.FLOOR) {
-                     MapSys.t[y*MapSys.w+x] = 2;
-                 }
-            }
-        }
+
     },
     getItem: function(c) {
         AudioSys.playItem(true);
         const key = c.replace('item_','');
-        const colors = {candle:'#ff8a80', wine:'#fff', hoof:'#a1887f', jade:'#a5d6a7', compass:'#ffd700'};
+        const colors = {candle:'#ff8a80', wine:'#fff', hoof:'#a1887f', jade:'#a5d6a7', compass:'#ffd700',shovel:'#c9d5cf'};
         const col = colors[key];
 
         // Direct Pickup (No Modal)
         AudioSys.playUse();
 
-        if(c==='item_candle'){ this.p.sight=Math.min(750,this.p.sight+150); this.msg(LANG[curLang].msgs.candle, col); }
-        if(c==='item_compass'){ this.p.hasCompass=1; this.msg(LANG[curLang].msgs.compass, col); }
+        if(c==='item_shovel'){this.p.hasShovel=true;this.msg(curLang==='CN'?'兵工铲入手 · 点击右下角攻击僵尸':'Shovel equipped · tap ATTACK',col);this.refreshBuffs();}
+        if(c==='item_candle'){ this.p.buffs.candle=20; this.msg(LANG[curLang].msgs.candle, col); }
+        if(c==='item_compass'){ this.p.hasCompass=1; this.drawMinimap(); this.msg(LANG[curLang].msgs.compass, col); }
         if(c==='item_wine'){ this.p.hp=Math.min(5,this.p.hp+1); this.msg(LANG[curLang].msgs.heal, col); this.updateHUD(); }
         if(c==='item_hoof'){ this.p.buffs.hoof=15; this.msg(LANG[curLang].msgs.repel, col); }
-        if(c==='item_jade'){ this.p.buffs.jade=15; this.msg(LANG[curLang].msgs.immune, col); }
+        if(c==='item_jade'){ this.p.buffs.jade=1; this.msg(LANG[curLang].msgs.immune, col); }
     },
 
     spawn: function(e){this.ents.push(e);},
@@ -849,23 +908,30 @@ const Game = {
         document.getElementById('level-num').innerText = `${levelBase} | ${lName}`;
 
         document.getElementById('artifact-bar').innerText = `${LANG[curLang].artLabel}: ${this.art}/10`;
+        document.getElementById('relic-strip').innerHTML=(this.collected||[]).map(i=>`<span class="relic-owned" title="${ARTIFACTS[i][curLang==='CN'?'n':'en']} · 人民币 ¥${RELIC_VALUES[i]}">${ARTIFACTS[i].i}<small>¥${RELIC_VALUES[i]}</small></span>`).join('');
+        document.getElementById('relic-total').textContent=(this.collected?.length?`${curLang==='CN'?'人民币 ¥':'CNY ¥'} ${(this.collected||[]).reduce((sum,i)=>sum+RELIC_VALUES[i],0)}`:'')+(this.p.hasKey?' · 🔑':'');
         const cn=curLang==='CN';
-        document.getElementById('objective').textContent=this.exit?(cn?'盗洞已开启 · 前往金色标记':'Exit unlocked · reach the gold marker'):(cn?'寻找镇墓冥器 · 靠近石棺自动开启':'Find the relic · stay beside a coffin to open');
+        document.getElementById('objective').textContent=World.remaining()&&this.exit?(cn?`冥器已得 · 还需破除 ${World.remaining()} 道封印`:`Relic secured · ${World.remaining()} seals remain`):this.exit?(ExitGate.remaining>0?(cn?`主墓室盗洞 ${Math.ceil(ExitGate.remaining)}秒 · ${ExitGate.flood.name}扩散中`:`Exit ${Math.ceil(ExitGate.remaining)}s · ${ExitGate.flood.en}`):(this.p.hasKey?(cn?'寻找机械开关 · 驻足拉闸开启盗洞':'Find the crank'):(cn?'寻找钥匙 · 藏在一口普通棺材内':'Find the key in a coffin'))):(cn?'寻找镇墓冥器 · 驻足开棺':'Find the relic · stay beside coffins');
         document.getElementById('exit-confirm-btn').textContent=this.lvl===10?(cn?'逃出生天':'Escape the tomb'):LANG[curLang].exitModal.yes;
     },
     over: function(){
-        this.running=0; Input.reset();
-        document.getElementById('end-desc').textContent=this.runSummary();
+        this.running=0; Input.reset();Sound.pause();
+        document.getElementById('end-desc').textContent=this.runSummary()+'\n\n'+this.settlement();
         document.getElementById('game-over-modal').classList.add('active');
         document.getElementById('end-btn').focus();
     },
     victory: function(){
-        this.running=0; Input.reset();
-        document.getElementById('win-desc').textContent=this.runSummary();
+        this.running=0; Input.reset();Sound.pause();
+        document.getElementById('win-desc').textContent=this.runSummary()+'\n\n'+this.settlement();
         document.getElementById('victory-modal').classList.add('active');
         document.getElementById('win-btn').focus();
     },
 
+    settlement: function(){
+        const list=(this.collected||[]).map(i=>`${ARTIFACTS[i].i} ${ARTIFACTS[i][curLang==='CN'?'n':'en']}：¥${RELIC_VALUES[i].toLocaleString('zh-CN')}`).join('\n');
+        const total=(this.collected||[]).reduce((sum,i)=>sum+RELIC_VALUES[i],0);
+        return `${curLang==='CN'?'冥器结算（人民币·游戏估值）':'Relic settlement (CNY · game valuation)'}\n${list||'—'}\n${curLang==='CN'?'总金额':'Total'}：¥${total.toLocaleString('zh-CN')}`;
+    },
     runSummary: function() {
         const time=`${Math.floor(this.elapsed/60)}:${String(Math.floor(this.elapsed%60)).padStart(2,'0')}`;
         return curLang==='CN'?`抵达第 ${this.lvl} 层 · 收集 ${this.art}/10 件冥器 · 探索 ${time}`:`Floor ${this.lvl} · ${this.art}/10 relics · ${time}`;
@@ -876,6 +942,7 @@ const Game = {
         if(this.lastTime===null) this.lastTime=timestamp;
         const delta=Math.min(Math.max((timestamp-this.lastTime)/1000,0),0.1);
         this.lastTime=timestamp;
+        if(Passage.active)Passage.update(delta);
         if(!this.pause) {
             this.accumulator+=delta;
             const dt=1/60;
@@ -901,24 +968,27 @@ const Game = {
         this.texts=this.texts.filter(t=>t.life>0);
         this.texts.forEach(t=>t.update(dt));
         if(!this.running) return;
+        World.update(dt);
+        if(!this.running)return;
         this.hudTimer-=dt;
         if(this.hudTimer<=0) { this.refreshExploration(); this.refreshBuffs(); this.drawMinimap(); this.hudTimer=0.1; }
-        if(this.exit&&Math.hypot(this.exitPos.x-this.p.x,this.exitPos.y-this.p.y)<30) this.showExitModal();
+        if(World.canExit()&&Math.hypot(this.exitPos.x-this.p.x,this.exitPos.y-this.p.y)<30) this.showExitModal();
     },
     refreshBuffs: function() {
+        const attack=document.getElementById('attack-btn');attack.style.display=this.p.hasShovel?'flex':'none';attack.textContent=curLang==='CN'?'攻击':'ATTACK';attack.disabled=this.p.attackCooldown>0;
         let html='';
         if(this.p.buffs.hoof>0) html+=`<div class="buff buff-hoof">🐴 ${Math.ceil(this.p.buffs.hoof)}s</div>`;
-        if(this.p.buffs.jade>0) html+=`<div class="buff buff-jade">🥋 ${Math.ceil(this.p.buffs.jade)}s</div>`;
+        if(this.p.buffs.jade>0) html+=`<div class="buff buff-jade">🥋 ${curLang==='CN'?'护身 ×1':'Shield ×1'}</div>`;
         if(this.p.hasCompass) html+=`<div class="buff buff-compass">🧭 ${curLang==='CN'?'寻龙':'Compass'}</div>`;
         const bar=document.getElementById('buff-bar');
         if(bar.innerHTML!==html) bar.innerHTML=html;
         const itemBar=document.getElementById('item-bar');
-        const lamp=this.p.sight>CONFIG.BASE_SIGHT?`<div class="item-slot">🪔 ${curLang==='CN'?'灯火':'Light'} +${this.p.sight-CONFIG.BASE_SIGHT}</div>`:'';
+        const lamp=this.p.buffs.candle>0?`<div class="item-slot ${this.p.buffs.candle<5?'lamp-low':''}">🪔 ${curLang==='CN'?'灯油':'Oil'} ${Math.ceil(this.p.buffs.candle)}s</div>`:'';
         if(itemBar.innerHTML!==lamp) itemBar.innerHTML=lamp;
     },
     refreshExploration: function() {
         const px=Math.floor(this.p.x/CONFIG.TILE), py=Math.floor(this.p.y/CONFIG.TILE);
-        const radius=Math.max(2,Math.floor(this.p.sight/CONFIG.TILE*0.65));
+        const radius=Math.max(2,Math.floor(World.sight()/CONFIG.TILE*0.65));
         for(let y=Math.max(0,py-radius);y<=Math.min(MapSys.h-1,py+radius);y++) {
             for(let x=Math.max(0,px-radius);x<=Math.min(MapSys.w-1,px+radius);x++) {
                 if(Math.hypot(x-px,y-py)<=radius) this.explored[y*MapSys.w+x]=1;
@@ -927,6 +997,8 @@ const Game = {
     },
     drawMinimap: function() {
         const canvas=document.getElementById('minimap'), ctx=canvas.getContext('2d'), scale=canvas.width/MapSys.w;
+        document.getElementById('map-panel').style.display=this.p.hasCompass?'':'none';
+        if(!this.p.hasCompass){ctx.clearRect(0,0,canvas.width,canvas.height);return;}
         ctx.fillStyle='#09110f'; ctx.fillRect(0,0,canvas.width,canvas.height);
         for(let i=0;i<this.explored.length;i++) {
             if(!this.explored[i]) continue;
@@ -938,12 +1010,17 @@ const Game = {
             const index=Math.floor(e.y/CONFIG.TILE)*MapSys.w+Math.floor(e.x/CONFIG.TILE);
             if(e.type==='coffin'&&!e.opened&&this.explored[index]) dot(e,'#c3aa8a',2);
         }
-        const target=this.exit?this.exitPos:this.artifactPos;
-        if(target&&(this.exit||this.p.hasCompass)) dot(target,'#ffd47d',3);
+        const target=World.target();
+        if(target&&this.p.hasCompass) dot(target,'#ffd47d',3);
+        for(const a of World.altars) {
+            const index=Math.floor(a.y/50)*60+Math.floor(a.x/50);
+            if(!a.done&&(this.explored[index]||(this.exit&&a.kind==='seal')))dot(a,a.kind==='seal'?'#e9bd75':'#80dcb9',2.5);
+        }
         dot(this.p,'#c3ffe5',3);
     },
 
     render: function(){
+        if(Art.ready) {Scene.draw(this);return;}
         const w=this.width, h=this.height, ctx=this.ctx;
         ctx.setTransform(this.dpr,0,0,this.dpr,0,0);
         let cx=this.p.x-w/2 + (Math.random()-.5)*this.shake, cy=this.p.y-h/2 + (Math.random()-.5)*this.shake;
@@ -983,7 +1060,7 @@ const Game = {
             }
         }
 
-        if(this.exit) {
+        if(World.canExit()) {
             ctx.save(); ctx.translate(this.exitPos.x, this.exitPos.y);
             ctx.fillStyle='#000';ctx.beginPath();ctx.arc(0,0,30,0,6.28);ctx.fill();
             ctx.strokeStyle='#795548'; ctx.lineWidth=4;
@@ -1028,3 +1105,11 @@ const Game = {
 };
 
 Game.updateUI();
+const startButton=document.getElementById('start-btn-text');
+startButton.disabled=true;
+const assetStatus=document.getElementById('asset-status');
+assetStatus.textContent=curLang==='CN'?'正在整理行装…':'Preparing expedition…';
+Art.load().then(()=>{
+    startButton.disabled=Art.failed;
+    assetStatus.textContent=Art.failed?(curLang==='CN'?'图案未加载完成，请刷新页面后重试。':'Artwork failed to load. Refresh the page to retry.'):(curLang==='CN'?'行装已备 · 点灯入墓':'Ready · light your lantern');
+});
