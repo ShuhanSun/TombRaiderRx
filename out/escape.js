@@ -25,10 +25,19 @@ const SPECIES=[
 ];
 const ExitGate={
  duration:25,remaining:0,radius:0,progress:0,latched:false,exposure:0,notice:-1,
- ready(){return !!Game.exit&&World.remaining()===0;},
+ ready(){return !!Game.exit&&World.remaining()===0&&!!Game.p.hasKey;},
  setup(){
   this.remaining=0;this.radius=0;this.progress=0;this.latched=false;this.exposure=0;this.notice=-1;
-  this.flood=FLOOD_TYPES[Game.lvl-1];this.dist=new Int16Array(MapSys.w*MapSys.h).fill(-1);
+  this.flood=FLOOD_TYPES[Game.lvl-1];const queue=this.rebuildDistance();
+  const usable=at=>{const x=(at%MapSys.w)*50+25,y=Math.floor(at/MapSys.w)*50+25;return !World.hazards.some(h=>Math.hypot(h.x-x,h.y-y)<65)&&!Game.ents.some(e=>['coffin','trap'].includes(e.type)&&Math.hypot(e.x-x,e.y-y)<55);};
+  const candidates=queue.filter(at=>{const x=at%MapSys.w*50+25,y=Math.floor(at/MapSys.w)*50+25;return usable(at)&&!World.inside(Game.exitRoom,x,y)&&Math.hypot(x-Game.exitPos.x,y-Game.exitPos.y)>=500;});
+  candidates.sort((a,b)=>Math.abs(this.dist[a]-24)-Math.abs(this.dist[b]-24));
+  const at=candidates[0]??queue.filter(usable).sort((a,b)=>this.dist[b]-this.dist[a])[0];
+  this.routeDistance=this.dist[at];
+  this.switch={x:at%MapSys.w*50+25,y:Math.floor(at/MapSys.w)*50+25,type:'gate_switch'};
+ },
+ rebuildDistance(){
+  this.dist=new Int16Array(MapSys.w*MapSys.h).fill(-1);
   const origin=Math.floor(Game.exitPos.y/50)*MapSys.w+Math.floor(Game.exitPos.x/50),queue=[origin];this.dist[origin]=0;
   for(let i=0;i<queue.length;i++){
    const at=queue[i];for(const to of [at-1,at+1,at-MapSys.w,at+MapSys.w]){
@@ -36,12 +45,7 @@ const ExitGate={
     this.dist[to]=this.dist[at]+1;queue.push(to);
    }
   }
-  const usable=at=>{const x=(at%MapSys.w)*50+25,y=Math.floor(at/MapSys.w)*50+25;return !World.hazards.some(h=>Math.hypot(h.x-x,h.y-y)<65)&&!Game.ents.some(e=>['coffin','trap'].includes(e.type)&&Math.hypot(e.x-x,e.y-y)<55);};
-  const candidates=queue.filter(at=>{const x=at%MapSys.w*50+25,y=Math.floor(at/MapSys.w)*50+25;return usable(at)&&!World.inside(Game.exitRoom,x,y)&&Math.hypot(x-Game.exitPos.x,y-Game.exitPos.y)>=500;});
-  candidates.sort((a,b)=>Math.abs(this.dist[a]-24)-Math.abs(this.dist[b]-24));
-  const at=candidates[0]??queue.filter(usable).sort((a,b)=>this.dist[b]-this.dist[a])[0];
-  this.routeDistance=this.dist[at];
-  this.switch={x:at%MapSys.w*50+25,y:Math.floor(at/MapSys.w)*50+25,type:'gate_switch'};
+  return queue;
  },
  open(){
   if(!this.ready()||this.remaining>0)return false;

@@ -9,8 +9,8 @@ const Art = {
     ],
     load() {
         const load=src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src;});
-        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png'),load('assets/tomb-mechanisms.png'),load('assets/tomb-stone-realistic.png')]).then(([sprites,materials,walker,zombies,traps,mechanisms,stone])=>{
-            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;this.mechanisms=mechanisms;this.stone=stone;
+        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png'),load('assets/tomb-mechanisms.png'),load('assets/tomb-stone-realistic.png'),load('assets/tomb-expedition.png')]).then(([sprites,materials,walker,zombies,traps,mechanisms,stone,expedition])=>{
+            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;this.mechanisms=mechanisms;this.stone=stone;this.expedition=expedition;
             const xs=[0,313,626,940,1254],ys=[0,302,618,918,1254];
             for(let i=0;i<16;i++) {
                 const c=document.createElement('canvas');c.width=c.height=400;
@@ -20,6 +20,11 @@ const Art = {
             }
             this.prepareWalker();this.ready=true;
         }).catch(()=>{this.failed=true;});
+    },
+    expeditionSprite(ctx,index,x,y,size){
+        if(!this.expedition)return;
+        const w=this.expedition.width/4,h=this.expedition.height/4;
+        ctx.drawImage(this.expedition,index%4*w,Math.floor(index/4)*h,w,h,x-size/2,y-size*.8,size,size);
     },
     stoneSurface(ctx,wall,x,y,dx=x*50,dy=y*50,dw=50,dh=50){
         if(!this.stone){ctx.drawImage(this.tiles[wall?12:0],dx,dy,dw,dh);return;}
@@ -100,15 +105,19 @@ const Scene = {
             if(type===0&&room?.kind==='sanctuary')tile=11;
             if(type===0&&room?.kind==='seal')tile=6;
             if(type===0&&room?.kind==='supply'&&World.theme.tile!==8)tile=1;
-            Art.stoneSurface(ctx,type===1,x,y);
+            ctx.save();ctx.filter=Expedition.style.filter;Art.stoneSurface(ctx,type===1,x,y);
+            ctx.globalAlpha=type===1?.42:.2;ctx.drawImage(Art.tiles[type===1?Expedition.style.wall:Expedition.style.floor],x%8*50,y%8*50,50,50,x*50,y*50,50,50);ctx.restore();
             if(type!==1){ctx.fillStyle=World.theme.tint+'16';ctx.fillRect(x*50,y*50,50,50);}
             ctx.fillStyle=type===1?'#020709cc':'#111c2520';ctx.fillRect(x*50,y*50,50,50);
             if(type===2) {
                 ctx.fillStyle=`rgba(122,214,207,${.05+.035*Math.sin(time*2+x*.9+y)})`;ctx.fillRect(x*50,y*50,50,50);
             }
         }
+        const main=game.ents.find(e=>e.royal);
+        if(main){ctx.save();ctx.fillStyle='#060c1399';ctx.fillRect(main.x-58,main.y-25,116,50);ctx.fillStyle=World.theme.tint+'55';ctx.fillRect(main.x-54,main.y-32,108,43);ctx.strokeStyle='#b4a28566';ctx.lineWidth=2;ctx.strokeRect(main.x-52,main.y-30,104,40);ctx.restore();}
         ExitGate.draw(ctx,left,right,top,bottom);
-        this.masonry(ctx,left,right,top,bottom);
+        ctx.save();ctx.filter=Expedition.style.filter;this.masonry(ctx,left,right,top,bottom);ctx.restore();
+        for(const wall of Expedition.walls)Expedition.render(ctx,wall);
         this.tombTraces(ctx,left,right,top,bottom);
         for(const hazard of World.hazards) {
             const phase=World.phase(hazard),active=phase>4.5,warn=phase>3.2;
@@ -124,7 +133,7 @@ const Scene = {
             if(warn&&!active)Art.label(ctx,hazard.x,hazard.y-37,curLang==='CN'?'避开机关':'MOVE AWAY','#ffc39b');
         }
         const visible=e=>e.x>cx-100&&e.x<cx+w+100&&e.y>cy-100&&e.y<cy+h+100;
-        const objects=[...World.props.map(e=>({...e,type:'decoration'})),...World.altars.map(e=>({...e,type:'altar'})),...game.ents.filter(e=>!e.dead),ExitGate.switch,...(World.canExit()?[{...game.exitPos,type:'exit'}]:[])].filter(visible).sort((a,b)=>a.y-b.y);
+        const objects=[...World.props.map(e=>({...e,type:'decoration'})),...World.altars.map(e=>({...e,type:'altar'})),...game.ents.filter(e=>!e.dead&&(!e.hidden||e.rising)),...Expedition.switches,ExitGate.switch,...(World.canExit()?[{...game.exitPos,type:'exit'}]:[])].filter(visible).sort((a,b)=>a.y-b.y);
         for(const e of objects)this.entity(ctx,e,game);
         for(const t of game.texts) {ctx.save();ctx.translate(t.x,t.y);t.draw(ctx);ctx.restore();}
         ctx.restore();
@@ -186,13 +195,14 @@ const Scene = {
         }
     },
     entity(ctx,e,game) {
+        if(Expedition.render(ctx,e))return;
         const time=game.elapsed,cn=curLang==='CN',distance=Math.hypot(e.x-game.p.x,e.y-game.p.y);
         if(e.type==='decoration') {if(e.glow)Art.glow(ctx,e.x,e.y-18,95,'#e9aa342b');Art.sprite(ctx,e.sprite,e.x,e.y,e.size);return;}
         if(e.type==='gate_switch') {
             const open=ExitGate.remaining>0;
             Art.glow(ctx,e.x,e.y,65,open?'#e4b95555':'#d4bd7040');
             Art.mechanism(ctx,open?1:0,e.x,e.y-15,84);
-            Art.label(ctx,e.x,e.y-65,open?(cn?`闸门开启 ${Math.ceil(ExitGate.remaining)}秒`:`OPEN ${Math.ceil(ExitGate.remaining)}s`):ExitGate.ready()?(cn?'驻足拉闸 · 开启盗洞':'STAND TO TURN CRANK'):(cn?'机械开关 · 冥器与封印未就绪':'CRANK · RELIC / SEALS REQUIRED'));
+            Art.label(ctx,e.x,e.y-65,open?(cn?`闸门开启 ${Math.ceil(ExitGate.remaining)}秒`:`OPEN ${Math.ceil(ExitGate.remaining)}s`):ExitGate.ready()?(cn?'驻足拉闸 · 开启盗洞':'STAND TO TURN CRANK'):(cn?(game.p.hasKey?'机械开关 · 冥器与封印未就绪':'机械开关 · 需要棺中钥匙'):'CRANK · KEY / RELIC / SEALS REQUIRED'));
             if(ExitGate.progress>0)Art.progress(ctx,e.x,e.y-52,ExitGate.progress,'#efd496');return;
         }
         if(e.type==='exit') {
@@ -229,8 +239,9 @@ const Scene = {
         if(e.type==='coffin') {
             ctx.save();
             if(game.p.y<e.y&&distance<85)ctx.globalAlpha=.62;
-            Art.sprite(ctx,e.opened?5:4,e.x+(e.shake>0?Math.sin(time*50)*2:0),e.y,90);ctx.restore();
-            if(!e.opened&&distance<130)Art.label(ctx,e.x,e.y-72,cn?'靠近开棺':'STAY TO OPEN');
+            if(e.rising){ctx.globalAlpha=e.elevation;ctx.translate(0,(1-e.elevation)*30);}
+            if(e.royal&&!e.opened){ctx.filter=Expedition.style.filter;Art.expeditionSprite(ctx,15,e.x,e.y,115);}else Art.sprite(ctx,e.opened?5:4,e.x+(e.shake>0?Math.sin(time*50)*2:0),e.y,90);ctx.restore();
+            if(!e.opened&&distance<130)Art.label(ctx,e.x,e.y-72,e.locked?(cn?'机关锁棺 · 寻找升棺锁':'LOCKED · FIND SWITCH'):(cn?'靠近开棺':'STAY TO OPEN'));
             if(!e.opened&&e.interactTimer>0)Art.progress(ctx,e.x,e.y-61,e.interactTimer/.6,'#e8c981');return;
         }
         if(e.type==='ground_item') {
@@ -241,8 +252,10 @@ const Scene = {
         if(e.type==='trap') {
             const kick=(e.recoil||0)/.28*7;
             ctx.save();ctx.translate(e.x,e.y);ctx.rotate(e.displayAim);ctx.translate(-kick,0);
+            ctx.filter=Expedition.style.filter;
+            Art.expeditionSprite(ctx,Expedition.style.trap,0,0,42);
             // Side-on barrel points right in the atlas; local +X is the exact firing axis.
-            ctx.drawImage(Art.traps,327,345,184,214,-26,-25,46,50);ctx.restore();
+            ctx.drawImage(Art.traps,327,345,184,214,-12,-12,32,26);ctx.restore();
             if(e.windup>0) {
                 ctx.save();ctx.strokeStyle='#ff876bad';ctx.lineWidth=2;ctx.setLineDash([7,5]);ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.x+Math.cos(e.displayAim)*250,e.y+Math.sin(e.displayAim)*250);ctx.stroke();ctx.restore();
                 Art.glow(ctx,e.x,e.y-10,35,'#ff5a3966');

@@ -26,3 +26,7 @@ Footsteps are short cached Web Audio buffers with stone heel/sole/grit and water
 ## Realistic stone material (2026-09-16)
 `out/assets/tomb-stone-realistic.png` was created with the built-in image generation tool and copied into this project. Runtime Canvas samples the left floor panel and right brick panel without altering the source image.
 Prompt: A photorealistic orthographic two-panel ancient Chinese tomb material atlas: left worn cool-grey irregular limestone floor slabs, right staggered weathered blue-grey brickwork with subtle Han cloud-scroll relief. Flat diffuse lighting; no text, objects, borders or baked shadows; sharp natural stone detail.
+
+
+## Expedition atlas
+`out/assets/tomb-expedition.png`: built-in image generation, transparent 4×4 atlas. Prompt: realistic 2.5D overhead Chinese tomb objects, ten themed funerary architectural props (stone stele, crossbow, bronze guardian, ritual furnace, bone urn, water jar, talisman pillar, rooted pillar, gilt dragon column, meteor monolith), crawling corpse, worms, scarab, spider, bat, red lacquer coffin on pedestal. Neutral upper-left light, isolated alpha cutouts, no text. Integrated as runtime sprites.

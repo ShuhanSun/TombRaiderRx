@@ -298,7 +298,7 @@ class GroundItem extends Entity {
 class Coffin extends Entity {
     constructor(x,y,c){super(x,y,'coffin');this.content=c;this.opened=0;this.shake=0;this.lidOffset=0;this.interactTimer=0;this.revealTimer=0;}
     interact(dt, p) {
-        if(this.opened) return;
+        if(this.opened||this.hidden||this.rising||this.locked) return;
         if(Math.hypot(this.x-p.x, this.y-p.y) < 45) {
             this.interactTimer += dt;
             if(this.interactTimer > 0.6) {
@@ -309,10 +309,12 @@ class Coffin extends Entity {
         }
     }
     open() {
-        if(this.opened) return;
+        if(this.opened||this.hidden||this.rising||this.locked) return;
         this.opened = 1; this.shake = 0.5; this.revealTimer = 0.6; AudioSys.playOpen();
     }
     reveal() {
+            if(this.revealed)return;this.revealed=true;
+            if(Expedition.reveal(this))return;
             if(this.content === 'artifact') {
                 Game.getArtifact();
                 Game.addText(this.x, this.y, ARTIFACTS[Game.lvl-1][curLang==='CN'?'n':'en'], '#ffd700');
@@ -558,7 +560,7 @@ class Player extends Entity {
 
             // Coffin Collision
             Game.ents.forEach(e => {
-                if(e.type === 'coffin') {
+                if(e.type === 'coffin'&&!e.hidden&&!e.rising) {
                     if(Math.hypot(this.x-e.x, this.y-e.y) < 30) {
                         this.x = oldX; this.y = oldY;
                     }
@@ -637,6 +639,8 @@ const MapSys = {
             }
             for(let x=8;x<48;x++) this.t[28*this.w+x]=TERRAIN.FLOOR;
         }
+        let main=1;for(let i=2;i<rms.length;i++)if(rms[i].w*rms[i].h>rms[main].w*rms[main].h)main=i;
+        [rms[main],rms[rms.length-1]]=[rms[rms.length-1],rms[main]];
         return rms;
     },
     lineClear: function(x1,y1,x2,y2) {
@@ -685,9 +689,9 @@ const Game = {
             'guide-move':cn?'循光探路':'EXPLORE',
             'guide-move-desc':cn?'WASD / 方向键移动，Shift 疾行；手机在画面上按住拖动，松手停下。':'Move with WASD / arrows. Hold Shift to sprint, or use touch controls.',
             'guide-find':cn?'驻足开棺':'DISCOVER',
-            'guide-find-desc':cn?'靠近石棺停留片刻，寻找本层唯一的镇墓冥器。':'Stay beside a coffin to open it. Find the relic on each floor.',
+            'guide-find-desc':cn?'驻足开棺寻找钥匙与补给，主墓室中藏着冥器。':'Stay beside a coffin to open it. Find the relic on each floor.',
             'guide-exit':cn?'寻龙脱身':'ESCAPE',
-            'guide-exit-desc':cn?'取得冥器并破印后，驻足机械开关拉闸，25秒内进入盗洞。':'Find the relic, break seals, then turn the crank. Reach the exit within 25 seconds.',
+            'guide-exit-desc':cn?'棺中寻钥匙，主棺取冥器；解印拉闸后，25秒内回主墓室。':'Find the relic, break seals, then turn the crank. Reach the exit within 25 seconds.',
             'pause-title':cn?'灯火未熄':'The flame awaits',
             'pause-desc':cn?'歇息片刻，古墓中的时间已暂停。':'Take a breath. The tomb is paused.',
             'resume-btn':cn?'继续探索':'Resume exploration',
@@ -725,12 +729,12 @@ const Game = {
         if(!Number.isInteger(level)||level<1||level>10)return;
         if(!Art.ready){this.msg(curLang==='CN'?'墓室图案加载中，请稍后再选':'Artwork loading; try again shortly','#d7c49e');return;}
         this.resize();window.onresize=()=>this.resize();
-        document.getElementById('start-screen').style.display='none';this.restart();this.art=level-1;this.load(level);
+        document.getElementById('start-screen').style.display='none';this.restart();this.art=0;this.load(level);
         this.msg(curLang==='CN'?'测试选关 · 全新装备与物资':'Test floor · fresh equipment','#d7c49e');
     },
     restart: function() {
         AudioSys.init();
-        Passage.reset();this.lvl = 1; this.art = 0; this.saved = null; this.items = [];
+        Passage.reset();this.lvl = 1; this.art = 0; this.collected=[]; this.saved = null; this.items = [];
         document.getElementById('game-over-modal').classList.remove('active');
         document.getElementById('victory-modal').classList.remove('active');
         this.running = 1;
@@ -799,35 +803,7 @@ const Game = {
         this.p.inv=2; // Safe arrival on every floor.
         this.ents.push(this.p);
 
-        const corners=[];
-        rms.forEach(r => {
-             for(let x=r.x;x<r.x+r.w;x++)corners.push({x:x*50+25,y:r.y*50+25});
-        });
-
-        ['item_compass', 'item_wine', 'item_hoof', 'item_jade', 'item_candle',...Array.from({length:l*2},(_,i)=>['item_wine','item_hoof','item_jade'][i%3])].forEach(code => {
-             if(corners.length>0) {
-                 const ri = Math.floor(Math.random()*corners.length);
-                 this.ents.push(new GroundItem(corners[ri].x, corners[ri].y, code));
-                 corners.splice(ri,1);
-             }
-        });
-
-        const spots=[];
-        for(let i=1;i<rms.length-1;i++) spots.push({x:(rms[i].x+rms[i].w/2)*CONFIG.TILE, y:(rms[i].y+rms[i].h/2)*CONFIG.TILE});
-
-        if(spots.length>0) {
-            const ai = Math.floor(Math.random()*spots.length);
-            this.ents.push(new Coffin(spots[ai].x, spots[ai].y, 'artifact'));
-            this.artifactPos = {x: spots[ai].x, y: spots[ai].y};
-            spots.splice(ai,1);
-        }
-
-        spots.forEach(p => {
-             const c = Math.random()<0.5?'empty':'zombie';
-             this.ents.push(new Coffin(p.x, p.y, c));
-        });
-
-        const trapCount = Math.floor(1 + Math.pow(l, 1.2));
+        const trapCount = Math.min(6,1+Math.floor(l/2));
         let trapsPlaced = 0;
         while(trapsPlaced < trapCount) {
              const r=rms[1+Math.floor(Math.random()*(rms.length-1))];
@@ -840,13 +816,6 @@ const Game = {
         this.exitRoom = e;
         this.exitPos = {x:(e.x+Math.floor(e.w/2)+.5)*CONFIG.TILE, y:(e.y+Math.floor(e.h/2)+.5)*CONFIG.TILE};
 
-        for(let i=0;i<4+l*2;i++){
-            const r=rms[1+Math.floor(Math.random()*(rms.length-1))];
-            const isSprinter = Math.random() < 0.2 ? 1 : 0;
-            const isGreen = Math.random() < 0.1 ? 2 : 0;
-            const zType = isSprinter ? 1 : (isGreen ? 2 : 0);
-            this.ents.push(new Zombie((r.x+2)*CONFIG.TILE, (r.y+2)*CONFIG.TILE, zType));
-        }
         World.setup(rms);
         document.getElementById('level-note').textContent=curLang==='CN'?World.theme.note:World.theme.enNote;
         clearTimeout(this.msgTimer); document.getElementById('msg-box').classList.remove('msg-show');
@@ -869,7 +838,7 @@ const Game = {
 
 
 
-        this.art++; this.exit=1;
+        this.art++; this.exit=1;if(!this.collected)this.collected=[];if(!this.collected.includes(this.lvl-1))this.collected.push(this.lvl-1);
         this.msg(`${name} · ${World.remaining()?(curLang==='CN'?'冥器入囊，还需解除封印':'Relic secured. Break the remaining seals.'):(curLang==='CN'?'寻找机械开关，拉闸开启盗洞':'Find the mechanical crank to open the exit')}`, "#dfc58c");
         this.updateHUD();
 
@@ -901,8 +870,10 @@ const Game = {
         document.getElementById('level-num').innerText = `${levelBase} | ${lName}`;
 
         document.getElementById('artifact-bar').innerText = `${LANG[curLang].artLabel}: ${this.art}/10`;
+        document.getElementById('relic-strip').innerHTML=(this.collected||[]).map(i=>`<span class="relic-owned" title="${ARTIFACTS[i][curLang==='CN'?'n':'en']} · ${RELIC_VALUES[i]} 冥值">${ARTIFACTS[i].i}<small>${RELIC_VALUES[i]}</small></span>`).join('');
+        document.getElementById('relic-total').textContent=(this.collected?.length?`${curLang==='CN'?'冥值':'Value'} ${(this.collected||[]).reduce((sum,i)=>sum+RELIC_VALUES[i],0)}`:'')+(this.p.hasKey?' · 🔑':'');
         const cn=curLang==='CN';
-        document.getElementById('objective').textContent=World.remaining()&&this.exit?(cn?`冥器已得 · 还需破除 ${World.remaining()} 道封印`:`Relic secured · ${World.remaining()} seals remain`):this.exit?(ExitGate.remaining>0?(cn?`主墓室盗洞 ${Math.ceil(ExitGate.remaining)}秒 · ${ExitGate.flood.name}扩散中`:`Exit ${Math.ceil(ExitGate.remaining)}s · ${ExitGate.flood.en}`):(cn?'寻找机械开关 · 驻足拉闸开启盗洞':'Find the crank · stand beside it to open the exit')):(cn?'寻找镇墓冥器 · 驻足开棺':'Find the relic · stay beside coffins');
+        document.getElementById('objective').textContent=World.remaining()&&this.exit?(cn?`冥器已得 · 还需破除 ${World.remaining()} 道封印`:`Relic secured · ${World.remaining()} seals remain`):this.exit?(ExitGate.remaining>0?(cn?`主墓室盗洞 ${Math.ceil(ExitGate.remaining)}秒 · ${ExitGate.flood.name}扩散中`:`Exit ${Math.ceil(ExitGate.remaining)}s · ${ExitGate.flood.en}`):(this.p.hasKey?(cn?'寻找机械开关 · 驻足拉闸开启盗洞':'Find the crank'):(cn?'寻找钥匙 · 藏在一口普通棺材内':'Find the key in a coffin'))):(cn?'寻找镇墓冥器 · 驻足开棺':'Find the relic · stay beside coffins');
         document.getElementById('exit-confirm-btn').textContent=this.lvl===10?(cn?'逃出生天':'Escape the tomb'):LANG[curLang].exitModal.yes;
     },
     over: function(){

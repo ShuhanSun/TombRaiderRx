@@ -48,9 +48,6 @@ const World = {
         }
         // Keep sanctuaries and arrival rooms free of spawned enemies and traps.
         Game.ents=Game.ents.filter(e=>!(['zombie','trap'].includes(e.type)&&rooms.some(r=>['sanctuary','entry'].includes(r.kind)&&this.inside(r,e.x,e.y))));
-        const enemyRooms=rooms.filter(r=>!['sanctuary','entry'].includes(r.kind));
-        let missing=4+Game.lvl*2-Game.ents.filter(e=>e.type==='zombie').length;
-        for(let i=0;i<missing;i++){const r=enemyRooms[i%enemyRooms.length];Game.spawn(new Zombie((r.x+1.5+i%Math.max(1,r.w-2))*50,(r.y+1.5+Math.floor(i/3)%Math.max(1,r.h-2))*50));}
         Game.ents.forEach(e=>{
             if(e.type==='zombie') {
                 e.species=SPECIES[Game.lvl-1];e.zType=e.species.type;e.spd=e.species.speed;
@@ -60,7 +57,7 @@ const World = {
         // The first compass is discoverable without having to search the entire floor.
         const compass=Game.ents.find(e=>e.code==='item_compass');
         if(compass&&!Game.p.hasCompass) {compass.x=Game.p.x+65;compass.y=Game.p.y+50;}
-        ExitGate.setup();this.baseSight=this.theme.sight;
+        Expedition.setup();ExitGate.setup();this.baseSight=this.theme.sight;
         this.updateRoom();
     },
     placePassageHazards() {
@@ -102,6 +99,7 @@ const World = {
     remaining() {return this.altars.filter(a=>a.kind==='seal'&&!a.done).length;},
     canExit() {return ExitGate.ready()&&ExitGate.remaining>0;},
     target() {
+        if(!Game.p.hasKey)return Expedition.keyCoffin;
         if(!Game.exit)return Game.artifactPos;
         const seals=this.altars.filter(a=>a.kind==='seal'&&!a.done).sort((a,b)=>Math.hypot(a.x-Game.p.x,a.y-Game.p.y)-Math.hypot(b.x-Game.p.x,b.y-Game.p.y));
         return seals[0]||(ExitGate.remaining>0?Game.exitPos:ExitGate.switch);
@@ -114,11 +112,11 @@ const World = {
         this.room=r;
         const label=document.getElementById('room-name'),hint=document.getElementById('room-hint');
         const type=ROOM_TYPES[r?.kind],cn=curLang==='CN';
-        label.textContent=type?(cn?type.cn:type.en):(cn?'连接甬道':'Connecting passage');
+        label.textContent=type?(r?.kind==='exit'?(cn?Expedition.style.name+' · 主墓室':this.theme.en+' · Main tomb'):(cn?type.cn:type.en)):(cn?'连接甬道':'Connecting passage');
         hint.textContent=type?(cn?type.hint:type.enHint):(cn?'沿石壁前行，留意通向其他墓室的岔口。':'Follow the stone passage and watch for branching rooms.');
     },
     update(dt) {
-        ExitGate.update(dt);this.updateRoom();
+        Expedition.update(dt);ExitGate.update(dt);this.updateRoom();
         for(const a of this.altars) {
             if(a.done)continue;
             if(Math.hypot(a.x-Game.p.x,a.y-Game.p.y)<48) {
@@ -128,7 +126,7 @@ const World = {
                     if(a.kind==='seal') Game.msg(curLang==='CN'?`封印已破 · 还剩 ${this.remaining()} 道`:`Seal broken · ${this.remaining()} remain`,'#e5be72');
                     else {
                         if(Game.p.hp<5)Game.p.hp++;else Game.p.buffs.jade=1;
-                        Game.msg(curLang==='CN'?'祭火护佑 · 生命恢复或护身八秒':'Altar blessing · healed or shielded for 8s','#9bd4b9');
+                        Game.msg(curLang==='CN'?'祭火护佑 · 生命恢复或抵挡一次伤害':'Altar blessing · healed or one-hit shield','#9bd4b9');
                     }
                     Game.updateHUD();
                 }

@@ -15,7 +15,7 @@ test('300 generated floors have one reachable relic, connected terrain and safe 
     const {Game,MapSys,World}=setup(19);
     for(let n=0;n<300;n++) {
         Game.load(n%10+1);
-        const relics=Game.ents.filter(e=>e.content==='artifact');assert.equal(relics.length,1);assert.equal(Game.ents.filter(e=>e.code==='item_candle').length,1);
+        const relics=Game.ents.filter(e=>e.content==='artifact');assert.equal(relics.length,1);assert.equal(Game.ents.filter(e=>e.payload?.loot?.includes('item_candle')).length,1);
         const index=p=>Math.floor(p.y/50)*60+Math.floor(p.x/50);
         const seen=new Set([index(Game.p)]),queue=[index(Game.p)];
         for(let i=0;i<queue.length;i++) {
@@ -37,7 +37,7 @@ test('300 generated floors have one reachable relic, connected terrain and safe 
 test('pathological RNG still produces a relic, compass and a connected fallback',()=>{
     const env=setup();vm.runInContext('Math.random=()=>0;',env.context);env.Game.load(1);
     assert.equal(env.Game.ents.filter(e=>e.content==='artifact').length,1);
-    assert.equal(env.Game.ents.filter(e=>e.code==='item_compass').length,1);
+    assert.equal(env.Game.ents.filter(e=>e.payload?.loot?.includes('item_compass')).length,1);
     assert.equal(env.MapSys.get(-0.1,1200),1);
 });
 
@@ -108,7 +108,7 @@ test('ten-floor progression preserves equipment and requires a gate crank before
     for(let floor=1;floor<=10;floor++) {
         assert.equal(Game.lvl,floor);assert.equal(Game.art,floor-1);
         if(!World.theme.water)assert.equal([...MapSys.t].filter(t=>t===2).length,0);
-        Game.getArtifact();Game.getArtifact();assert.equal(Game.art,floor);
+        Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();assert.equal(Game.art,floor);
         assert.equal(ExitGate.remaining,0);
         World.altars.forEach(a=>a.done=true);ExitGate.open();Game.showExitModal();Game.confirmNextLevel();Passage.update(1.3);
         assert.equal(Game.p.hp,4);assert.equal(Game.p.buffs.candle,0);assert.equal(Game.p.hasCompass,1);
@@ -120,7 +120,7 @@ test('ten-floor progression preserves equipment and requires a gate crank before
 
 test('seals block the exit until all required altars are activated',()=>{
     const {Game,World,Passage,ExitGate}=setup();
-    Game.load(7);Game.getArtifact();assert.equal(World.remaining(),2);assert.equal(World.canExit(),false);
+    Game.load(7);Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();assert.equal(World.remaining(),2);assert.equal(World.canExit(),false);
     Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y;Game.step(1/60);assert.equal(Game.pause,false);
     Game.showExitModal();Game.confirmNextLevel();assert.equal(Game.lvl,7);Game.pause=false;
     for(const altar of World.altars.filter(a=>a.kind==='seal')) {
@@ -266,12 +266,12 @@ test('terrain detection still tracks entering and leaving water with playback di
 });
 
 test('descent previews next theme, freezes play, ignores duplicate taps and can restart safely',()=>{
-    const {Game,Passage,World,THEMES,els,tick,ExitGate}=setup();Game.getArtifact();ExitGate.open();Game.showExitModal();
+    const {Game,Passage,World,THEMES,els,tick,ExitGate}=setup();Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();ExitGate.open();Game.showExitModal();
     assert.equal(els['exit-title'].textContent,THEMES[1].name);assert.equal(Passage.mode,'bolts');
     Game.p.buffs.candle=10;const elapsed=Game.elapsed;Game.confirmNextLevel();Game.confirmNextLevel();
     tick(0);tick(100);assert.equal(Game.lvl,1);assert.equal(Game.elapsed,elapsed);assert.equal(Game.p.buffs.candle,10);
     Passage.update(1.3);assert.equal(Game.lvl,2);assert.equal(Passage.active,false);assert.equal(Game.pause,false);
-    Game.getArtifact();World.altars.forEach(a=>a.done=true);ExitGate.open();Game.showExitModal();Game.confirmNextLevel();Game.restart();Passage.update(2);assert.equal(Game.lvl,1);
+    Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();World.altars.forEach(a=>a.done=true);ExitGate.open();Game.showExitModal();Game.confirmNextLevel();Game.restart();Passage.update(2);assert.equal(Game.lvl,1);
     assert.equal(new Set(Passage.modes).size,11);
     for(let next=1;next<=10;next++){Passage.open(next);Passage.update(.1);assert.ok(els['passage-description'].textContent.length>10);}
 });
@@ -280,7 +280,7 @@ test('crank reveals the hidden exit, expires, requires rearming and can reopen',
  const {Game,ExitGate,World,Input,Scene,calls}=setup();Input.active=false;
  assert.equal(World.canExit(),false);assert.equal(ExitGate.open(),false);
  calls.length=0;Scene.draw(Game);assert.ok(!calls.some(c=>c[0]==='fillText'&&String(c[1]).startsWith('盗洞 ·')));
- Game.getArtifact();assert.equal(World.canExit(),false);assert.equal(ExitGate.radius,0);
+ Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();assert.equal(World.canExit(),false);assert.equal(ExitGate.radius,0);
  Game.p.x=ExitGate.switch.x;Game.p.y=ExitGate.switch.y;Game.p.moving=false;
  for(let i=0;i<61;i++)ExitGate.update(1/60);assert.ok(World.canExit());assert.ok(ExitGate.remaining>24);
  for(let i=0;i<26*60;i++)ExitGate.update(1/60);assert.equal(World.canExit(),false);assert.equal(ExitGate.remaining,0);
@@ -289,7 +289,7 @@ test('crank reveals the hidden exit, expires, requires rearming and can reopen',
 });
 
 test('flood grows along reachable tiles, respects walls, recedes, and resets each floor',()=>{
- const {Game,ExitGate,MapSys,World}=setup();Game.getArtifact();ExitGate.open();
+ const {Game,ExitGate,MapSys,World}=setup();Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();ExitGate.open();
  assert.equal(ExitGate.radius,0);ExitGate.update(2);assert.ok(ExitGate.levelAt(Game.exitPos.x,Game.exitPos.y)>0);
  for(let i=0;i<MapSys.t.length;i++)if(MapSys.t[i]===1)assert.equal(ExitGate.dist[i],-1);
  const far=ExitGate.dist.findIndex(d=>d>4);assert.equal(ExitGate.levelAt(far%60*50+25,Math.floor(far/60)*50+25),0);
@@ -300,14 +300,14 @@ test('flood grows along reachable tiles, respects walls, recedes, and resets eac
 test('each floor applies its guardian species and flood; pause freezes the gate',()=>{
  const {Game,SPECIES,FLOOD_TYPES,ExitGate,tick}=setup();assert.equal(new Set(SPECIES.map(s=>s.name)).size,10);assert.equal(new Set(FLOOD_TYPES.map(s=>s.sprite)).size,10);
  for(let lvl=1;lvl<=10;lvl++){Game.load(lvl);for(const z of Game.ents.filter(e=>e.type==='zombie')){assert.equal(z.species.name,SPECIES[lvl-1].name);assert.equal(z.spd,SPECIES[lvl-1].speed);}assert.equal(ExitGate.flood,FLOOD_TYPES[lvl-1]);}
- Game.load(1);Game.getArtifact();ExitGate.open();tick(0);Game.togglePause();tick(5000);assert.equal(ExitGate.remaining,25);assert.equal(ExitGate.radius,0);
+ Game.load(1);Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();ExitGate.open();tick(0);Game.togglePause();tick(5000);assert.equal(ExitGate.remaining,25);assert.equal(ExitGate.radius,0);
 });
 
 test('flood effects slow or obscure and harmful contact has a grace period',()=>{
- const {Game,ExitGate,World}=setup();Game.getArtifact();ExitGate.open();ExitGate.radius=3;
+ const {Game,ExitGate,World}=setup();Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();ExitGate.open();ExitGate.radius=3;
  Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y;assert.ok(ExitGate.speed()<1);
- Game.load(5);Game.getArtifact();ExitGate.open();Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y;const clear=World.sight();ExitGate.radius=3;assert.ok(World.sight()<clear);
- Game.load(7);Game.getArtifact();World.altars.forEach(a=>a.done=true);ExitGate.open();ExitGate.radius=3;Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y;Game.p.inv=0;
+ Game.load(5);Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();ExitGate.open();Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y;const clear=World.sight();ExitGate.radius=3;assert.ok(World.sight()<clear);
+ Game.load(7);Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();World.altars.forEach(a=>a.done=true);ExitGate.open();ExitGate.radius=3;Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y;Game.p.inv=0;
  ExitGate.update(2);assert.equal(Game.p.hp,5);ExitGate.update(.3);assert.equal(Game.p.hp,4);
 });
 
@@ -319,8 +319,8 @@ test('main chamber exit, remote crank and finite increasing floor populations',(
   assert.ok(!World.inside(Game.exitRoom,ExitGate.switch.x,ExitGate.switch.y));
   assert.ok(Math.hypot(ExitGate.switch.x-Game.exitPos.x,ExitGate.switch.y-Game.exitPos.y)>=500);
   assert.ok(ExitGate.routeDistance<45,'route fits 25 seconds of normal movement plus flood slowdown');
-  assert.equal(Game.ents.filter(e=>e.type==='ground_item').length,5+2*Game.lvl);
-  assert.equal(Game.ents.filter(e=>e.type==='zombie').length,4+2*Game.lvl);
+  assert.equal(Game.ents.filter(e=>e.type==='ground_item').length,1);
+  assert.equal(Game.ents.filter(e=>e.type==='zombie').length,1);
  }
 });
 
@@ -344,7 +344,7 @@ test('jade persists until one blocked hit; compass loss hides map and can be rec
  for(let i=0;i<4;i++)Game.debugTap();assert.equal(Game.pause,false);
  Game.debugTap();assert.equal(Game.pause,true);Game.closeTest();assert.equal(Game.pause,false);
  Game.p.hasCompass=1;Game.p.hp=1;Game.testLevel(7);
- assert.equal(Game.lvl,7);assert.equal(Game.p.hp,5);assert.equal(Game.p.hasCompass,0);assert.equal(Game.art,6);assert.equal(Game.pause,false);
+ assert.equal(Game.lvl,7);assert.equal(Game.p.hp,5);assert.equal(Game.p.hasCompass,0);assert.equal(Game.art,0);assert.equal(Game.pause,false);
  Game.testLevel(11);assert.equal(Game.lvl,7);
  });
 
@@ -352,3 +352,55 @@ test('jade persists until one blocked hit; compass loss hides map and can be rec
  const {Game,Art,tick}=setup();Game.width=undefined;Game.height=undefined;Game.dpr=undefined;Game.p=null;Game.running=0;
  Game.testLevel(4);assert.ok(Game.width>0&&Game.height>0);assert.ok(Game.cvs.width>0);tick(0);tick(17);assert.equal(Game.running,1);assert.equal(Game.lvl,4);
  });
+
+test('fixed hidden contents, reachable single key, no duplicate coffin rewards',()=>{
+ const {Game,Expedition,MapSys}=setup(31);
+ for(let n=0;n<50;n++){
+  Game.load(n%10+1);assert.equal(Game.ents.filter(e=>e.content==='key').length,1);
+  assert.equal(Game.ents.filter(e=>e.type==='ground_item').length,1);
+  assert.equal(Game.ents.filter(e=>e.type==='zombie').length,1);
+  assert.ok(!Expedition.keyCoffin.hidden);assert.ok(MapSys.canOccupy(Expedition.keyCoffin.x,Expedition.keyCoffin.y,10));
+  const coffins=Game.ents.filter(e=>e.type==='coffin');for(const c of coffins)c.reveal();
+  assert.equal(Game.ents.filter(e=>e.type==='zombie').length,Expedition.zombieBudget);
+  assert.equal(Game.ents.filter(e=>e.type==='vermin').length,Expedition.verminBudget);
+  assert.equal(Game.ents.filter(e=>e.type==='ground_item').length,Expedition.itemBudget);
+  const count=Game.ents.length;for(const c of coffins)c.reveal();assert.equal(Game.ents.length,count);
+  assert.equal(Game.p.hasKey,true);
+ }
+});
+
+test('keys gate every lock; hidden coffins rise and trap switches telegraph damage',()=>{
+ const {Game,Expedition,ExitGate,World}=setup(72);Game.getArtifact();World.altars.forEach(a=>a.done=true);
+ assert.equal(ExitGate.open(),false);for(const s of Expedition.switches)assert.equal(Expedition.useSwitch(s),false);
+ const hidden=Expedition.hidden[0];assert.ok(hidden);hidden.open();assert.equal(hidden.opened,0);
+ Expedition.keyCoffin.reveal();assert.ok(ExitGate.open());
+ const lift=Expedition.switches.find(s=>s.kind==='coffin');Expedition.useSwitch(lift);Expedition.update(2);assert.equal(hidden.hidden,false);hidden.open();assert.equal(hidden.opened,1);
+ const trap=Expedition.switches.find(s=>s.kind==='trap');Game.p.x=trap.x;Game.p.y=trap.y;Game.p.inv=0;
+ Expedition.useSwitch(trap);Expedition.update(.5);assert.equal(Game.p.hp,5);Expedition.update(.8);assert.equal(Game.p.hp,4);
+ Game.load(2);assert.equal(Game.p.hasKey,false);
+});
+
+test('moving walls change collision and never close on an actor',()=>{
+ const {Game,Expedition,MapSys}=setup(112);const wall=Expedition.walls[0];assert.ok(wall);
+ wall.manual=true;wall.target=0;Expedition.update(2);assert.equal(MapSys.t[wall.at],0);
+ Game.p.x=wall.x;Game.p.y=wall.y;wall.target=1;Expedition.update(2);assert.equal(MapSys.t[wall.at],0);
+ Game.p.x+=100;Expedition.update(2);assert.equal(MapSys.t[wall.at],1);
+});
+
+test('relic collection keeps actual icons and values; restarting clears it',()=>{
+ const {Game,RELIC_VALUES,els}=setup();Game.getArtifact();Game.getArtifact();assert.deepEqual([...Game.collected],[0]);
+ assert.ok(els['relic-strip'].innerHTML.includes(String(RELIC_VALUES[0])));
+ Game.load(2);Game.getArtifact();assert.deepEqual([...Game.collected],[0,1]);
+ assert.ok(els['relic-total'].textContent.includes(String(RELIC_VALUES[0]+RELIC_VALUES[1])));
+ Game.restart();assert.equal(Game.collected.length,0);
+});
+
+test('creatures telegraph attacks, respect warding and use finite coffin spawns',()=>{
+ const {Game,TombCreature}=setup();Game.p.inv=0;
+ for(const kind of ['worm','beetle','spider','bat']){
+  const c=new TombCreature(Game.p.x,Game.p.y,kind);c.cooldown=0;Game.p.hp=5;Game.p.inv=0;
+  c.update(.01,Game.p);assert.equal(Game.p.hp,5);assert.ok(c.windup>0);
+  c.update(.6,Game.p);assert.equal(Game.p.hp,4);
+  c.cooldown=0;Game.p.inv=0;Game.p.buffs.hoof=1;c.update(1,Game.p);assert.equal(Game.p.hp,4);Game.p.buffs.hoof=0;
+ }
+});
