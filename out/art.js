@@ -9,8 +9,8 @@ const Art = {
     ],
     load() {
         const load=src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src;});
-        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png'),load('assets/tomb-mechanisms.png')]).then(([sprites,materials,walker,zombies,traps,mechanisms])=>{
-            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;this.mechanisms=mechanisms;
+        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png'),load('assets/tomb-mechanisms.png'),load('assets/tomb-stone-realistic.png')]).then(([sprites,materials,walker,zombies,traps,mechanisms,stone])=>{
+            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;this.mechanisms=mechanisms;this.stone=stone;
             const xs=[0,313,626,940,1254],ys=[0,302,618,918,1254];
             for(let i=0;i<16;i++) {
                 const c=document.createElement('canvas');c.width=c.height=400;
@@ -20,6 +20,15 @@ const Art = {
             }
             this.prepareWalker();this.ready=true;
         }).catch(()=>{this.failed=true;});
+    },
+    stoneSurface(ctx,wall,x,y,dx=x*50,dy=y*50,dw=50,dh=50){
+        if(!this.stone){ctx.drawImage(this.tiles[wall?12:0],dx,dy,dw,dh);return;}
+        const half=this.stone.width/2,rows=12,cols=6;
+        const tx=((x%cols)+cols)%cols,ty=((y%rows)+rows)%rows;
+        // Mirror alternate repetitions to avoid a hard seam at atlas boundaries.
+        const flipX=Math.abs(Math.floor(x/cols))%2,flipY=Math.abs(Math.floor(y/rows))%2;
+        ctx.save();ctx.translate(dx+(flipX?dw:0),dy+(flipY?dh:0));ctx.scale(flipX?-1:1,flipY?-1:1);
+        ctx.drawImage(this.stone,(wall?half:0)+(flipX?cols-1-tx:tx)*half/cols,(flipY?rows-1-ty:ty)*this.stone.height/rows,half/cols,this.stone.height/rows,0,0,dw+.2,dh+.2);ctx.restore();
     },
     prepareWalker(canvasFactory=()=>document.createElement('canvas')) {
         const c=canvasFactory();c.width=this.walker.width;c.height=this.walker.height;
@@ -91,8 +100,9 @@ const Scene = {
             if(type===0&&room?.kind==='sanctuary')tile=11;
             if(type===0&&room?.kind==='seal')tile=6;
             if(type===0&&room?.kind==='supply'&&World.theme.tile!==8)tile=1;
-            ctx.drawImage(Art.tiles[tile],x%8*50,y%8*50,50,50,x*50,y*50,50.5,50.5);
-            ctx.fillStyle=type===1?'#020709bb':'#b8aa8820';ctx.fillRect(x*50,y*50,50,50);
+            Art.stoneSurface(ctx,type===1,x,y);
+            if(type!==1){ctx.fillStyle=World.theme.tint+'16';ctx.fillRect(x*50,y*50,50,50);}
+            ctx.fillStyle=type===1?'#020709cc':'#111c2520';ctx.fillRect(x*50,y*50,50,50);
             if(type===2) {
                 ctx.fillStyle=`rgba(122,214,207,${.05+.035*Math.sin(time*2+x*.9+y)})`;ctx.fillRect(x*50,y*50,50,50);
             }
@@ -139,23 +149,18 @@ const Scene = {
             const px=x*50,py=y*50,front=open(x,y+1),back=open(x,y-1),west=open(x-1,y),east=open(x+1,y);
             if(!front&&!back&&!west&&!east)continue;
             ctx.save();
-            // Raised blue-grey brickwork, rendered inside solid collision cells.
-            ctx.fillStyle='#353b3a';ctx.fillRect(px,py,50,50);
-            for(let row=0;row<3;row++)for(let col=0;col<3;col++){
-                const bx=px+col*21-(row%2)*10,by=py+row*16;
-                ctx.fillStyle=['#484b44','#414640','#515047'][(x+y+row+col)%3];
-                ctx.fillRect(Math.max(px,bx)+1,by+1,Math.max(0,Math.min(px+50,bx+20)-Math.max(px,bx)-1),13);
-            }
-            ctx.globalAlpha=.23;ctx.drawImage(Art.tiles[World.theme.wall],x%8*50,y%8*50,50,50,px,py,50,50);ctx.globalAlpha=1;
+            // Textured wall crown sits above a taller, shaded vertical face.
+            Art.stoneSurface(ctx,true,x,y,px,py,50,50);
+            const crown=ctx.createLinearGradient(px,py,px+50,py+50);crown.addColorStop(0,'#bac1aa22');crown.addColorStop(1,'#080e1455');ctx.fillStyle=crown;ctx.fillRect(px,py,50,50);
             if(front){
-                const shade=ctx.createLinearGradient(0,py+28,0,py+50);shade.addColorStop(0,'#727062');shade.addColorStop(.2,'#373c38');shade.addColorStop(1,'#101917');
-                ctx.fillStyle=shade;ctx.beginPath();ctx.moveTo(px,py+29);
-                for(let k=0;k<=5;k++)ctx.lineTo(px+k*10,py+28+Math.sin(x*9+k*4)*2.5);
+                Art.stoneSurface(ctx,true,x,y+3,px,py+12,50,38);
+                const shade=ctx.createLinearGradient(0,py+12,0,py+50);shade.addColorStop(0,'#d0c8ac66');shade.addColorStop(.12,'#07101933');shade.addColorStop(1,'#030b13e0');
+                ctx.fillStyle=shade;ctx.beginPath();ctx.moveTo(px,py+13);
+                for(let k=0;k<=5;k++)ctx.lineTo(px+k*10,py+12+Math.sin(x*9+k*4)*2.5);
                 ctx.lineTo(px+50,py+50);ctx.lineTo(px,py+50);ctx.fill();
-                ctx.strokeStyle='#131c19';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(px,py+40);ctx.lineTo(px+50,py+40);ctx.moveTo(px+25,py+29);ctx.lineTo(px+25,py+50);ctx.stroke();
-                const shadow=ctx.createLinearGradient(0,py+50,0,py+63);shadow.addColorStop(0,'#000000a0');shadow.addColorStop(1,'#00000000');ctx.fillStyle=shadow;ctx.fillRect(px,py+50,50,13);
+                const shadow=ctx.createLinearGradient(0,py+50,0,py+69);shadow.addColorStop(0,'#000000a0');shadow.addColorStop(1,'#00000000');ctx.fillStyle=shadow;ctx.fillRect(px,py+50,50,19);
             }
-            for(const side of [west?-1:0,east?1:0])if(side){const bx=side<0?px:px+44;ctx.fillStyle=side<0?'#6e706055':'#030a0bc0';ctx.fillRect(bx,py,6,50);}
+            for(const side of [west?-1:0,east?1:0])if(side){const bx=side<0?px:px+38;const edge=ctx.createLinearGradient(bx,0,bx+12,0);edge.addColorStop(0,side<0?'#d3cab355':'#09101811');edge.addColorStop(1,side<0?'#1b252822':'#020812dd');ctx.fillStyle=edge;ctx.fillRect(bx,py,12,50);}
             if(back){ctx.fillStyle='#a8a18a66';ctx.fillRect(px,py,50,3);}
             // Chipped masonry and rubble soften the boundary, without hiding the route.
             for(let k=0;k<4;k++){const jitter=Math.sin(x*71+y*37+k*13),xx=px+k*13+3;

@@ -21,3 +21,8 @@ Built-in generation prompts requested realistic elevated orthographic 4×4 sheet
 Footsteps are short cached Web Audio buffers with stone heel/sole/grit and water splash variants. Playback follows actual travel distance, respects pause and mute, and disconnects finished sources. No external samples or audio service are used.
 
 `out/assets/tomb-mechanisms.png`: built-in generated RGBA 1275×1233 atlas, inspected before integration. Prompt: realistic Chinese tomb mechanical lever OFF/ON, hatch closed/open, sand/water/beetles/lava/mist/corpse water/poison/vines/acid/starfall patches and gear/chain. Source unchanged; explicit boundaries account for the tall first row. Footstep synthesis was removed after user feedback.
+
+
+## Realistic stone material (2026-09-16)
+`out/assets/tomb-stone-realistic.png` was created with the built-in image generation tool and copied into this project. Runtime Canvas samples the left floor panel and right brick panel without altering the source image.
+Prompt: A photorealistic orthographic two-panel ancient Chinese tomb material atlas: left worn cool-grey irregular limestone floor slabs, right staggered weathered blue-grey brickwork with subtle Han cloud-scroll relief. Flat diffuse lighting; no text, objects, borders or baked shadows; sharp natural stone detail.

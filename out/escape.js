@@ -1,15 +1,15 @@
 // Relics unlock the crank; only the crank reveals the timed escape shaft.
 const FLOOD_TYPES=[
- {name:'流沙',en:'Quicksand',sprite:4,slow:.48,color:'#c5a16d'},
- {name:'地下水',en:'Groundwater',sprite:5,slow:.65,color:'#6bb6c7'},
- {name:'尸甲虫',en:'Tomb beetles',sprite:6,slow:.85,harm:2.8,color:'#a28a68'},
- {name:'岩浆',en:'Lava',sprite:7,slow:.9,harm:1.8,color:'#ff9842'},
- {name:'迷雾',en:'Mist',sprite:8,slow:1,fog:.62,color:'#bdc9cc'},
- {name:'尸水',en:'Corpse water',sprite:9,slow:.5,harm:3.2,color:'#8ea585'},
- {name:'毒气',en:'Poison gas',sprite:10,slow:1,harm:2.2,color:'#adc76a'},
- {name:'藤蔓',en:'Creeping vines',sprite:11,slow:.46,color:'#81a674'},
- {name:'硫酸',en:'Acid',sprite:12,slow:.82,harm:1.9,color:'#d6d45d'},
- {name:'星陨瘴尘',en:'Starfall miasma',sprite:13,slow:.7,harm:2.5,fog:.8,color:'#b696dd'}
+ {name:'流沙',en:'Quicksand',sprite:4,slow:.48,color:'#d89537',base:'#57321c',edge:'#ffe1a0'},
+ {name:'地下水',en:'Groundwater',sprite:5,slow:.65,color:'#36bce7',base:'#063e63',edge:'#a2edff'},
+ {name:'尸甲虫',en:'Tomb beetles',sprite:6,slow:.85,harm:2.8,color:'#9a5b3b',base:'#231014',edge:'#e4b593'},
+ {name:'岩浆',en:'Lava',sprite:7,slow:.9,harm:1.8,color:'#ff651c',base:'#8b1809',edge:'#fff4b0'},
+ {name:'迷雾',en:'Mist',sprite:8,slow:1,fog:.62,color:'#dde5f6',base:'#8292b7',edge:'#ffffff'},
+ {name:'尸水',en:'Corpse water',sprite:9,slow:.5,harm:3.2,color:'#59bca2',base:'#173c35',edge:'#bce6c6'},
+ {name:'毒气',en:'Poison gas',sprite:10,slow:1,harm:2.2,color:'#b1eb49',base:'#385b1b',edge:'#e2ff9f'},
+ {name:'藤蔓',en:'Creeping vines',sprite:11,slow:.46,color:'#45aa59',base:'#173f25',edge:'#bef497'},
+ {name:'硫酸',en:'Acid',sprite:12,slow:.82,harm:1.9,color:'#e1ef39',base:'#687517',edge:'#f9ffc3'},
+ {name:'星陨瘴尘',en:'Starfall miasma',sprite:13,slow:.7,harm:2.5,fog:.8,color:'#be89ee',base:'#442365',edge:'#f1d1ff'}
 ];
 const SPECIES=[
  {name:'沙埋枯尸',en:'Sand husk',type:0,speed:47,sense:150,hop:1.1,windup:.6,filter:'sepia(.6)',size:76},
@@ -73,8 +73,18 @@ const ExitGate={
    const seed=Math.sin(x*127.1+y*311.7),px=x*50+25+seed*15,py=y*50+25+Math.cos(x*73+y*29)*15;
    const radius=38+amount*20+Math.sin(Game.elapsed*1.4+seed*5)*3;
    const gradient=ctx.createRadialGradient(px,py,0,px,py,radius);
-   gradient.addColorStop(0,this.flood.color+'99');gradient.addColorStop(.55,this.flood.color+'66');gradient.addColorStop(1,this.flood.color+'00');
-   ctx.globalAlpha=amount*(fog?.8:.65);ctx.fillStyle=gradient;ctx.fillRect(px-radius,py-radius,radius*2,radius*2);
+   gradient.addColorStop(0,this.flood.base+'f0');gradient.addColorStop(.5,this.flood.color+'dd');gradient.addColorStop(.8,this.flood.color+'bb');gradient.addColorStop(1,this.flood.color+'00');
+   ctx.globalAlpha=amount*(fog?.85:.95);ctx.fillStyle=gradient;ctx.fillRect(px-radius,py-radius,radius*2,radius*2);
+   // Directional ripples and dual-tone highlights stay visible on every floor.
+   ctx.globalAlpha=amount*.8;ctx.strokeStyle=this.flood.edge;ctx.lineWidth=this.flood.sprite===4?1.5:1;
+   for(let k=0;k<3;k++){
+    const shift=(Game.elapsed*(this.flood.sprite===4?9:5)+k*13+seed*10)%36;
+    ctx.beginPath();
+    if(this.flood.sprite===4){const sy=py-16+shift;ctx.moveTo(px-12,sy);ctx.bezierCurveTo(px-5,sy+3,px+seed*8,sy-3,px+13,sy+1);}
+    else if(this.flood.fog){ctx.globalAlpha=amount*.18;ctx.ellipse(px+seed*7,py-16+shift,16+k*3,5+k,seed*.4,Math.PI*.15,Math.PI*.85);}
+    else {ctx.ellipse(px+seed*7,py-16+shift,11+k*3,2.5+k,seed*.4,Math.PI*.15,Math.PI*.85);}
+    ctx.stroke();
+   }
    if((x*3+y*7)%4===0){ctx.globalAlpha=amount*.5;Art.mechanism(ctx,this.flood.sprite,px,py,72+seed*16);}
   }
   ctx.restore();
