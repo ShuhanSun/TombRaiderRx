@@ -27,7 +27,7 @@ test('300 generated floors have one reachable relic, connected terrain and safe 
         }
         assert.ok(seen.has(index(relics[0])));assert.ok(seen.has(index(Game.exitPos)));
         for(const altar of World.altars) {assert.ok(seen.has(index(altar)));assert.ok(MapSys.canOccupy(altar.x,altar.y,10));}
-        assert.equal(seen.size,[...MapSys.t].filter(t=>t!==1).length);
+        assert.equal(seen.size,[...MapSys.t].filter(t=>t!==1).length-World.rooms.filter(r=>r.kind==='sealed').reduce((n,r)=>n+r.w*r.h,0));
         for(const e of Game.ents.filter(e=>e.type==='zombie'||e.type==='trap')) assert.ok(Math.hypot(e.x-Game.p.x,e.y-Game.p.y)>150);
         assert.ok(MapSys.canOccupy(Game.p.x,Game.p.y,10));
         assert.ok(MapSys.canOccupy(Game.exitPos.x,Game.exitPos.y,10));
@@ -403,4 +403,46 @@ test('creatures telegraph attacks, respect warding and use finite coffin spawns'
   c.update(.6,Game.p);assert.equal(Game.p.hp,4);
   c.cooldown=0;Game.p.inv=0;Game.p.buffs.hoof=1;c.update(1,Game.p);assert.equal(Game.p.hp,4);Game.p.buffs.hoof=0;
  }
+});
+
+test('sealed chambers have one moving entrance and required relic/key remain outside',()=>{
+ const {Game,Expedition,World,MapSys}=setup(81);
+ for(let lvl=1;lvl<=10;lvl++){
+  Game.load(lvl);assert.ok(Expedition.sealedRooms.length);
+  for(const r of Expedition.sealedRooms){
+   const walls=Expedition.walls.filter(w=>w.room===r);assert.equal(walls.length,1);const w=walls[0];
+   const perimeter=[];for(let x=r.x-1;x<=r.x+r.w;x++)perimeter.push((r.y-1)*60+x,(r.y+r.h)*60+x);
+   for(let y=r.y;y<r.y+r.h;y++)perimeter.push(y*60+r.x-1,y*60+r.x+r.w);
+   assert.ok(perimeter.every(at=>MapSys.t[at]===1));
+   assert.ok(!World.inside(r,Expedition.keyCoffin.x,Expedition.keyCoffin.y));assert.ok(!World.inside(r,Game.artifactPos.x,Game.artifactPos.y));
+   assert.equal(Expedition.switches.filter(s=>s.wall===w).length,2);
+   Game.p.hasKey=true;Expedition.useSwitch(Expedition.switches.find(s=>s.wall===w));Expedition.update(2);assert.equal(MapSys.t[w.at],0);
+  }
+ }
+});
+
+test('trap projectiles kill zombies and explosions respect walls',()=>{
+ const {Game,MapSys,Zombie,Projectile,TombDangers}=setup();MapSys.t.fill(0);Game.p.x=200;Game.p.y=300;Game.ents=[Game.p];
+ const z=new Zombie(150,100,0);Game.spawn(z);
+ for(let i=0;i<3;i++){Game.elapsed=i;new Projectile(100,100,0,'ARROW').update(.3,Game.p);}assert.equal(z.dead,1);
+ const other=new Zombie(150,150,0);Game.spawn(other);MapSys.t[2*60+3]=1;Game.elapsed=5;TombDangers.blast(175,75,120,3);assert.equal(other.dead,0);
+ MapSys.t.fill(0);TombDangers.blast(175,75,120,3);assert.equal(other.dead,1);
+});
+
+test('explosive coffins warn before blast and only explode once',()=>{
+ const {Game,Expedition,TombDangers}=setup();const c=Expedition.coffins.find(c=>c.explosive);assert.ok(c);c.reveal();assert.equal(c.fuse,1.4);
+ Game.p.x=c.x;Game.p.y=c.y+35;Game.p.inv=0;TombDangers.vents=[];TombDangers.update(.5);assert.equal(Game.p.hp,5);TombDangers.update(1);assert.equal(Game.p.hp,4);
+ const count=TombDangers.bursts.length;c.reveal();assert.equal(c.fuse,0);assert.equal(TombDangers.bursts.length,count);
+});
+
+test('burrows respawn bounded stompable creatures; water rolls safely and smoke reduces sight',()=>{
+ const {Game,TombDangers,MapSys,World}=setup();MapSys.t.fill(0);Game.ents=[Game.p];Game.p.x=500;Game.p.y=500;
+ const source={x:500,y:500,kind:'snake',timer:0};TombDangers.sources=[source];TombDangers.vents=[];
+ for(let i=0;i<20;i++)TombDangers.update(4);assert.equal(Game.ents.filter(e=>e.source===source&&!e.dead).length,5);
+ Game.p.moving=true;for(const e of Game.ents.filter(e=>e.source===source))e.update(.01,Game.p);assert.equal(Game.ents.filter(e=>e.source===source&&!e.dead).length,0);
+ TombDangers.update(4);assert.equal(Game.ents.filter(e=>e.source===source&&!e.dead).length,1);
+ const jet={x:450,y:500,angle:0,kind:'water',age:2,cooldown:0,length:180};TombDangers.vents=[jet];TombDangers.update(.1);assert.ok(Game.p.rollTime>0);
+ MapSys.t[10*60+11]=1;Game.p.update(.45);assert.ok(Game.p.x<550);
+ Game.p.x=500;jet.kind='smoke';const fog=World.sight();TombDangers.vents=[];assert.ok(World.sight()>fog);
+ assert.ok(Game.settlement().includes('人民币'));Game.getArtifact();assert.ok(Game.settlement().includes('¥1,200'));
 });

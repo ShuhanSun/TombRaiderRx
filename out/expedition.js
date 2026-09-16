@@ -56,7 +56,7 @@ const Expedition={
    const p={x:x*50+25,y:y*50+25};if(Math.hypot(p.x-Game.exitPos.x,p.y-Game.exitPos.y)>100&&!Game.ents.some(e=>e.type==='coffin'&&Math.hypot(e.x-p.x,e.y-p.y)<65)&&!this.switches.some(e=>Math.hypot(e.x-p.x,e.y-p.y)<90)&&!World.altars.some(e=>Math.hypot(e.x-p.x,e.y-p.y)<65))return p;
   }return {x:(r.x+.5)*50,y:(r.y+.5+offset)*50};};
   for(const [i,kind] of ['coffin','wall','trap'].entries())this.switches.push({...freeSpot(switchRoom,i),type:'lock_switch',kind,progress:0,latched:false,cooldown:0});
-  this.buildWalls();
+  this.buildWalls();TombDangers.setup();
  },
  spawnEnemy(kind,x,y){
   if(kind==='zombie'||kind==='crawler'){
@@ -66,6 +66,7 @@ const Expedition={
   }else Game.spawn(new TombCreature(x,y,kind));
  },
  reveal(c){
+  if(c.explosive){c.fuse=1.4;Game.msg(curLang==='CN'?'棺内火药嘶响！退后！':'Explosive coffin! Back away!','#ff986d');}
   if(c.content==='key'){Game.p.hasKey=true;Game.msg(curLang==='CN'?'青铜机关钥匙 · 本层开关已解锁':'Bronze key · floor mechanisms unlocked','#eac879');Game.updateHUD();return true;}
   if(c.content!=='cache')return false;
   for(const p of [c.payload,...c.extra]){
@@ -75,26 +76,24 @@ const Expedition={
   Game.addText(c.x,c.y,c.payload.enemy?(curLang==='CN'?'棺中有异动！':'Something stirs!'):(curLang==='CN'?'取出随葬供物':'Burial supplies'),'#d2b38b');return true;
  },
  buildWalls(){
-  const candidates=[];
-  for(let y=2;y<MapSys.h-2;y++)for(let x=2;x<MapSys.w-2;x++){
-   const at=y*MapSys.w+x;if(MapSys.t[at]!==1)continue;
-   const h=MapSys.t[at-1]!==1&&MapSys.t[at+1]!==1,v=MapSys.t[at-MapSys.w]!==1&&MapSys.t[at+MapSys.w]!==1;
-   if(!h&&!v)continue;
-   const px=x*50+25,py=y*50+25;
-   if(Math.hypot(px-Game.p.x,py-Game.p.y)<150||Math.hypot(px-Game.exitPos.x,py-Game.exitPos.y)<140)continue;
-   if(this.walls.some(w=>Math.hypot(w.x-px,w.y-py)<220))continue;
-   candidates.push({at,x:px,y:py,axis:h?'y':'x'});
+  this.sealedRooms=[];
+  for(let y=2;y<MapSys.h-7&&this.walls.length<2;y++)for(let x=2;x<MapSys.w-7&&this.walls.length<2;x++){
+   let solid=true;for(let yy=y;yy<y+5;yy++)for(let xx=x;xx<x+5;xx++)if(MapSys.t[yy*MapSys.w+xx]!==1)solid=false;
+   if(!solid)continue;
+   const sides=[{dx:2,dy:0,ox:2,oy:-1,ix:2,iy:1},{dx:2,dy:4,ox:2,oy:5,ix:2,iy:3},{dx:0,dy:2,ox:-1,oy:2,ix:1,iy:2},{dx:4,dy:2,ox:5,oy:2,ix:3,iy:2}];
+   const side=sides.find(q=>MapSys.t[(y+q.oy)*MapSys.w+x+q.ox]!==1&&!this.sealedRooms.some(r=>World.inside(r,(x+q.ox)*50+25,(y+q.oy)*50+25)));
+   if(!side)continue;
+   const outside={x:(x+side.ox)*50+25,y:(y+side.oy)*50+25};
+   if(Game.ents.some(e=>e.type==='coffin'&&Math.hypot(e.x-outside.x,e.y-outside.y)<65)||this.switches.some(e=>Math.hypot(e.x-outside.x,e.y-outside.y)<80))continue;
+   const room={x:x+1,y:y+1,w:3,h:3,kind:'sealed'};const id=World.rooms.length;World.rooms.push(room);this.sealedRooms.push(room);
+   for(let yy=y+1;yy<y+4;yy++)for(let xx=x+1;xx<x+4;xx++){MapSys.t[yy*MapSys.w+xx]=0;World.roomTiles[yy*MapSys.w+xx]=id;}
+   const dx=x+side.dx,dy=y+side.dy;
+   const wall={at:dy*MapSys.w+dx,x:dx*50+25,y:dy*50+25,type:'moving_wall',mode:this.walls.length?'slide':'lift',height:1,target:1,manual:true,room,dead:0};this.walls.push(wall);
+   for(const p of [outside,{x:(x+side.ix)*50+25,y:(y+side.iy)*50+25}])this.switches.push({...p,type:'lock_switch',kind:'wall',wall,progress:0,latched:false,cooldown:0});
+   const loot=this.coffins.find(c=>!c.hidden&&!c.locked&&!c.sealed&&c.payload?.loot&&!c.payload.loot.includes('item_compass')&&!c.payload.loot.includes('item_candle'));
+   if(loot){loot.x=(x+2)*50+25;loot.y=(y+2)*50+25;loot.sealed=true;}
+   Game.spawn({type:'burial_decor',x:(x+3.4)*50,y:(y+1.5)*50,sprite:this.style.decor,size:48,dead:0});
   }
-  if(!candidates.length){
-   outer:for(const room of World.rooms.filter(r=>r.kind!=='entry'))for(let y=room.y+1;y<room.y+room.h-1;y++)for(let x=room.x+1;x<room.x+room.w-1;x++){
-    const px=x*50+25,py=y*50+25,at=y*MapSys.w+x;
-    if(Math.hypot(px-Game.exitPos.x,py-Game.exitPos.y)<100||Game.ents.some(e=>Math.hypot(e.x-px,e.y-py)<65)||World.altars.some(e=>Math.hypot(e.x-px,e.y-py)<70)||this.switches.some(e=>Math.hypot(e.x-px,e.y-py)<70))continue;
-    if([-61,-60,-59,-1,0,1,59,60,61].some(d=>MapSys.t[at+d]===1))continue;
-    MapSys.t[at]=1;candidates.push({at,x:px,y:py,axis:'x'});break outer;
-   }
-  }
-  // These are additional shortcuts through previously solid walls, never the only route.
-  for(const [i,p] of candidates.slice(0,4).entries())this.walls.push({...p,type:'moving_wall',mode:i%2?'slide':'lift',height:1,target:1,phase:i*2,manual:i===0,dead:0});
  },
  useSwitch(s){
   if(!Game.p.hasKey){Game.msg(curLang==='CN'?'需要青铜钥匙 · 在普通棺材中寻找':'Find the bronze key inside a coffin','#d7ba8d');return false;}
@@ -102,12 +101,13 @@ const Expedition={
    this.hidden.filter(c=>!c.opened).forEach(c=>{c.liftTarget=c.liftTarget?0:1;c.rising=true;c.hidden=true;});
    if(this.lockedCoffin){this.lockedCoffin.locked=false;this.lockedCoffin.open();}
   }
-  if(s.kind==='wall')this.walls.forEach(w=>{w.manual=true;w.target=w.target?0:1;});
+  if(s.kind==='wall')(s.wall?[s.wall]:this.walls).forEach(w=>{w.manual=true;w.target=w.target?0:1;});
   if(s.kind==='trap'){s.warning=1.2;s.cooldown=5;Game.msg(curLang==='CN'?'机关失控！离开红色区域':'Trap armed! Leave the red area','#f39b7b');}
   else Game.msg(curLang==='CN'?(s.kind==='coffin'?'地宫升棺 · 隐藏石椁显现':'石壁移位 · 甬道改道'):'Mechanism activated','#d2b483');
   AudioSys.playOpen();return true;
  },
  update(dt){
+  TombDangers.update(dt);if(!Game.running)return;
   let changed=false;
   for(const c of this.hidden)if(c.rising){c.elevation=Math.max(0,Math.min(1,c.elevation+(c.liftTarget?1:-1)*dt*.65));if(c.elevation===c.liftTarget){c.hidden=c.elevation===0;c.rising=false;}}
   for(const s of this.switches){
@@ -115,7 +115,7 @@ const Expedition={
    s.cooldown=Math.max(0,s.cooldown-dt);
    if(!near)s.latched=false;
    if(near&&!Game.p.moving&&!s.latched&&!s.cooldown){s.progress+=dt;if(s.progress>=.8){s.latched=true;s.progress=0;this.useSwitch(s);}}else s.progress=0;
-   if(s.warning>0){s.warning=Math.max(0,s.warning-dt);if(s.warning===0){for(let i=0;i<8;i++)Game.spawn(new Projectile(s.x,s.y,i*Math.PI/4,World.theme.trap==='MIX'?'ARROW':World.theme.trap));if(Math.hypot(s.x-Game.p.x,s.y-Game.p.y)<65)Game.p.hit();}}
+   if(s.warning>0){s.warning=Math.max(0,s.warning-dt);if(s.warning===0){for(let i=0;i<8;i++)Game.spawn(new Projectile(s.x,s.y,i*Math.PI/4,World.theme.trap==='MIX'?'ARROW':World.theme.trap));TombDangers.blast(s.x,s.y,65,1);}}
   }
   for(const w of this.walls){
    if(!w.manual){const phase=(Game.elapsed+w.phase)%12;w.warning=phase>5&&phase<6||phase>11;w.target=phase<6?1:0;}
@@ -129,6 +129,7 @@ const Expedition={
  },
  render(ctx,e){
   const cn=curLang==='CN';
+  if(TombDangers.render(ctx,e))return true;
   if(e.type==='burial_decor'){Art.expeditionSprite(ctx,e.sprite,e.x,e.y,e.size);return true;}
   if(e.type==='lock_switch'){
    Art.mechanism(ctx,14,e.x,e.y,52);const labels={coffin:'升棺锁',wall:'移壁锁',trap:'兽面锁'};
@@ -153,12 +154,15 @@ const Expedition={
 class TombCreature{
  constructor(x,y,kind){Object.assign(this,{x,y,kind,type:'vermin',dead:0,cooldown:1,windup:0});}
  update(dt,p){
-  const d=Math.hypot(p.x-this.x,p.y-this.y);this.cooldown=Math.max(0,this.cooldown-dt);
+  if(this.dead)return;
+  const d=Math.hypot(p.x-this.x,p.y-this.y);
+  if(this.stompable&&d<20&&(p.moving||p.rollTime>0)){this.dead=1;Game.spawn(new Effect(this.x,this.y,'dust'));return;}
+  this.cooldown=Math.max(0,this.cooldown-dt);
   if(p.buffs.hoof>0){this.windup=0;return;}
   if(this.windup>0){this.windup=Math.max(0,this.windup-dt);if(!this.windup){if(d<34&&MapSys.lineClear(this.x,this.y,p.x,p.y))p.hit();this.cooldown=1.8;}return;}
   if(d<28&&!this.cooldown){this.windup=.55;return;}
   if(d>220||d<25)return;
-  const speed={worm:24,beetle:49,spider:66,bat:88}[this.kind],angle=Math.atan2(p.y-this.y,p.x-this.x)+(this.kind==='spider'?Math.sin(Game.elapsed*3)*.5:0);
+  const speed={worm:24,beetle:49,spider:66,bat:88,snake:58}[this.kind],angle=Math.atan2(p.y-this.y,p.x-this.x)+(this.kind==='spider'?Math.sin(Game.elapsed*3)*.5:0);
   const x=this.x+Math.cos(angle)*speed*dt,y=this.y+Math.sin(angle)*speed*dt;
   if(MapSys.canOccupy(x,this.y,7))this.x=x;if(MapSys.canOccupy(this.x,y,7))this.y=y;
  }

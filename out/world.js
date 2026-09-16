@@ -11,6 +11,7 @@ const THEMES = [
     {name:'永劫天陨塔',en:'Tower of the Fallen Star',tile:9,wall:15,tint:'#8797c7',sight:300,water:0.12,hazard:'fire',seals:3,zombies:[0,1,2],trap:'MIX',note:'最后三道封印。取回彼岸花，从盗洞重见天光。',enNote:'Three final seals. Claim the Equinox Flower and escape.'}
 ];
 const ROOM_TYPES = {
+    sealed:{cn:'封闭陪葬室',en:'Sealed chamber',hint:'唯一出入口为机关石壁，内外移壁锁均可开启。',enHint:'The moving wall is the only door; use either lock to open it.'},
     entry:{cn:'落脚处',en:'Arrival',hint:'灯火尚安，整顿行装再向前。',enHint:'A quiet place to begin.'},
     burial:{cn:'陪葬室',en:'Burial chamber',hint:'石棺之中，可能是供物，也可能是守墓人。',enHint:'Coffins may hold offerings—or guardians.'},
     supply:{cn:'供奉室',en:'Offering chamber',hint:'这里留有补给；满血时糯米酒不会自动消耗。',enHint:'Supplies await. Wine is preserved while at full health.'},
@@ -104,7 +105,7 @@ const World = {
         const seals=this.altars.filter(a=>a.kind==='seal'&&!a.done).sort((a,b)=>Math.hypot(a.x-Game.p.x,a.y-Game.p.y)-Math.hypot(b.x-Game.p.x,b.y-Game.p.y));
         return seals[0]||(ExitGate.remaining>0?Game.exitPos:ExitGate.switch);
     },
-    sight() {return Math.max(100,((this.baseSight||300)+(Game.p.buffs.candle>0?170*Math.min(1,Game.p.buffs.candle/2):0))*(ExitGate.levelAt(Game.p.x,Game.p.y)>.25?(ExitGate.flood.fog||1):1));},
+    sight() {return Math.max(70,(TombDangers.smokeAt(Game.p)?.4:1)*((this.baseSight||300)+(Game.p.buffs.candle>0?170*Math.min(1,Game.p.buffs.candle/2):0))*(ExitGate.levelAt(Game.p.x,Game.p.y)>.25?(ExitGate.flood.fog||1):1));},
     phase(h) {return (Game.elapsed+h.offset)%6;},
     updateRoom() {
         const r=this.rooms.find(r=>this.inside(r,Game.p.x,Game.p.y));
@@ -133,7 +134,10 @@ const World = {
             } else a.progress=0;
         }
         for(const h of this.hazards) {
-            if(this.phase(h)>4.5&&Math.abs(h.x-Game.p.x)<21&&Math.abs(h.y-Game.p.y)<21)Game.p.hit();
+            if(this.phase(h)>4.5){
+                if(Math.abs(h.x-Game.p.x)<21&&Math.abs(h.y-Game.p.y)<21)Game.p.hit();
+                for(const e of TombDangers.enemies())if(Math.abs(h.x-e.x)<24&&Math.abs(h.y-e.y)<24)TombDangers.hurt(e,1);
+            }
         }
     }
 };

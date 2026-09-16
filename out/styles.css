@@ -286,3 +286,6 @@ html[lang='en'] h1 { font-size:clamp(32px,7vw,68px); letter-spacing:4px; }
 .relic-owned small {font-size:9px;color:#e0c58e;}
 #objective {top:max(108px,calc(env(safe-area-inset-top) + 90px));}
 #room-panel {top:max(142px,calc(env(safe-area-inset-top) + 122px));}
+
+#end-desc,#win-desc {white-space:pre-line;line-height:1.8;max-height:65vh;overflow:auto;padding:0 18px;font-size:15px;text-align:left;}
+#end-desc,#win-desc {touch-action:pan-y;}

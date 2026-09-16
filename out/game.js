@@ -407,7 +407,7 @@ class Zombie extends Entity {
                 if(this.attackState==='windup') {
                     this.attackState='strike';this.attackClock=.24;
                     if(this.zType===2) {
-                        Game.spawn(new Projectile(this.x,this.y,this.attackAim,this.species.shot||'VENOM'));
+                        Game.spawn(new Projectile(this.x,this.y,this.attackAim,this.species.shot||'VENOM','enemy'));
                         const fx=new Effect(this.x,this.y,'spit');fx.angle=this.attackAim;Game.spawn(fx);
                         AudioSys.playTrap(d);
                     } else {
@@ -485,6 +485,7 @@ class Trap extends Entity {
         this.lvlIdx = Math.min(lvlIndex,9);
     }
     update(dt,p){
+        if(this.vent)return;
         const dist=Math.hypot(this.x-p.x,this.y-p.y);
         this.recoil=Math.max(0,this.recoil-dt);
         if(this.windup<=0&&this.recoil<=0&&dist<400&&MapSys.lineClear(this.x,this.y,p.x,p.y))this.aim=Math.atan2(p.y-this.y,p.x-this.x);
@@ -516,18 +517,23 @@ class Trap extends Entity {
 }
 
 class Projectile extends Entity {
-    constructor(x,y,a,type){super(x,y,'proj');
-        this.pType=type;this.age=0;this.info = PROJ_TYPES[type] || PROJ_TYPES.ARROW;
+    constructor(x,y,a,type,source='trap'){super(x,y,'proj');
+        this.source=source;this.pType=type;this.age=0;this.info = PROJ_TYPES[type] || PROJ_TYPES.ARROW;
         this.vx=Math.cos(a)*this.info.spd; this.vy=Math.sin(a)*this.info.spd;
         this.life=3.0; this.ang=a;
     }
     update(dt,p){
         this.age+=dt;this.life-=dt; if(this.life<0){this.dead=1;return;}
-        this.x+=this.vx*dt; this.y+=this.vy*dt;
-        if(Math.hypot(this.x-p.x,this.y-p.y)<this.info.size+10){
-            p.hit(); this.dead=1;
+        const steps=Math.max(1,Math.ceil(Math.hypot(this.vx*dt,this.vy*dt)/8));
+        for(let i=0;i<steps&&!this.dead;i++){
+            this.x+=this.vx*dt/steps;this.y+=this.vy*dt/steps;
+            if(MapSys.get(this.x,this.y)===TERRAIN.WALL){this.dead=1;Game.spawn(new Effect(this.x,this.y,'dust'));break;}
+            if(this.source==='trap'){
+                const victim=TombDangers.enemies().find(e=>Math.hypot(this.x-e.x,this.y-e.y)<this.info.size+13);
+                if(victim){TombDangers.hurt(victim,this.pType==='STONE'||this.pType==='LOG'?2:1);this.dead=1;break;}
+            }
+            if(Math.hypot(this.x-p.x,this.y-p.y)<this.info.size+10){p.hit();this.dead=1;}
         }
-        if(MapSys.get(this.x,this.y)===TERRAIN.WALL) {this.dead=1;Game.spawn(new Effect(this.x-this.vx*dt,this.y-this.vy*dt,'dust'));}
     }
     draw(ctx){
         ctx.rotate(this.ang); ctx.fillStyle=this.info.col;
@@ -545,6 +551,15 @@ class Player extends Entity {
         if(this.buffs.candle>0) this.buffs.candle=Math.max(0,this.buffs.candle-dt);
 
 
+        if(this.rollTime>0){
+            const step=Math.min(dt,this.rollTime),parts=Math.max(1,Math.ceil(290*step/6));this.rollTime=Math.max(0,this.rollTime-dt);
+            const clear=(x,y)=>MapSys.canOccupy(x,y,10)&&!Game.ents.some(e=>e.type==='coffin'&&!e.hidden&&!e.rising&&Math.hypot(e.x-x,e.y-y)<30);
+            for(let i=0;i<parts;i++){
+                const nx=this.x+this.rollVX*step/parts,ny=this.y+this.rollVY*step/parts;
+                if(clear(nx,this.y))this.x=nx;if(clear(this.x,ny))this.y=ny;
+            }
+            this.moving=true;this.stepPhase+=dt*20;return;
+        }
         const oldX=this.x, oldY=this.y;
         let s=160*ExitGate.speed();
         if(Input.sprint) s *= 1.5; // Sprint!
@@ -870,25 +885,30 @@ const Game = {
         document.getElementById('level-num').innerText = `${levelBase} | ${lName}`;
 
         document.getElementById('artifact-bar').innerText = `${LANG[curLang].artLabel}: ${this.art}/10`;
-        document.getElementById('relic-strip').innerHTML=(this.collected||[]).map(i=>`<span class="relic-owned" title="${ARTIFACTS[i][curLang==='CN'?'n':'en']} · ${RELIC_VALUES[i]} 冥值">${ARTIFACTS[i].i}<small>${RELIC_VALUES[i]}</small></span>`).join('');
-        document.getElementById('relic-total').textContent=(this.collected?.length?`${curLang==='CN'?'冥值':'Value'} ${(this.collected||[]).reduce((sum,i)=>sum+RELIC_VALUES[i],0)}`:'')+(this.p.hasKey?' · 🔑':'');
+        document.getElementById('relic-strip').innerHTML=(this.collected||[]).map(i=>`<span class="relic-owned" title="${ARTIFACTS[i][curLang==='CN'?'n':'en']} · 人民币 ¥${RELIC_VALUES[i]}">${ARTIFACTS[i].i}<small>¥${RELIC_VALUES[i]}</small></span>`).join('');
+        document.getElementById('relic-total').textContent=(this.collected?.length?`${curLang==='CN'?'人民币 ¥':'CNY ¥'} ${(this.collected||[]).reduce((sum,i)=>sum+RELIC_VALUES[i],0)}`:'')+(this.p.hasKey?' · 🔑':'');
         const cn=curLang==='CN';
         document.getElementById('objective').textContent=World.remaining()&&this.exit?(cn?`冥器已得 · 还需破除 ${World.remaining()} 道封印`:`Relic secured · ${World.remaining()} seals remain`):this.exit?(ExitGate.remaining>0?(cn?`主墓室盗洞 ${Math.ceil(ExitGate.remaining)}秒 · ${ExitGate.flood.name}扩散中`:`Exit ${Math.ceil(ExitGate.remaining)}s · ${ExitGate.flood.en}`):(this.p.hasKey?(cn?'寻找机械开关 · 驻足拉闸开启盗洞':'Find the crank'):(cn?'寻找钥匙 · 藏在一口普通棺材内':'Find the key in a coffin'))):(cn?'寻找镇墓冥器 · 驻足开棺':'Find the relic · stay beside coffins');
         document.getElementById('exit-confirm-btn').textContent=this.lvl===10?(cn?'逃出生天':'Escape the tomb'):LANG[curLang].exitModal.yes;
     },
     over: function(){
         this.running=0; Input.reset();Sound.pause();
-        document.getElementById('end-desc').textContent=this.runSummary();
+        document.getElementById('end-desc').textContent=this.runSummary()+'\n\n'+this.settlement();
         document.getElementById('game-over-modal').classList.add('active');
         document.getElementById('end-btn').focus();
     },
     victory: function(){
         this.running=0; Input.reset();Sound.pause();
-        document.getElementById('win-desc').textContent=this.runSummary();
+        document.getElementById('win-desc').textContent=this.runSummary()+'\n\n'+this.settlement();
         document.getElementById('victory-modal').classList.add('active');
         document.getElementById('win-btn').focus();
     },
 
+    settlement: function(){
+        const list=(this.collected||[]).map(i=>`${ARTIFACTS[i].i} ${ARTIFACTS[i][curLang==='CN'?'n':'en']}：¥${RELIC_VALUES[i].toLocaleString('zh-CN')}`).join('\n');
+        const total=(this.collected||[]).reduce((sum,i)=>sum+RELIC_VALUES[i],0);
+        return `${curLang==='CN'?'冥器结算（人民币·游戏估值）':'Relic settlement (CNY · game valuation)'}\n${list||'—'}\n${curLang==='CN'?'总金额':'Total'}：¥${total.toLocaleString('zh-CN')}`;
+    },
     runSummary: function() {
         const time=`${Math.floor(this.elapsed/60)}:${String(Math.floor(this.elapsed%60)).padStart(2,'0')}`;
         return curLang==='CN'?`抵达第 ${this.lvl} 层 · 收集 ${this.art}/10 件冥器 · 探索 ${time}`:`Floor ${this.lvl} · ${this.art}/10 relics · ${time}`;

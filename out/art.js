@@ -133,8 +133,9 @@ const Scene = {
             if(warn&&!active)Art.label(ctx,hazard.x,hazard.y-37,curLang==='CN'?'避开机关':'MOVE AWAY','#ffc39b');
         }
         const visible=e=>e.x>cx-100&&e.x<cx+w+100&&e.y>cy-100&&e.y<cy+h+100;
-        const objects=[...World.props.map(e=>({...e,type:'decoration'})),...World.altars.map(e=>({...e,type:'altar'})),...game.ents.filter(e=>!e.dead&&(!e.hidden||e.rising)),...Expedition.switches,ExitGate.switch,...(World.canExit()?[{...game.exitPos,type:'exit'}]:[])].filter(visible).sort((a,b)=>a.y-b.y);
+        const objects=[...World.props.map(e=>({...e,type:'decoration'})),...World.altars.map(e=>({...e,type:'altar'})),...game.ents.filter(e=>!e.dead&&(!e.hidden||e.rising)),...Expedition.switches,...TombDangers.sources,ExitGate.switch,...(World.canExit()?[{...game.exitPos,type:'exit'}]:[])].filter(visible).sort((a,b)=>a.y-b.y);
         for(const e of objects)this.entity(ctx,e,game);
+        TombDangers.drawJets(ctx);
         for(const t of game.texts) {ctx.save();ctx.translate(t.x,t.y);t.draw(ctx);ctx.restore();}
         ctx.restore();
         const sight=World.sight(),shade=ctx.createRadialGradient(w/2,h/2,60,w/2,h/2,sight);
@@ -223,7 +224,7 @@ const Scene = {
                 if(e.buffs.jade>0||e.buffs.hoof>0) {ctx.strokeStyle=e.buffs.jade>0?'#b8f0d2':'#d8b077';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(e.x,e.y,25,12,0,0,Math.PI*2);ctx.stroke();}
                 ctx.save();if(e.inv>0)ctx.globalAlpha=.6+.4*Math.sin(time*25)**2;
                 const bob=e.moving?-Math.abs(Math.sin(e.stepPhase))*1.8:0;
-                Art.raider(ctx,e,e.x,e.y+bob,74);ctx.restore();
+                if(e.rollTime>0){ctx.translate(e.x,e.y-20);ctx.rotate((.45-e.rollTime)/.45*Math.PI*2);Art.raider(ctx,e,0,20,74);}else Art.raider(ctx,e,e.x,e.y+bob,74);ctx.restore();
             } else {
                 const pose=e.attackState==='windup'?2:e.attackState==='strike'?3:lift>2?1:0;
                 const lunge=e.attackState==='strike'?Math.sin((1-e.attackClock/.24)*Math.PI)*11:0;
@@ -237,6 +238,7 @@ const Scene = {
             return;
         }
         if(e.type==='coffin') {
+            if(e.fuse>0){Art.glow(ctx,e.x,e.y,110,'#ff6a2944');Art.label(ctx,e.x,e.y-88,cn?'火药引燃 · 快退！':'EXPLOSIVE!','#ff9870');}
             ctx.save();
             if(game.p.y<e.y&&distance<85)ctx.globalAlpha=.62;
             if(e.rising){ctx.globalAlpha=e.elevation;ctx.translate(0,(1-e.elevation)*30);}
@@ -250,6 +252,7 @@ const Scene = {
             if(distance<95)Art.label(ctx,e.x,e.y-38,LANG[curLang].items[e.code.replace('item_','')].n);return;
         }
         if(e.type==='trap') {
+            if(e.vent)return;
             const kick=(e.recoil||0)/.28*7;
             ctx.save();ctx.translate(e.x,e.y);ctx.rotate(e.displayAim);ctx.translate(-kick,0);
             ctx.filter=Expedition.style.filter;
