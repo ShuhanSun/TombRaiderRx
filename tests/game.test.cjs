@@ -368,20 +368,18 @@ test('fixed hidden contents, reachable single key, no duplicate coffin rewards',
  }
 });
 
-test('keys gate every lock; hidden coffins rise and trap switches telegraph damage',()=>{
+test('auxiliary locks are removed; exit key remains necessary and hidden coffins rise nearby',()=>{
  const {Game,Expedition,ExitGate,World}=setup(72);Game.getArtifact();World.altars.forEach(a=>a.done=true);
- assert.equal(ExitGate.open(),false);for(const s of Expedition.switches)assert.equal(Expedition.useSwitch(s),false);
- const hidden=Expedition.hidden[0];assert.ok(hidden);hidden.open();assert.equal(hidden.opened,0);
+ assert.equal(Expedition.switches.length,0);assert.equal(ExitGate.open(),false);
  Expedition.keyCoffin.reveal();assert.ok(ExitGate.open());
- const lift=Expedition.switches.find(s=>s.kind==='coffin');Expedition.useSwitch(lift);Expedition.update(2);assert.equal(hidden.hidden,false);hidden.open();assert.equal(hidden.opened,1);
- const trap=Expedition.switches.find(s=>s.kind==='trap');Game.p.x=trap.x;Game.p.y=trap.y;Game.p.inv=0;
- Expedition.useSwitch(trap);Expedition.update(.5);assert.equal(Game.p.hp,5);Expedition.update(.8);assert.equal(Game.p.hp,4);
- Game.load(2);assert.equal(Game.p.hasKey,false);
+ Game.load(6);const hidden=Expedition.hidden[0];assert.ok(hidden);hidden.open();assert.equal(hidden.opened,0);
+ Game.p.x=hidden.x;Game.p.y=hidden.y+65;Expedition.update(2);assert.equal(hidden.hidden,false);hidden.open();assert.equal(hidden.opened,1);
+ assert.equal(Game.p.hasKey,false);
 });
 
 test('moving walls change collision and never close on an actor',()=>{
  const {Game,Expedition,MapSys}=setup(112);const wall=Expedition.walls[0];assert.ok(wall);
- wall.manual=true;wall.target=0;Expedition.update(2);assert.equal(MapSys.t[wall.at],0);
+ Game.p.x=wall.x;Game.p.y=wall.y+50;Expedition.update(2);assert.equal(MapSys.t[wall.at],0);
  Game.p.x=wall.x;Game.p.y=wall.y;wall.target=1;Expedition.update(2);assert.equal(MapSys.t[wall.at],0);
  Game.p.x+=100;Expedition.update(2);assert.equal(MapSys.t[wall.at],1);
 });
@@ -414,8 +412,9 @@ test('sealed chambers have one moving entrance and required relic/key remain out
    for(let y=r.y;y<r.y+r.h;y++)perimeter.push(y*60+r.x-1,y*60+r.x+r.w);
    assert.ok(perimeter.every(at=>MapSys.t[at]===1));
    assert.ok(!World.inside(r,Expedition.keyCoffin.x,Expedition.keyCoffin.y));assert.ok(!World.inside(r,Game.artifactPos.x,Game.artifactPos.y));
-   assert.equal(Expedition.switches.filter(s=>s.wall===w).length,2);
-   Game.p.hasKey=true;Expedition.useSwitch(Expedition.switches.find(s=>s.wall===w));Expedition.update(2);assert.equal(MapSys.t[w.at],0);
+   assert.equal(Expedition.switches.length,0);
+   assert.ok(Game.ents.some(c=>c.type==='coffin'&&World.inside(r,c.x,c.y)&&c.payload?.loot?.some(k=>['item_shovel','item_jade'].includes(k))));
+   Game.p.x=w.x;Game.p.y=w.y;Expedition.update(2);assert.equal(MapSys.t[w.at],0);
   }
  }
 });
@@ -468,4 +467,23 @@ test('duplicate equipment is always picked up without stacking jade protection',
 test('traps are dispersed after coffin placement',()=>{
  const {Game,TombDangers}=setup(63);
  for(let lvl=1;lvl<=10;lvl++){Game.load(lvl);const traps=Game.ents.filter(e=>e.type==='trap');for(let i=0;i<traps.length;i++)for(let j=i+1;j<traps.length;j++)assert.ok(Math.hypot(traps[i].x-traps[j].x,traps[i].y-traps[j].y)>=175);assert.equal(TombDangers.vents.length,3);}
+});
+
+test('shovel pickup unlocks attack; melee respects cooldown, walls, range, pause and restart',()=>{
+ const {Game,MapSys,Zombie,els}=setup();MapSys.t.fill(0);Game.ents=[Game.p];Game.p.x=125;Game.p.y=125;
+ const z=new Zombie(185,125,0);Game.spawn(z);
+ assert.equal(Game.p.attack(),false);Game.refreshBuffs();assert.equal(els['attack-btn'].style.display,'none');
+ Game.getItem('item_shovel');assert.equal(els['attack-btn'].style.display,'flex');
+ els['attack-btn'].handlers.click();assert.equal(z.hp,2);assert.equal(Game.p.attack(),false);
+ Game.elapsed+=.7;Game.p.attackCooldown=0;MapSys.t[2*60+3]=1;Game.p.attack();assert.equal(z.hp,2);
+ MapSys.t.fill(0);Game.p.attackCooldown=0;z.x=210;Game.p.attack();assert.equal(z.hp,2);
+ z.x=185;Game.p.attackCooldown=0;Game.pause=1;assert.equal(Game.p.attack(),false);Game.pause=0;
+ Game.p.attack();assert.equal(z.hp,1);Game.elapsed+=.7;Game.p.attackCooldown=0;Game.p.attack();assert.equal(z.dead,1);
+ Game.restart();assert.equal(Game.p.hasShovel,false);assert.equal(els['attack-btn'].style.display,'none');
+});
+
+test('stomping beetles and snakes makes one sound each and honors mute',()=>{
+ const {Game,TombCreature,AudioSys}=setup();let sounds=0;const play=AudioSys.playStomp;AudioSys.playStomp=()=>sounds++;
+ for(const kind of ['beetle','snake']){const c=new TombCreature(Game.p.x,Game.p.y,kind);c.stompable=true;Game.p.moving=true;c.update(.02,Game.p);c.update(.02,Game.p);assert.equal(c.dead,1);}
+ assert.equal(sounds,2);AudioSys.playStomp=play;AudioSys.muted=true;AudioSys.ctx={state:'running',createBuffer(){throw Error('muted sound');}};AudioSys.playStomp();
 });

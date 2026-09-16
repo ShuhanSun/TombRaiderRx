@@ -11,7 +11,7 @@ const THEMES = [
     {name:'永劫天陨塔',en:'Tower of the Fallen Star',tile:9,wall:15,tint:'#8797c7',sight:300,water:0.12,hazard:'fire',seals:3,zombies:[0,1,2],trap:'MIX',note:'最后三道封印。取回彼岸花，从盗洞重见天光。',enNote:'Three final seals. Claim the Equinox Flower and escape.'}
 ];
 const ROOM_TYPES = {
-    sealed:{cn:'封闭陪葬室',en:'Sealed chamber',hint:'唯一出入口为机关石壁，内外移壁锁均可开启。',enHint:'The moving wall is the only door; use either lock to open it.'},
+    sealed:{cn:'封闭陪葬室',en:'Sealed chamber',hint:'室内藏有珍贵供物，靠近机关石壁即可打开唯一入口。',enHint:'Precious supplies inside. Approach the moving wall to open the only entrance.'},
     entry:{cn:'落脚处',en:'Arrival',hint:'灯火尚安，整顿行装再向前。',enHint:'A quiet place to begin.'},
     burial:{cn:'陪葬室',en:'Burial chamber',hint:'石棺之中，可能是供物，也可能是守墓人。',enHint:'Coffins may hold offerings—or guardians.'},
     supply:{cn:'供奉室',en:'Offering chamber',hint:'这里留有补给；靠近即可拾取供物，已有装备也可拾取。',enHint:'Supplies await. All items can be picked up.'},

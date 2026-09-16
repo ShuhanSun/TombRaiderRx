@@ -233,6 +233,7 @@ const Scene = {
                 ctx.save();if(e.inv>0)ctx.globalAlpha=.6+.4*Math.sin(time*25)**2;
                 const bob=e.moving?-Math.abs(Math.sin(e.stepPhase))*1.8:0;
                 if(e.rollTime>0){ctx.translate(e.x,e.y-20);ctx.rotate((.65-e.rollTime)/.65*Math.PI*2);Art.raider(ctx,e,0,20,74);}else Art.raider(ctx,e,e.x,e.y+bob,74);ctx.restore();
+                if(e.hasShovel){ctx.save();ctx.translate(e.x,e.y-15);ctx.rotate(e.attackT>0?e.attackAngle+(.5-e.attackT/.28)*2: .7);if(e.attackT>0){ctx.strokeStyle='#f2dba170';ctx.lineWidth=5;ctx.beginPath();ctx.arc(0,0,46,-.9,.8);ctx.stroke();}Art.shovel(ctx,24,0,1);ctx.restore();}
             } else {
                 const pose=e.attackState==='windup'?2:e.attackState==='strike'?3:lift>2?1:0;
                 const lunge=e.attackState==='strike'?Math.sin((1-e.attackClock/.24)*Math.PI)*11:0;
@@ -251,12 +252,12 @@ const Scene = {
             if(game.p.y<e.y&&distance<85)ctx.globalAlpha=.62;
             if(e.rising){ctx.globalAlpha=e.elevation;ctx.translate(0,(1-e.elevation)*30);}
             if(e.royal&&!e.opened){ctx.filter=Expedition.style.filter;Art.expeditionSprite(ctx,15,e.x,e.y,115);}else if(e.opened)Art.coffinDetail(ctx,2,e.x,e.y,95);else Art.sprite(ctx,4,e.x+(e.shake>0?Math.sin(time*50)*2:0),e.y,90);ctx.restore();
-            if(!e.opened&&distance<130)Art.label(ctx,e.x,e.y-72,e.locked?(cn?'机关锁棺 · 寻找升棺锁':'LOCKED · FIND SWITCH'):(cn?'靠近开棺':'STAY TO OPEN'));
+            if(!e.opened&&distance<130)Art.label(ctx,e.x,e.y-72,(cn?'靠近开棺':'STAY TO OPEN'));
             if(!e.opened&&e.interactTimer>0)Art.progress(ctx,e.x,e.y-61,e.interactTimer/.6,'#e8c981');return;
         }
         if(e.type==='ground_item') {
             const idx={item_candle:8,item_wine:9,item_hoof:10,item_jade:11,item_compass:12}[e.code];
-            Art.glow(ctx,e.x,e.y-5,32,'#ddb65930');Art.sprite(ctx,idx,e.x,e.y+Math.sin(time*3)*2,38);
+            Art.glow(ctx,e.x,e.y-5,32,'#ddb65930');if(e.code==='item_shovel')Art.shovel(ctx,e.x,e.y,1);else Art.sprite(ctx,idx,e.x,e.y+Math.sin(time*3)*2,38);
             if(distance<95)Art.label(ctx,e.x,e.y-38,LANG[curLang].items[e.code.replace('item_','')].n);return;
         }
         if(e.type==='trap') {
@@ -289,4 +290,9 @@ const Scene = {
         if(e.type==='effect'&&e.effectType==='gold') {ctx.save();ctx.globalAlpha=Math.max(0,e.life);Art.sprite(ctx,13,e.x,e.y-(1-e.life)*40,44);ctx.restore();return;}
         ctx.save();ctx.translate(e.x,e.y);if(e.draw)e.draw(ctx);ctx.restore();
     }
+};
+
+Art.shovel=function(ctx,x,y,scale){
+ ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);ctx.strokeStyle='#29231d';ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(-18,0);ctx.lineTo(12,0);ctx.stroke();ctx.strokeStyle='#997449';ctx.lineWidth=4;ctx.stroke();
+ const steel=ctx.createLinearGradient(10,-10,25,9);steel.addColorStop(0,'#e0e9e7');steel.addColorStop(.45,'#839590');steel.addColorStop(1,'#354640');ctx.fillStyle=steel;ctx.strokeStyle='#172221';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(10,-8);ctx.lineTo(23,-10);ctx.lineTo(29,0);ctx.lineTo(23,10);ctx.lineTo(10,8);ctx.closePath();ctx.fill();ctx.stroke();ctx.strokeStyle='#d5ddce';ctx.beginPath();ctx.moveTo(12,0);ctx.lineTo(24,0);ctx.stroke();ctx.restore();
 };

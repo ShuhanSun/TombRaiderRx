@@ -25,7 +25,7 @@ const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:
         Game.load(floor);
         const c=createCanvas(390,844);Game.ctx=c.getContext('2d');Game.cvs=c;Game.width=390;Game.height=844;Game.dpr=1;
         if(floor>1) {const r=World.rooms.find(r=>r.kind===(floor===7?'seal':'trap'));Game.p.x=(r.x+r.w/2)*50;Game.p.y=(r.y+r.h/2)*50+45;}
-        Game.elapsed=4.2;Game.shake=0;Game.p.inv=0;Game.render();
+        Game.getItem('item_shovel');Game.p.attackT=.18;Game.p.attackAngle=0;Game.elapsed=4.2;Game.shake=0;Game.p.inv=0;Game.render();
         fs.writeFileSync(path.join(output,'floor-'+floor+'.png'),c.toBuffer('image/png'));
     }
     const sheet=createCanvas(900,700),sc=sheet.getContext('2d');sc.fillStyle='#243234';sc.fillRect(0,0,900,700);

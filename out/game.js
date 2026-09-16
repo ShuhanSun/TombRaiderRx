@@ -62,6 +62,7 @@ const LANG = {
         winDesc: "找到冥器，逃出生天！",
         winBtn: "再来一局",
         items: {
+            shovel: {n:"兵工铲", d:"近战武器：点击攻击按钮，挥击身边的僵尸。"},
             candle: {n:"残油铜灯", d:"<b>添油续火</b>: 扩大视野 20 秒，每层仅一盏。"},
             wine: {n:"糯米酒", d:"<b>祛阴补阳</b>: 恢复 1 点生命值。"},
             hoof: {n:"黑驴蹄子", d:"<b>生人勿近</b>: 僵尸退避 15 秒。"},
@@ -102,6 +103,7 @@ const LANG = {
         winDesc: "Artifacts found. You survived!",
         winBtn: "Play Again",
         items: {
+            shovel: {n:"Entrenching Shovel", d:"Tap ATTACK to strike nearby zombies."},
             candle: {n:"Oil Lamp", d:"<b>Last Oil</b>: Wider sight for 20 seconds. One lamp per floor."},
             wine: {n:"Rice Wine", d:"<b>Vitality</b>: Restore 1 HP."},
             hoof: {n:"Donkey Hoof", d:"<b>Repel</b>: Zombies fear you for 15s."},
@@ -146,6 +148,15 @@ const AudioSys = {
         g.gain.exponentialRampToValueAtTime(0.001, t+dur);
         osc.connect(g); g.connect(this.gain);
         osc.start(t); osc.stop(t+dur+0.2);
+    },
+    playStomp: function() {
+        if(!this.ctx||this.muted||this.ctx.state!=='running')return;
+        const t=this.ctx.currentTime,buffer=this.ctx.createBuffer(1,Math.ceil(this.ctx.sampleRate*.12),this.ctx.sampleRate),data=buffer.getChannelData(0);
+        for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.exp(-i/data.length*5);
+        const source=this.ctx.createBufferSource(),filter=this.ctx.createBiquadFilter(),gain=this.ctx.createGain();
+        source.buffer=buffer;filter.type='lowpass';filter.frequency.value=1700;gain.gain.setValueAtTime(.32,t);gain.gain.exponentialRampToValueAtTime(.001,t+.12);
+        source.connect(filter);filter.connect(gain);gain.connect(this.gain);source.start(t);source.stop(t+.13);
+        this.tone(85,'sine',.09,.14,38);
     },
     playStep: function(water=false,sprint=false) { /* Footstep and wading audio disabled by request. */ },
     playOpen: function() {
@@ -220,6 +231,7 @@ const Input = {
         zone.classList.remove('steering');
     };
     ['pointerup','pointercancel','lostpointercapture'].forEach(name=>zone.addEventListener(name,release));
+    document.getElementById('attack-btn').addEventListener('click',()=>Game.p?.attack());
     const sprint=document.getElementById('sprint-btn');
     sprint.addEventListener('pointerdown',e=>{
         if(!Game.running||Game.pause||Input.sprintPointer!==null) return;
@@ -233,6 +245,7 @@ const Input = {
     ['pointerup','pointercancel','lostpointercapture'].forEach(name=>sprint.addEventListener(name,releaseSprint));
     const movement=['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','ShiftLeft','ShiftRight'];
     window.addEventListener('keydown',e=>{
+        if(['Space','KeyJ'].includes(e.code)&&Game.running&&!Game.pause){e.preventDefault();if(!e.repeat)Game.p.attack();return;}
         if(e.code==='Escape'&&!e.repeat) { Game.togglePause(); return; }
         if(e.code==='KeyM'&&!e.repeat) { Game.toggleSound(); return; }
         if(!Game.running||Game.pause||!movement.includes(e.code)) return;
@@ -281,9 +294,9 @@ class GroundItem extends Entity {
     }
     draw(ctx) {
         const iKey = this.code.replace('item_', '');
-        const colors = {candle:'#ff8a80', wine:'#fff', hoof:'#a1887f', jade:'#a5d6a7', compass:'#ffd700'};
+        const colors = {candle:'#ff8a80', wine:'#fff', hoof:'#a1887f', jade:'#a5d6a7', compass:'#ffd700',shovel:'#c9d5cf'};
         const yOff = Math.sin(Date.now()/300)*5;
-        const iconMap = {candle:'🪔', wine:'🍶', hoof:'🐴', jade:'🥋', compass:'🧭'};
+        const iconMap = {candle:'🪔', wine:'🍶', hoof:'🐴', jade:'🥋', compass:'🧭',shovel:'⚒'};
         ctx.font = "24px serif"; ctx.textAlign = "center";
         ctx.fillText(iconMap[iKey], 0, yOff);
         ctx.fillStyle = '#fff'; ctx.font = "12px serif";
@@ -543,8 +556,18 @@ class Projectile extends Entity {
 }
 
 class Player extends Entity {
-    constructor(x,y){super(x,y,'player');this.hp=5;this.sight=CONFIG.BASE_SIGHT;this.inv=0;this.buffs={hoof:0,candle:0,jade:0};this.walkT=0;this.hasCompass=0;this.stepPhase=0;this.direction=0;this.walkFrame=1;this.walkDistance=0;this.stepDistance=0;this.moving=false;this.inWater=MapSys.get(x,y)===TERRAIN.WATER;}
+    constructor(x,y){super(x,y,'player');this.hp=5;this.sight=CONFIG.BASE_SIGHT;this.inv=0;this.buffs={hoof:0,candle:0,jade:0};this.walkT=0;this.hasCompass=0;this.hasShovel=false;this.attackCooldown=0;this.attackT=0;this.attackAngle=0;this.stepPhase=0;this.direction=0;this.walkFrame=1;this.walkDistance=0;this.stepDistance=0;this.moving=false;this.inWater=MapSys.get(x,y)===TERRAIN.WATER;}
+    attack(){
+        if(!Game.running||Game.pause||!this.hasShovel||this.attackCooldown>0||this.rollTime>0)return false;
+        this.attackCooldown=.6;this.attackT=.28;
+        const target=Game.ents.filter(e=>!e.dead&&e.type==='zombie'&&Math.hypot(e.x-this.x,e.y-this.y)<=78&&MapSys.lineClear(this.x,this.y,e.x,e.y)).sort((a,b)=>Math.hypot(a.x-this.x,a.y-this.y)-Math.hypot(b.x-this.x,b.y-this.y))[0];
+        this.attackAngle=target?Math.atan2(target.y-this.y,target.x-this.x):[Math.PI/2,Math.PI,0,-Math.PI/2][this.direction];
+        AudioSys.tone(220,'triangle',.1,.09,70);
+        if(target&&TombDangers.hurt(target,1)){Game.spawn(new Effect(target.x,target.y,'dust'));AudioSys.playStomp();}
+        return true;
+    }
     update(dt){
+        this.attackCooldown=Math.max(0,this.attackCooldown-dt);this.attackT=Math.max(0,this.attackT-dt);
         if(this.inv>0)this.inv-=dt;
         if(this.buffs.hoof>0) this.buffs.hoof-=dt;
         if(this.buffs.candle>0) this.buffs.candle=Math.max(0,this.buffs.candle-dt);
@@ -797,7 +820,7 @@ const Game = {
         this.pause = false;Sound.unlock();
         if(this.lvl>=10){ this.victory(); }
         else {
-            this.saved={hp:this.p.hp,hasCompass:this.p.hasCompass};
+            this.saved={hp:this.p.hp,hasCompass:this.p.hasCompass,hasShovel:this.p.hasShovel};
             this.load(this.lvl+1);
         }
     },
@@ -861,12 +884,13 @@ const Game = {
     getItem: function(c) {
         AudioSys.playItem(true);
         const key = c.replace('item_','');
-        const colors = {candle:'#ff8a80', wine:'#fff', hoof:'#a1887f', jade:'#a5d6a7', compass:'#ffd700'};
+        const colors = {candle:'#ff8a80', wine:'#fff', hoof:'#a1887f', jade:'#a5d6a7', compass:'#ffd700',shovel:'#c9d5cf'};
         const col = colors[key];
 
         // Direct Pickup (No Modal)
         AudioSys.playUse();
 
+        if(c==='item_shovel'){this.p.hasShovel=true;this.msg(curLang==='CN'?'兵工铲入手 · 点击右下角攻击僵尸':'Shovel equipped · tap ATTACK',col);this.refreshBuffs();}
         if(c==='item_candle'){ this.p.buffs.candle=20; this.msg(LANG[curLang].msgs.candle, col); }
         if(c==='item_compass'){ this.p.hasCompass=1; this.drawMinimap(); this.msg(LANG[curLang].msgs.compass, col); }
         if(c==='item_wine'){ this.p.hp=Math.min(5,this.p.hp+1); this.msg(LANG[curLang].msgs.heal, col); this.updateHUD(); }
@@ -951,6 +975,7 @@ const Game = {
         if(World.canExit()&&Math.hypot(this.exitPos.x-this.p.x,this.exitPos.y-this.p.y)<30) this.showExitModal();
     },
     refreshBuffs: function() {
+        const attack=document.getElementById('attack-btn');attack.style.display=this.p.hasShovel?'flex':'none';attack.textContent=curLang==='CN'?'攻击':'ATTACK';attack.disabled=this.p.attackCooldown>0;
         let html='';
         if(this.p.buffs.hoof>0) html+=`<div class="buff buff-hoof">🐴 ${Math.ceil(this.p.buffs.hoof)}s</div>`;
         if(this.p.buffs.jade>0) html+=`<div class="buff buff-jade">🥋 ${curLang==='CN'?'护身 ×1':'Shield ×1'}</div>`;

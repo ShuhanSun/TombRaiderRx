@@ -35,27 +35,22 @@ const Expedition={
   const payloads=[{loot:['item_compass','item_candle']}];
   for(let i=1;i<this.zombieBudget;i++)payloads.push({enemy:i%3===1?'crawler':'zombie'});
   for(let i=0;i<this.verminBudget;i++)payloads.push({enemy:['worm','beetle','spider','bat'][(i+Game.lvl-1)%4]});
-  for(let i=0;i<this.itemBudget-3;i++){const code=['item_wine','item_hoof','item_jade'][i%3];payloads.push({loot:[code]});}
+  for(let i=0;i<this.itemBudget-3;i++){const code=i===0?'item_shovel':i===1?'item_jade':['item_wine','item_hoof','item_jade'][i%3];payloads.push({loot:[code]});}
   this.coffins=[];
   for(const payload of payloads){
    const p=spots.shift();if(!p){const c=this.coffins[this.coffins.length-1];c.extra.push(payload);continue;}
    const c=new Coffin(p.x,p.y,'cache');c.payload=payload;c.extra=[];this.coffins.push(c);Game.spawn(c);
   }
   const supply=this.coffins.filter(c=>c.payload.loot&&!c.payload.loot.includes('item_compass'));
-  this.hidden=supply.slice(0,Math.min(2,supply.length));
+  this.hidden=supply.slice(2,4);
   this.hidden.forEach(c=>{c.hidden=true;c.elevation=0;c.liftTarget=0;});
-  this.lockedCoffin=supply.find(c=>!this.hidden.includes(c));if(this.lockedCoffin)this.lockedCoffin.locked=true;
+  
   Game.spawn(new GroundItem(Game.p.x+50,Game.p.y,'item_wine'));
   const scout=rooms[0];this.spawnEnemy('zombie',(scout.x+scout.w-1.5)*50,(scout.y+scout.h-1.5)*50);
   for(let i=0;i<rooms.length;i++){
    const r=rooms[i],size=r===Game.exitRoom?100:62;
    for(const side of [0,1])Game.spawn({type:'burial_decor',x:(r.x+(side?r.w-.65:.65))*50,y:(r.y+.8)*50,sprite:r===Game.exitRoom?this.style.decor:(this.style.decor+i%3)%10,size,dead:0});
   }
-  const switchRoom=rooms.find(r=>r!==Game.exitRoom)||rooms[0];
-  const freeSpot=(r,offset)=>{for(let y=r.y;y<r.y+r.h;y++)for(let x=r.x;x<r.x+r.w;x++){
-   const p={x:x*50+25,y:y*50+25};if(Math.hypot(p.x-Game.exitPos.x,p.y-Game.exitPos.y)>100&&!Game.ents.some(e=>e.type==='coffin'&&Math.hypot(e.x-p.x,e.y-p.y)<65)&&!this.switches.some(e=>Math.hypot(e.x-p.x,e.y-p.y)<90)&&!World.altars.some(e=>Math.hypot(e.x-p.x,e.y-p.y)<65))return p;
-  }return {x:(r.x+.5)*50,y:(r.y+.5+offset)*50};};
-  for(const [i,kind] of ['coffin','wall','trap'].entries())this.switches.push({...freeSpot(switchRoom,i),type:'lock_switch',kind,progress:0,latched:false,cooldown:0});
   Game.spawn({type:'arrival_coffin',x:Game.p.x,y:Game.p.y-65,dead:0});
   for(const r of World.rooms.filter(r=>r.kind!=='entry'))for(let i=0;i<2;i++)Game.spawn({type:'bone_pile',x:(r.x+.75+i*(r.w-1.5))*50,y:(r.y+r.h-.7)*50,size:40+i*10,dead:0});
   this.buildWalls();TombDangers.setup();
@@ -69,7 +64,7 @@ const Expedition={
  },
  reveal(c){
   if(c.explosive){c.fuse=1.4;Game.msg(curLang==='CN'?'棺内火药嘶响！退后！':'Explosive coffin! Back away!','#ff986d');}
-  if(c.content==='key'){Game.p.hasKey=true;Game.msg(curLang==='CN'?'青铜机关钥匙 · 本层开关已解锁':'Bronze key · floor mechanisms unlocked','#eac879');Game.updateHUD();return true;}
+  if(c.content==='key'){Game.p.hasKey=true;Game.msg(curLang==='CN'?'青铜机关钥匙 · 可开启盗洞机关':'Bronze key · exit crank unlocked','#eac879');Game.updateHUD();return true;}
   if(c.content!=='cache')return false;
   for(const p of [c.payload,...c.extra]){
    if(p.enemy)this.spawnEnemy(p.enemy,c.x,c.y+35);
@@ -91,36 +86,19 @@ const Expedition={
    for(let yy=y+1;yy<y+4;yy++)for(let xx=x+1;xx<x+4;xx++){MapSys.t[yy*MapSys.w+xx]=0;World.roomTiles[yy*MapSys.w+xx]=id;}
    const dx=x+side.dx,dy=y+side.dy;
    const wall={at:dy*MapSys.w+dx,x:dx*50+25,y:dy*50+25,type:'moving_wall',mode:this.walls.length?'slide':'lift',height:1,target:1,manual:true,room,dead:0};this.walls.push(wall);
-   for(const p of [outside,{x:(x+side.ix)*50+25,y:(y+side.iy)*50+25}])this.switches.push({...p,type:'lock_switch',kind:'wall',wall,progress:0,latched:false,cooldown:0});
    const loot=this.coffins.find(c=>!c.hidden&&!c.locked&&!c.sealed&&c.payload?.loot&&!c.payload.loot.includes('item_compass')&&!c.payload.loot.includes('item_candle'));
+   if(!loot)throw new Error('Sealed chamber must contain supplies');
    if(loot){loot.x=(x+2)*50+25;loot.y=(y+2)*50+25;loot.sealed=true;}
    Game.spawn({type:'burial_decor',x:(x+3.4)*50,y:(y+1.5)*50,sprite:this.style.decor,size:48,dead:0});
   }
  },
- useSwitch(s){
-  if(!Game.p.hasKey){Game.msg(curLang==='CN'?'需要青铜钥匙 · 在普通棺材中寻找':'Find the bronze key inside a coffin','#d7ba8d');return false;}
-  if(s.kind==='coffin'){
-   this.hidden.filter(c=>!c.opened).forEach(c=>{c.liftTarget=c.liftTarget?0:1;c.rising=true;c.hidden=true;});
-   if(this.lockedCoffin){this.lockedCoffin.locked=false;this.lockedCoffin.open();}
-  }
-  if(s.kind==='wall')(s.wall?[s.wall]:this.walls).forEach(w=>{w.manual=true;w.target=w.target?0:1;});
-  if(s.kind==='trap'){s.warning=1.2;s.cooldown=5;Game.msg(curLang==='CN'?'机关失控！离开红色区域':'Trap armed! Leave the red area','#f39b7b');}
-  else Game.msg(curLang==='CN'?(s.kind==='coffin'?'地宫升棺 · 隐藏石椁显现':'石壁移位 · 甬道改道'):'Mechanism activated','#d2b483');
-  AudioSys.playOpen();return true;
- },
  update(dt){
   TombDangers.update(dt);if(!Game.running)return;
   let changed=false;
+  for(const c of this.hidden)if(c.hidden&&!c.rising&&Math.hypot(c.x-Game.p.x,c.y-Game.p.y)<100){c.rising=true;c.liftTarget=1;AudioSys.playOpen();}
   for(const c of this.hidden)if(c.rising){c.elevation=Math.max(0,Math.min(1,c.elevation+(c.liftTarget?1:-1)*dt*.65));if(c.elevation===c.liftTarget){c.hidden=c.elevation===0;c.rising=false;}}
-  for(const s of this.switches){
-   const near=Math.hypot(s.x-Game.p.x,s.y-Game.p.y)<48;
-   s.cooldown=Math.max(0,s.cooldown-dt);
-   if(!near)s.latched=false;
-   if(near&&!Game.p.moving&&!s.latched&&!s.cooldown){s.progress+=dt;if(s.progress>=.8){s.latched=true;s.progress=0;this.useSwitch(s);}}else s.progress=0;
-   if(s.warning>0){s.warning=Math.max(0,s.warning-dt);if(s.warning===0){for(let i=0;i<8;i++)Game.spawn(new Projectile(s.x,s.y,i*Math.PI/4,World.theme.trap==='MIX'?'ARROW':World.theme.trap));TombDangers.blast(s.x,s.y,65,1);}}
-  }
   for(const w of this.walls){
-   if(!w.manual){const phase=(Game.elapsed+w.phase)%12;w.warning=phase>5&&phase<6||phase>11;w.target=phase<6?1:0;}
+   w.target=Math.hypot(Game.p.x-w.x,Game.p.y-w.y)<90?0:1;
    const occupied=Game.ents.some(e=>['player','zombie','vermin'].includes(e.type)&&Math.abs(e.x-w.x)<39&&Math.abs(e.y-w.y)<39);
    if(w.target&&occupied)continue;
    w.height=Math.max(0,Math.min(1,w.height+(w.target?1:-1)*dt*.55));
@@ -133,15 +111,10 @@ const Expedition={
   const cn=curLang==='CN';
   if(TombDangers.render(ctx,e))return true;
   if(e.type==='burial_decor'){Art.expeditionSprite(ctx,e.sprite,e.x,e.y,e.size);return true;}
-  if(e.type==='lock_switch'){
-   Art.mechanism(ctx,14,e.x,e.y,52);const labels={coffin:'升棺锁',wall:'移壁锁',trap:'兽面锁'};
-   if(Math.hypot(Game.p.x-e.x,Game.p.y-e.y)<150)Art.label(ctx,e.x,e.y-44,(cn?labels[e.kind]:e.kind)+(Game.p.hasKey?(cn?' · 驻足开启':' · activate'):' · 🔑'),'#e3c798');
-   if(e.progress)Art.progress(ctx,e.x,e.y-30,e.progress/.8,'#daba76');
-   if(e.warning>0){ctx.strokeStyle='#ff684b';ctx.lineWidth=3;ctx.beginPath();ctx.arc(e.x,e.y,65,0,Math.PI*2);ctx.stroke();Art.label(ctx,e.x,e.y-65,cn?'退后！':'BACK!','#ff8266');}return true;
-  }
   if(e.type==='moving_wall'){
    ctx.save();ctx.fillStyle='#04090baa';ctx.fillRect(e.x-25,e.y-25,50,50);
    if(e.height>.03){const shift=e.mode==='slide'?(1-e.height)*40:0;ctx.globalAlpha=e.height;Art.stoneSurface(ctx,true,Math.floor(e.x/50),Math.floor(e.y/50),e.x-25+shift,e.y-25-(e.mode==='lift'?e.height*18:0),50,50);}
+   if(Math.hypot(Game.p.x-e.x,Game.p.y-e.y)<145)Art.label(ctx,e.x,e.y-50,cn?'机关石壁 · 靠近开启':'APPROACH TO OPEN','#d9c296');
    ctx.globalAlpha=1;ctx.strokeStyle=e.target?'#c59861':'#7eaba1';ctx.lineWidth=2;ctx.strokeRect(e.x-24,e.y-24,48,48);if(e.warning&&Math.hypot(Game.p.x-e.x,Game.p.y-e.y)<180)Art.label(ctx,e.x,e.y-46,cn?'石壁将动':'WALL SHIFT','#e9ae76');ctx.restore();return true;
   }
   if(e.type==='vermin'||e.crawler){
@@ -158,7 +131,7 @@ class TombCreature{
  update(dt,p){
   if(this.dead)return;
   const d=Math.hypot(p.x-this.x,p.y-this.y);
-  if(this.stompable&&d<20&&(p.moving||p.rollTime>0)){this.dead=1;Game.spawn(new Effect(this.x,this.y,'dust'));return;}
+  if(this.stompable&&d<20&&(p.moving||p.rollTime>0)){this.dead=1;AudioSys.playStomp();Game.spawn(new Effect(this.x,this.y,'dust'));return;}
   this.cooldown=Math.max(0,this.cooldown-dt);
   if(p.buffs.hoof>0){this.windup=0;return;}
   if(this.windup>0){this.windup=Math.max(0,this.windup-dt);if(!this.windup){if(d<34&&MapSys.lineClear(this.x,this.y,p.x,p.y))p.hit();this.cooldown=1.8;}return;}
