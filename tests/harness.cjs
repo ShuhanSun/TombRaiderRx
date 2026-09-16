@@ -12,7 +12,7 @@ function setup(seed=1) {
     const calls=[];
     const ctx=new Proxy({}, {get(target,key) {
         if(key==='getImageData') return ()=>({data:new Uint8Array(16)});
-        if(key==='createRadialGradient') return ()=>({addColorStop(){}});
+        if(key==='createRadialGradient'||key==='createLinearGradient') return ()=>({addColorStop(){}});
         return target[key]??((...args)=>calls.push([key,...args]));
     },set(target,key,value){target[key]=value;return true;}});
     function element(id) {

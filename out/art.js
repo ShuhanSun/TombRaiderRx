@@ -92,20 +92,14 @@ const Scene = {
             if(type===0&&room?.kind==='seal')tile=6;
             if(type===0&&room?.kind==='supply'&&World.theme.tile!==8)tile=1;
             ctx.drawImage(Art.tiles[tile],x%8*50,y%8*50,50,50,x*50,y*50,50.5,50.5);
-            ctx.fillStyle=type===1?'#02070966':'#060a1138';ctx.fillRect(x*50,y*50,50,50);
-            if(type===1&&MapSys.t[(y+1)*MapSys.w+x]!==1) {
-                ctx.fillStyle='#0008';ctx.fillRect(x*50,(y+1)*50,50,13);
-                ctx.fillStyle='#d5d3b638';ctx.fillRect(x*50,y*50,50,2);
-            }
+            ctx.fillStyle=type===1?'#020709bb':'#b8aa8820';ctx.fillRect(x*50,y*50,50,50);
             if(type===2) {
                 ctx.fillStyle=`rgba(122,214,207,${.05+.035*Math.sin(time*2+x*.9+y)})`;ctx.fillRect(x*50,y*50,50,50);
             }
         }
         ExitGate.draw(ctx,left,right,top,bottom);
-        for(const r of World.rooms) {
-            if(r.x*50>cx+w||(r.x+r.w)*50<cx||r.y*50>cy+h||(r.y+r.h)*50<cy)continue;
-            ctx.strokeStyle=World.theme.tint+'45';ctx.lineWidth=2;ctx.strokeRect(r.x*50+7,r.y*50+7,r.w*50-14,r.h*50-14);
-        }
+        this.masonry(ctx,left,right,top,bottom);
+        this.tombTraces(ctx,left,right,top,bottom);
         for(const hazard of World.hazards) {
             const phase=World.phase(hazard),active=phase>4.5,warn=phase>3.2;
             const kind=hazard.kind==='poison'?12:hazard.kind==='fire'?8:6;
@@ -137,6 +131,54 @@ const Scene = {
             }
         }
         ctx.restore();
+    },
+    masonry(ctx,left,right,top,bottom){
+        const open=(x,y)=>x>=0&&y>=0&&x<MapSys.w&&y<MapSys.h&&MapSys.t[y*MapSys.w+x]!==1;
+        for(let y=top-1;y<bottom+1;y++)for(let x=left-1;x<right+1;x++){
+            if(x<0||y<0||x>=MapSys.w||y>=MapSys.h||MapSys.t[y*MapSys.w+x]!==1)continue;
+            const px=x*50,py=y*50,front=open(x,y+1),back=open(x,y-1),west=open(x-1,y),east=open(x+1,y);
+            if(!front&&!back&&!west&&!east)continue;
+            ctx.save();
+            // Raised blue-grey brickwork, rendered inside solid collision cells.
+            ctx.fillStyle='#353b3a';ctx.fillRect(px,py,50,50);
+            for(let row=0;row<3;row++)for(let col=0;col<3;col++){
+                const bx=px+col*21-(row%2)*10,by=py+row*16;
+                ctx.fillStyle=['#484b44','#414640','#515047'][(x+y+row+col)%3];
+                ctx.fillRect(Math.max(px,bx)+1,by+1,Math.max(0,Math.min(px+50,bx+20)-Math.max(px,bx)-1),13);
+            }
+            ctx.globalAlpha=.23;ctx.drawImage(Art.tiles[World.theme.wall],x%8*50,y%8*50,50,50,px,py,50,50);ctx.globalAlpha=1;
+            if(front){
+                const shade=ctx.createLinearGradient(0,py+28,0,py+50);shade.addColorStop(0,'#727062');shade.addColorStop(.2,'#373c38');shade.addColorStop(1,'#101917');
+                ctx.fillStyle=shade;ctx.beginPath();ctx.moveTo(px,py+29);
+                for(let k=0;k<=5;k++)ctx.lineTo(px+k*10,py+28+Math.sin(x*9+k*4)*2.5);
+                ctx.lineTo(px+50,py+50);ctx.lineTo(px,py+50);ctx.fill();
+                ctx.strokeStyle='#131c19';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(px,py+40);ctx.lineTo(px+50,py+40);ctx.moveTo(px+25,py+29);ctx.lineTo(px+25,py+50);ctx.stroke();
+                const shadow=ctx.createLinearGradient(0,py+50,0,py+63);shadow.addColorStop(0,'#000000a0');shadow.addColorStop(1,'#00000000');ctx.fillStyle=shadow;ctx.fillRect(px,py+50,50,13);
+            }
+            for(const side of [west?-1:0,east?1:0])if(side){const bx=side<0?px:px+44;ctx.fillStyle=side<0?'#6e706055':'#030a0bc0';ctx.fillRect(bx,py,6,50);}
+            if(back){ctx.fillStyle='#a8a18a66';ctx.fillRect(px,py,50,3);}
+            // Chipped masonry and rubble soften the boundary, without hiding the route.
+            for(let k=0;k<4;k++){const jitter=Math.sin(x*71+y*37+k*13),xx=px+k*13+3;
+                ctx.fillStyle=k%2?'#66675b':'#171f1b';
+                if(front){ctx.beginPath();ctx.moveTo(xx,py+47);ctx.lineTo(xx+6,py+49);ctx.lineTo(xx+3,py+53+jitter*2);ctx.closePath();ctx.fill();}
+            }
+            if(front&&(x+y)%5===0){ctx.fillStyle='#bba574';ctx.fillRect(px+18,py+29,9,17);ctx.strokeStyle='#692c21';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(px+22,py+31);ctx.lineTo(px+20,py+36);ctx.lineTo(px+25,py+39);ctx.lineTo(px+21,py+44);ctx.stroke();}
+            ctx.restore();
+        }
+    },
+    tombTraces(ctx,left,right,top,bottom){
+        for(let y=top;y<bottom;y++)for(let x=left;x<right;x++){
+            if(MapSys.t[y*MapSys.w+x]===1)continue;
+            const seed=(x*73+y*191+Game.lvl*31)%97,px=x*50+25,py=y*50+25;
+            if(seed<5){
+                ctx.save();ctx.fillStyle='#4a1014b0';
+                for(let i=0;i<9;i++){const a=i*2.4+seed,r=3+i*1.8;ctx.beginPath();ctx.ellipse(px+Math.cos(a)*r,py+Math.sin(a)*r*.5,2+(i%4)*2,1+i%3, a,0,Math.PI*2);ctx.fill();}
+                ctx.strokeStyle='#58131799';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(px,py);ctx.bezierCurveTo(px+6,py+12,px-5,py+16,px+8,py+23);ctx.stroke();ctx.restore();
+            }
+            if(seed===9){ctx.save();ctx.translate(px,py);ctx.rotate(x+y);ctx.strokeStyle='#c3b89a';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-8,-2);ctx.lineTo(9,3);ctx.moveTo(-5,7);ctx.lineTo(6,-7);ctx.stroke();ctx.fillStyle='#a89e87';ctx.beginPath();ctx.ellipse(11,-5,5,6,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#161b16';ctx.fillRect(8,-7,2,2);ctx.fillRect(12,-7,2,2);ctx.restore();}
+            const room=World.rooms[World.roomTiles[y*MapSys.w+x]];
+            if(room&&x===room.x+1&&y===room.y+1){ctx.save();ctx.globalAlpha=.4;ctx.translate(px,py);ctx.strokeStyle='#9b8660';ctx.lineWidth=2;ctx.strokeRect(-18,-18,36,36);ctx.font='24px serif';ctx.textAlign='center';ctx.fillStyle='#9e8355';ctx.fillText(room.kind==='exit'?'奠':'鎮',0,9);ctx.restore();}
+        }
     },
     entity(ctx,e,game) {
         const time=game.elapsed,cn=curLang==='CN',distance=Math.hypot(e.x-game.p.x,e.y-game.p.y);

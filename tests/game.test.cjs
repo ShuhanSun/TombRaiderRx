@@ -347,3 +347,8 @@ test('jade persists until one blocked hit; compass loss hides map and can be rec
  assert.equal(Game.lvl,7);assert.equal(Game.p.hp,5);assert.equal(Game.p.hasCompass,0);assert.equal(Game.art,6);assert.equal(Game.pause,false);
  Game.testLevel(11);assert.equal(Game.lvl,7);
  });
+
+ test('direct floor selection initializes the viewport before the first game frame',()=>{
+ const {Game,Art,tick}=setup();Game.width=undefined;Game.height=undefined;Game.dpr=undefined;Game.p=null;Game.running=0;
+ Game.testLevel(4);assert.ok(Game.width>0&&Game.height>0);assert.ok(Game.cvs.width>0);tick(0);tick(17);assert.equal(Game.running,1);assert.equal(Game.lvl,4);
+ });

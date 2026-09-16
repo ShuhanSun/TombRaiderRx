@@ -723,6 +723,8 @@ const Game = {
     closeTest: function(){document.getElementById('test-modal').classList.remove('active');this.pause=!!this.debugWasPaused;this.lastTime=null;},
     testLevel: function(level){
         if(!Number.isInteger(level)||level<1||level>10)return;
+        if(!Art.ready){this.msg(curLang==='CN'?'墓室图案加载中，请稍后再选':'Artwork loading; try again shortly','#d7c49e');return;}
+        this.resize();window.onresize=()=>this.resize();
         document.getElementById('start-screen').style.display='none';this.restart();this.art=level-1;this.load(level);
         this.msg(curLang==='CN'?'测试选关 · 全新装备与物资':'Test floor · fresh equipment','#d7c49e');
     },
