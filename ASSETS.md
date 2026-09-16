@@ -30,3 +30,7 @@ Prompt: A photorealistic orthographic two-panel ancient Chinese tomb material at
 
 ## Expedition atlas
 `out/assets/tomb-expedition.png`: built-in image generation, transparent 4×4 atlas. Prompt: realistic 2.5D overhead Chinese tomb objects, ten themed funerary architectural props (stone stele, crossbow, bronze guardian, ritual furnace, bone urn, water jar, talisman pillar, rooted pillar, gilt dragon column, meteor monolith), crawling corpse, worms, scarab, spider, bat, red lacquer coffin on pedestal. Neutral upper-left light, isolated alpha cutouts, no text. Integrated as runtime sprites.
+
+
+## Coffin detail atlas
+`out/assets/tomb-coffin-details.png`: generated with the built-in image tool. Prompt: transparent 2×2 realistic overhead Chinese tomb atlas containing a giant red lacquer coffin with descending stair passage, stone coffin arrival stairway, desiccated corpse inside open stone coffin, and scattered ivory bones/skulls. Isolated cutouts, neutral upper-left lighting, no text.

@@ -1,5 +1,5 @@
 const TombDangers={
- sources:[],vents:[],bursts:[],
+ sources:[],vents:[],bursts:[],clouds:[],stains:[],
  enemies(){return Game.ents.filter(e=>!e.dead&&(e.type==='zombie'||e.type==='vermin'));},
  hurt(e,amount=1){
   if(e.dead||Game.elapsed<(e.hurtUntil||0))return false;
@@ -13,15 +13,18 @@ const TombDangers={
   for(const e of this.enemies())if(Math.hypot(e.x-x,e.y-y)<radius&&MapSys.lineClear(x,y,e.x,e.y))this.hurt(e,damage);
  },
  setup(){
-  this.sources=[];this.vents=[];this.bursts=[];
+  this.sources=[];this.vents=[];this.bursts=[];this.clouds=[];this.stains=[];
   const options=Expedition.coffins.filter(c=>!c.hidden&&!c.locked&&!c.sealed);
   for(const c of options.slice(-Math.min(3,1+Math.floor(Game.lvl/4))))c.explosive=true;
-  const traps=[];
-  for(let i=0;i<3;i++){const room=World.rooms.find(r=>r.kind==='trap')||Game.exitRoom;const t=new Trap((room.x+1.5)*50,(room.y+1.5)*50,Game.lvl-1);World.mountTrap(t);t.vent=true;Game.spawn(t);traps.push(t);}
-  const names=['fire','water','smoke'];
-  for(let i=0;i<3;i++){
-   const t=traps[i];if(!t)continue;t.vent=true;
-   this.vents.push({x:t.x,y:t.y,type:'jet',kind:names[i],angle:t.aim,length:0,cooldown:0,age:0});
+  const anchors=Game.ents.filter(e=>e.type==='coffin'&&!e.hidden&&!e.sealed);
+  const picked=[];
+  const anchor=()=>{const choices=anchors.filter(c=>!picked.includes(c));choices.sort((a,b)=>{
+   const score=c=>picked.length?Math.min(...picked.map(p=>Math.hypot(c.x-p.x,c.y-p.y))):c.royal?10000:0;return score(b)-score(a);
+  });const c=choices[0]||Game.exitPos;picked.push(c);return c;};
+  for(const t of Game.ents.filter(e=>e.type==='trap')){const c=anchor();t.x=c.x;t.y=c.y;World.mountTrap(t);}
+  for(const kind of ['fire','water','smoke']){
+   const c=anchor(),t=new Trap(c.x,c.y,Game.lvl-1);World.mountTrap(t);t.vent=true;Game.spawn(t);
+   this.vents.push({x:t.x,y:t.y,type:'jet',kind,angle:t.aim,length:0,cooldown:0,age:0,state:'idle',timer:0});
   }
   const rooms=World.rooms.filter(r=>!['entry','sealed','sanctuary'].includes(r.kind));
   for(let i=0;i<2;i++){const r=rooms[(i+Game.lvl)%rooms.length];
@@ -32,8 +35,36 @@ const TombDangers={
   }
  },
  inJet(v,p){const dx=p.x-v.x,dy=p.y-v.y,along=dx*Math.cos(v.angle)+dy*Math.sin(v.angle),across=-dx*Math.sin(v.angle)+dy*Math.cos(v.angle);return along>5&&along<v.length&&Math.abs(across)<16+along*.1&&MapSys.lineClear(v.x,v.y,p.x,p.y);},
- smokeAt(p){return this.vents.some(v=>v.kind==='smoke'&&v.age>1&&this.inJet(v,p));},
+ addCloud(x,y,color='#66736b',duration=14){
+  const dist=new Int16Array(MapSys.w*MapSys.h).fill(-1),at=Math.floor(y/50)*MapSys.w+Math.floor(x/50),queue=[at];dist[at]=0;
+  for(let i=0;i<queue.length;i++)for(const to of [queue[i]-1,queue[i]+1,queue[i]-60,queue[i]+60]){
+   if(to<0||to>=dist.length||Math.abs(to%60-queue[i]%60)>1||MapSys.t[to]===1||dist[to]>=0||dist[queue[i]]>=9)continue;
+   dist[to]=dist[queue[i]]+1;queue.push(to);
+  }
+  this.clouds.push({x,y,color,dist,age:0,life:duration});if(this.clouds.length>12)this.clouds.shift();
+ },
+ coffinFX(c){
+  const effect=(Math.floor(c.x/50)+Math.floor(c.y/50)+Game.lvl)%4;
+  if(effect<2)this.addCloud(c.x,c.y,effect?'#111915':'#325d38',7);
+  else {this.stains.push({x:c.x,y:c.y,age:0,color:effect===2?'#640b17':'#3c6523'});}
+ },
+ drawStains(ctx){
+  for(const s of this.stains){const r=Math.min(55,8+s.age*9);ctx.save();ctx.fillStyle=s.color+'cc';ctx.beginPath();ctx.ellipse(s.x,s.y+18,r,r*.4,Math.sin(s.x),0,Math.PI*2);ctx.fill();ctx.strokeStyle=s.color+'bb';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.bezierCurveTo(s.x-8,s.y+18,s.x+12,s.y+30,s.x+5,s.y+Math.min(65,s.age*12));ctx.stroke();ctx.restore();}
+ },
+ drawClouds(ctx,left,right,top,bottom){
+  for(const c of this.clouds){const radius=Math.min(360,c.age*34),fade=Math.min(1,c.life/3),density=Math.min(.99,c.age*.38)*fade;
+   for(let y=top;y<bottom;y++)for(let x=left;x<right;x++){
+    const dist=c.dist[y*60+x];if(dist<0)continue;const amount=Math.max(0,Math.min(1,(radius-dist*50)/65));if(!amount)continue;
+    const px=x*50+25+Math.sin(c.age*.8+y)*7,py=y*50+25+Math.cos(c.age*.6+x)*7;
+    ctx.save();ctx.beginPath();
+    for(let yy=Math.max(0,y-1);yy<=Math.min(59,y+1);yy++)for(let xx=Math.max(0,x-1);xx<=Math.min(59,x+1);xx++)if(c.dist[yy*60+xx]>=0)ctx.rect(xx*50,yy*50,50,50);
+    ctx.clip();const puff=ctx.createRadialGradient(px,py,8,px,py,68);puff.addColorStop(0,c.color+'ff');puff.addColorStop(.65,c.color+'ee');puff.addColorStop(1,c.color+'00');
+    ctx.globalAlpha=density*amount;ctx.fillStyle=puff;ctx.fillRect(px-68,py-68,136,136);ctx.restore();
+   }
+  }
+ },
  update(dt){
+  this.clouds=this.clouds.filter(c=>{c.age+=dt;c.life-=dt;return c.life>0;});for(const s of this.stains)s.age+=dt;
   for(const c of Game.ents.filter(e=>e.fuse>0)){c.fuse=Math.max(0,c.fuse-dt);if(!c.fuse)this.blast(c.x,c.y,110,3);}
   this.bursts=this.bursts.filter(b=>(b.life-=dt)>0);
   for(const s of this.sources){
@@ -42,15 +73,24 @@ const TombDangers={
    s.timer-=dt;if(s.timer<=0){s.timer=3.5;if(Game.ents.filter(e=>e.source===s&&!e.dead).length<5){const c=new TombCreature(s.x,s.y,s.kind);c.stompable=true;c.source=s;Game.spawn(c);}}
   }
   for(const v of this.vents){
-   v.age+=dt;v.cooldown=Math.max(0,v.cooldown-dt);v.length=0;
-   for(let r=10;r<=180;r+=10){if(MapSys.get(v.x+Math.cos(v.angle)*r,v.y+Math.sin(v.angle)*r)===1)break;v.length=r;}
-   if(v.age<1)continue;
+   v.age+=dt;v.cooldown=Math.max(0,v.cooldown-dt);v.state=v.state||'idle';v.timer=v.timer||0;
+   if(v.state==='idle'){
+    if(Math.hypot(Game.p.x-v.x,Game.p.y-v.y)<165&&MapSys.lineClear(v.x,v.y,Game.p.x,Game.p.y)){v.state='warning';v.timer=.75;}else continue;
+   }else if(v.state==='warning'){
+    v.timer-=dt;if(v.timer<=0){v.state='active';v.timer=3.5;if(v.kind==='smoke')this.addCloud(v.x,v.y);}
+   }else if(v.state==='active'){
+    v.timer-=dt;if(v.timer<=0){v.state='cooldown';v.timer=5;}
+   }else if(v.state==='cooldown'){
+    v.timer-=dt;if(v.timer<=0)v.state='idle';continue;
+   }
+   v.length=0;for(let r=10;r<=200;r+=10){if(MapSys.get(v.x+Math.cos(v.angle)*r,v.y+Math.sin(v.angle)*r)===1)break;v.length=r;}
+   if(v.state!=='active')continue;
    if(v.kind==='fire'){
     if(this.inJet(v,Game.p))Game.p.hit();
     for(const e of this.enemies())if(this.inJet(v,e))this.hurt(e,1);
    }
    if(v.kind==='water'&&!v.cooldown&&this.inJet(v,Game.p)&&!Game.p.rollTime){
-    Game.p.rollTime=.45;Game.p.rollVX=Math.cos(v.angle)*290;Game.p.rollVY=Math.sin(v.angle)*290;v.cooldown=1.5;
+    Game.p.rollTime=.65;Game.p.rollVX=Math.cos(v.angle)*290;Game.p.rollVY=Math.sin(v.angle)*290;v.cooldown=2;
    }
   }
  },
@@ -69,7 +109,8 @@ const TombDangers={
    ctx.save();ctx.translate(v.x,v.y);ctx.rotate(v.angle);
    ctx.drawImage(Art.traps,327,345,184,214,-24,-24,42,48);
    const colors={fire:['#ff4b1688','#ffce6877'],water:['#277ac0aa','#c0f6ffbb'],smoke:['#c0c8d588','#dde3eb44']},col=colors[v.kind];
-   if(v.age<1){ctx.fillStyle=col[1];ctx.fillRect(6,-7,8,14);ctx.restore();continue;}
+   if(v.state!=='active'){if(v.state==='warning'){ctx.fillStyle=col[1];ctx.fillRect(6,-7,8,14);}ctx.restore();continue;}
+   if(v.kind==='smoke'){ctx.restore();continue;}
    if(v.length>0){
     const plume=ctx.createLinearGradient(0,0,v.length,0);plume.addColorStop(0,col[1]);plume.addColorStop(.45,col[0]);plume.addColorStop(1,'#ffffff00');
     ctx.fillStyle=plume;ctx.beginPath();ctx.moveTo(9,-4);ctx.bezierCurveTo(v.length*.35,-12,v.length*.75,-22,v.length,-26);ctx.lineTo(v.length,26);ctx.bezierCurveTo(v.length*.75,22,v.length*.35,12,9,4);ctx.closePath();ctx.fill();

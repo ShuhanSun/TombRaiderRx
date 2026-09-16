@@ -6,6 +6,7 @@ const output=process.argv[2]||'tmp/render-check';fs.mkdirSync(output,{recursive:
 const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:[process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES]}));
 (async()=>{
     const {Game,Art,World,Passage,els,ExitGate,Expedition,TombDangers}=setup(2026);
+    Art.coffinDetails=await loadImage('out/assets/tomb-coffin-details.png');
     Art.expedition=await loadImage('out/assets/tomb-expedition.png');
     Art.stone=await loadImage('out/assets/tomb-stone-realistic.png');
     Art.sprites=await loadImage('out/assets/tomb-sprites.png');
@@ -36,7 +37,7 @@ const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:
     for(const lvl of [1,2,3,4,5,6,7,8,9,10]){Game.load(lvl);Game.p.hasKey=true;Game.getArtifact();World.altars.forEach(a=>a.done=true);Game.p.x=ExitGate.switch.x;Game.p.y=ExitGate.switch.y+65;Game.render();fs.writeFileSync(path.join(output,'crank-'+lvl+'.png'),Game.cvs.toBuffer('image/png'));ExitGate.open();ExitGate.radius=5;Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y+100;Game.render();fs.writeFileSync(path.join(output,'flood-'+lvl+'.png'),Game.cvs.toBuffer('image/png'));}
     for(const lvl of [1,3,6,9,10]){Game.load(lvl);const royal=Game.ents.find(e=>e.royal);Game.p.x=royal.x;Game.p.y=royal.y+110;Game.render();fs.writeFileSync(path.join(output,'royal-'+lvl+'.png'),Game.cvs.toBuffer('image/png'));}
     Game.load(8);for(const c of Expedition.coffins.filter(c=>c.payload.enemy))c.reveal();const crawler=Game.ents.find(e=>e.crawler);Game.p.x=crawler.x+35;Game.p.y=crawler.y+80;Game.render();fs.writeFileSync(path.join(output,'crawler.png'),Game.cvs.toBuffer('image/png'));
-    Game.load(4);for(const v of TombDangers.vents){v.age=3;v.length=150;Game.p.x=v.x+Math.cos(v.angle)*90;Game.p.y=v.y+Math.sin(v.angle)*90;Game.elapsed=3;Game.render();fs.writeFileSync(path.join(output,'jet-'+v.kind+'.png'),Game.cvs.toBuffer('image/png'));}
+    Game.load(4);for(const v of TombDangers.vents){v.age=3;v.state='active';v.timer=3;v.length=150;if(v.kind==='smoke'){TombDangers.addCloud(v.x,v.y);TombDangers.clouds[0].age=6;}Game.p.x=v.x+Math.cos(v.angle)*90;Game.p.y=v.y+Math.sin(v.angle)*90;Game.elapsed=3;Game.render();fs.writeFileSync(path.join(output,'jet-'+v.kind+'.png'),Game.cvs.toBuffer('image/png'));}
     const wall=Expedition.walls[0];if(wall){Game.p.x=wall.x;Game.p.y=wall.y+70;Game.render();fs.writeFileSync(path.join(output,'sealed-room.png'),Game.cvs.toBuffer('image/png'));}
     console.log('Rendered floors 1, 4 and 7 at 390×844 using real Canvas and atlas PNGs.');
 })();

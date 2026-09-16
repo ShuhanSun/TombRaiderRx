@@ -56,6 +56,8 @@ const Expedition={
    const p={x:x*50+25,y:y*50+25};if(Math.hypot(p.x-Game.exitPos.x,p.y-Game.exitPos.y)>100&&!Game.ents.some(e=>e.type==='coffin'&&Math.hypot(e.x-p.x,e.y-p.y)<65)&&!this.switches.some(e=>Math.hypot(e.x-p.x,e.y-p.y)<90)&&!World.altars.some(e=>Math.hypot(e.x-p.x,e.y-p.y)<65))return p;
   }return {x:(r.x+.5)*50,y:(r.y+.5+offset)*50};};
   for(const [i,kind] of ['coffin','wall','trap'].entries())this.switches.push({...freeSpot(switchRoom,i),type:'lock_switch',kind,progress:0,latched:false,cooldown:0});
+  Game.spawn({type:'arrival_coffin',x:Game.p.x,y:Game.p.y-65,dead:0});
+  for(const r of World.rooms.filter(r=>r.kind!=='entry'))for(let i=0;i<2;i++)Game.spawn({type:'bone_pile',x:(r.x+.75+i*(r.w-1.5))*50,y:(r.y+r.h-.7)*50,size:40+i*10,dead:0});
   this.buildWalls();TombDangers.setup();
  },
  spawnEnemy(kind,x,y){

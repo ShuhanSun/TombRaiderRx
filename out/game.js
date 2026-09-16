@@ -274,11 +274,10 @@ class Entity { constructor(x,y,t){this.x=x;this.y=y;this.type=t;this.dead=0;} }
 class GroundItem extends Entity {
     constructor(x,y,code) { super(x,y,'ground_item'); this.code=code; }
     update(dt, p) {
+        if(this.dead)return;
         if(this.pickupDelay>0){this.pickupDelay=Math.max(0,this.pickupDelay-dt);return;}
         const key=this.code.replace('item_','');
-        if((key==='compass'&&p.hasCompass)||(key==='jade'&&p.buffs.jade>0))return;
-        if(this.code==='item_wine'&&p.hp>=5)return;
-        if(Math.hypot(this.x-p.x, this.y-p.y) < 30) { Game.getItem(this.code);if(this.remaining!==undefined&&key!=='compass')p.buffs[key]=this.remaining; this.dead = 1; }
+        if(Math.hypot(this.x-p.x, this.y-p.y) < 30) { const previous=p.buffs[key]||0;Game.getItem(this.code);if(this.remaining!==undefined&&key!=='compass')p.buffs[key]=Math.max(previous,this.remaining); this.dead = 1; }
     }
     draw(ctx) {
         const iKey = this.code.replace('item_', '');
@@ -310,7 +309,7 @@ class Coffin extends Entity {
     }
     open() {
         if(this.opened||this.hidden||this.rising||this.locked) return;
-        this.opened = 1; this.shake = 0.5; this.revealTimer = 0.6; AudioSys.playOpen();
+        this.opened = 1;TombDangers.coffinFX(this); this.shake = 0.5; this.revealTimer = 0.6; AudioSys.playOpen();
     }
     reveal() {
             if(this.revealed)return;this.revealed=true;

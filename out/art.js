@@ -9,8 +9,8 @@ const Art = {
     ],
     load() {
         const load=src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src;});
-        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png'),load('assets/tomb-mechanisms.png'),load('assets/tomb-stone-realistic.png'),load('assets/tomb-expedition.png')]).then(([sprites,materials,walker,zombies,traps,mechanisms,stone,expedition])=>{
-            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;this.mechanisms=mechanisms;this.stone=stone;this.expedition=expedition;
+        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png'),load('assets/tomb-mechanisms.png'),load('assets/tomb-stone-realistic.png'),load('assets/tomb-expedition.png'),load('assets/tomb-coffin-details.png')]).then(([sprites,materials,walker,zombies,traps,mechanisms,stone,expedition,coffinDetails])=>{
+            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;this.mechanisms=mechanisms;this.stone=stone;this.expedition=expedition;this.coffinDetails=coffinDetails;
             const xs=[0,313,626,940,1254],ys=[0,302,618,918,1254];
             for(let i=0;i<16;i++) {
                 const c=document.createElement('canvas');c.width=c.height=400;
@@ -20,6 +20,10 @@ const Art = {
             }
             this.prepareWalker();this.ready=true;
         }).catch(()=>{this.failed=true;});
+    },
+    coffinDetail(ctx,index,x,y,size){
+        if(!this.coffinDetails)return;const w=this.coffinDetails.width/2,h=this.coffinDetails.height/2;
+        ctx.drawImage(this.coffinDetails,index%2*w,Math.floor(index/2)*h,w,h,x-size/2,y-size*.8,size,size);
     },
     expeditionSprite(ctx,index,x,y,size){
         if(!this.expedition)return;
@@ -115,6 +119,7 @@ const Scene = {
         }
         const main=game.ents.find(e=>e.royal);
         if(main){ctx.save();ctx.fillStyle='#060c1399';ctx.fillRect(main.x-58,main.y-25,116,50);ctx.fillStyle=World.theme.tint+'55';ctx.fillRect(main.x-54,main.y-32,108,43);ctx.strokeStyle='#b4a28566';ctx.lineWidth=2;ctx.strokeRect(main.x-52,main.y-30,104,40);ctx.restore();}
+        TombDangers.drawStains(ctx);
         ExitGate.draw(ctx,left,right,top,bottom);
         ctx.save();ctx.filter=Expedition.style.filter;this.masonry(ctx,left,right,top,bottom);ctx.restore();
         for(const wall of Expedition.walls)Expedition.render(ctx,wall);
@@ -150,6 +155,7 @@ const Scene = {
                 ctx.fillStyle='#f2cf87';ctx.beginPath();ctx.moveTo(11,0);ctx.lineTo(-6,-6);ctx.lineTo(-6,6);ctx.closePath();ctx.fill();ctx.restore();
             }
         }
+        TombDangers.drawClouds(ctx,left,right,top,bottom);
         ctx.restore();
     },
     masonry(ctx,left,right,top,bottom){
@@ -198,6 +204,8 @@ const Scene = {
     entity(ctx,e,game) {
         if(Expedition.render(ctx,e))return;
         const time=game.elapsed,cn=curLang==='CN',distance=Math.hypot(e.x-game.p.x,e.y-game.p.y);
+        if(e.type==='arrival_coffin'){Art.coffinDetail(ctx,1,e.x,e.y,155);return;}
+        if(e.type==='bone_pile'){Art.coffinDetail(ctx,3,e.x,e.y,e.size);return;}
         if(e.type==='decoration') {if(e.glow)Art.glow(ctx,e.x,e.y-18,95,'#e9aa342b');Art.sprite(ctx,e.sprite,e.x,e.y,e.size);return;}
         if(e.type==='gate_switch') {
             const open=ExitGate.remaining>0;
@@ -207,7 +215,7 @@ const Scene = {
             if(ExitGate.progress>0)Art.progress(ctx,e.x,e.y-52,ExitGate.progress,'#efd496');return;
         }
         if(e.type==='exit') {
-            Art.mechanism(ctx,3,e.x,e.y,84);Art.label(ctx,e.x,e.y-54,cn?`盗洞 · ${Math.ceil(ExitGate.remaining)}秒`:`EXIT · ${Math.ceil(ExitGate.remaining)}s`,'#f5d592');return;
+            Art.coffinDetail(ctx,0,e.x,e.y,160);Art.label(ctx,e.x,e.y-125,cn?`盗洞 · ${Math.ceil(ExitGate.remaining)}秒`:`EXIT · ${Math.ceil(ExitGate.remaining)}s`,'#f5d592');return;
         }
         if(e.type==='altar') {
             const col=e.kind==='seal'?'#e7be6c':'#8fdbbd';
@@ -224,7 +232,7 @@ const Scene = {
                 if(e.buffs.jade>0||e.buffs.hoof>0) {ctx.strokeStyle=e.buffs.jade>0?'#b8f0d2':'#d8b077';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(e.x,e.y,25,12,0,0,Math.PI*2);ctx.stroke();}
                 ctx.save();if(e.inv>0)ctx.globalAlpha=.6+.4*Math.sin(time*25)**2;
                 const bob=e.moving?-Math.abs(Math.sin(e.stepPhase))*1.8:0;
-                if(e.rollTime>0){ctx.translate(e.x,e.y-20);ctx.rotate((.45-e.rollTime)/.45*Math.PI*2);Art.raider(ctx,e,0,20,74);}else Art.raider(ctx,e,e.x,e.y+bob,74);ctx.restore();
+                if(e.rollTime>0){ctx.translate(e.x,e.y-20);ctx.rotate((.65-e.rollTime)/.65*Math.PI*2);Art.raider(ctx,e,0,20,74);}else Art.raider(ctx,e,e.x,e.y+bob,74);ctx.restore();
             } else {
                 const pose=e.attackState==='windup'?2:e.attackState==='strike'?3:lift>2?1:0;
                 const lunge=e.attackState==='strike'?Math.sin((1-e.attackClock/.24)*Math.PI)*11:0;
@@ -242,7 +250,7 @@ const Scene = {
             ctx.save();
             if(game.p.y<e.y&&distance<85)ctx.globalAlpha=.62;
             if(e.rising){ctx.globalAlpha=e.elevation;ctx.translate(0,(1-e.elevation)*30);}
-            if(e.royal&&!e.opened){ctx.filter=Expedition.style.filter;Art.expeditionSprite(ctx,15,e.x,e.y,115);}else Art.sprite(ctx,e.opened?5:4,e.x+(e.shake>0?Math.sin(time*50)*2:0),e.y,90);ctx.restore();
+            if(e.royal&&!e.opened){ctx.filter=Expedition.style.filter;Art.expeditionSprite(ctx,15,e.x,e.y,115);}else if(e.opened)Art.coffinDetail(ctx,2,e.x,e.y,95);else Art.sprite(ctx,4,e.x+(e.shake>0?Math.sin(time*50)*2:0),e.y,90);ctx.restore();
             if(!e.opened&&distance<130)Art.label(ctx,e.x,e.y-72,e.locked?(cn?'机关锁棺 · 寻找升棺锁':'LOCKED · FIND SWITCH'):(cn?'靠近开棺':'STAY TO OPEN'));
             if(!e.opened&&e.interactTimer>0)Art.progress(ctx,e.x,e.y-61,e.interactTimer/.6,'#e8c981');return;
         }

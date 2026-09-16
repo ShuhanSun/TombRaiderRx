@@ -131,11 +131,10 @@ test('seals block the exit until all required altars are activated',()=>{
     Game.showExitModal();Game.confirmNextLevel();Passage.update(1.3);assert.equal(Game.lvl,8);
 });
 
-test('wine is preserved at full health, sanctuary heals once and trap shots are telegraphed',()=>{
+test('wine can be picked up at full health, sanctuary heals once and trap shots are telegraphed',()=>{
     const {Game,World,MapSys}=setup();
     const wine=Game.ents.find(e=>e.code==='item_wine');Game.p.x=wine.x;Game.p.y=wine.y;
-    wine.update(1/60,Game.p);assert.equal(wine.dead,0);Game.p.hp=3;
-    wine.update(1/60,Game.p);assert.equal(wine.dead,1);assert.equal(Game.p.hp,4);
+    wine.update(1/60,Game.p);assert.equal(wine.dead,1);assert.equal(Game.p.hp,5);Game.p.hp=4;
     const shrine=World.altars.find(a=>a.kind==='sanctuary');assert.ok(shrine);
     Game.p.x=shrine.x;Game.p.y=shrine.y;
     for(let i=0;i<150;i++)World.update(1/60);
@@ -435,14 +434,38 @@ test('explosive coffins warn before blast and only explode once',()=>{
  const count=TombDangers.bursts.length;c.reveal();assert.equal(c.fuse,0);assert.equal(TombDangers.bursts.length,count);
 });
 
-test('burrows respawn bounded stompable creatures; water rolls safely and smoke reduces sight',()=>{
+test('burrows respawn bounded stompable creatures; water rolls safely and smoke leaves sight radius unchanged',()=>{
  const {Game,TombDangers,MapSys,World}=setup();MapSys.t.fill(0);Game.ents=[Game.p];Game.p.x=500;Game.p.y=500;
  const source={x:500,y:500,kind:'snake',timer:0};TombDangers.sources=[source];TombDangers.vents=[];
  for(let i=0;i<20;i++)TombDangers.update(4);assert.equal(Game.ents.filter(e=>e.source===source&&!e.dead).length,5);
  Game.p.moving=true;for(const e of Game.ents.filter(e=>e.source===source))e.update(.01,Game.p);assert.equal(Game.ents.filter(e=>e.source===source&&!e.dead).length,0);
  TombDangers.update(4);assert.equal(Game.ents.filter(e=>e.source===source&&!e.dead).length,1);
- const jet={x:450,y:500,angle:0,kind:'water',age:2,cooldown:0,length:180};TombDangers.vents=[jet];TombDangers.update(.1);assert.ok(Game.p.rollTime>0);
+ const jet={x:450,y:500,angle:0,kind:'water',state:'active',timer:3,age:2,cooldown:0,length:180};TombDangers.vents=[jet];TombDangers.update(.1);assert.ok(Game.p.rollTime>0);
  MapSys.t[10*60+11]=1;Game.p.update(.45);assert.ok(Game.p.x<550);
- Game.p.x=500;jet.kind='smoke';const fog=World.sight();TombDangers.vents=[];assert.ok(World.sight()>fog);
+ Game.p.x=500;jet.kind='smoke';const fog=World.sight();TombDangers.vents=[];assert.equal(World.sight(),fog);
  assert.ok(Game.settlement().includes('人民币'));Game.getArtifact();assert.ok(Game.settlement().includes('¥1,200'));
+});
+
+
+test('jets require proximity and sight, warn, fire, cool down; smoke grows above the scene',()=>{
+ const {Game,TombDangers,MapSys,World,calls,Scene}=setup();MapSys.t.fill(0);Game.ents=[Game.p];Game.p.x=900;Game.p.y=900;TombDangers.sources=[];
+ const v={x:500,y:500,kind:'smoke',angle:0,state:'idle',timer:0,age:0,cooldown:0};TombDangers.vents=[v];
+ TombDangers.update(5);assert.equal(v.state,'idle');assert.equal(TombDangers.clouds.length,0);
+ Game.p.x=550;Game.p.y=500;TombDangers.update(.1);assert.equal(v.state,'warning');
+ const sight=World.sight();TombDangers.update(.8);assert.equal(v.state,'active');assert.equal(TombDangers.clouds.length,1);
+ TombDangers.update(2);assert.ok(TombDangers.clouds[0].age>=2);assert.equal(World.sight(),sight);
+ TombDangers.update(2);assert.equal(v.state,'cooldown');
+ MapSys.t[10*60+10]=1;Game.p.x=500;Game.p.y=700;v.state='idle';TombDangers.update(.1);assert.equal(v.state,'idle');
+});
+
+test('duplicate equipment is always picked up without stacking jade protection',()=>{
+ const {Game}=setup();Game.getItem('item_jade');Game.getItem('item_compass');
+ const Item=Game.ents.find(e=>e.type==='ground_item').constructor;
+ for(const code of ['item_jade','item_compass','item_wine']){const item=new Item(Game.p.x,Game.p.y,code);item.update(.01,Game.p);assert.equal(item.dead,1);}
+ assert.equal(Game.p.buffs.jade,1);assert.equal(Game.p.hp,5);
+});
+
+test('traps are dispersed after coffin placement',()=>{
+ const {Game,TombDangers}=setup(63);
+ for(let lvl=1;lvl<=10;lvl++){Game.load(lvl);const traps=Game.ents.filter(e=>e.type==='trap');for(let i=0;i<traps.length;i++)for(let j=i+1;j<traps.length;j++)assert.ok(Math.hypot(traps[i].x-traps[j].x,traps[i].y-traps[j].y)>=175);assert.equal(TombDangers.vents.length,3);}
 });
