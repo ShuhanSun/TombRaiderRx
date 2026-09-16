@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>寻龙诀 · 十层古墓</title>
-    <link rel="stylesheet" href="styles.css?v=7">
+    <link rel="stylesheet" href="styles.css?v=8">
 
 </head>
 <body>
@@ -14,7 +14,7 @@
     <div id="top-bar" class="hud">
         <div id="hp-bar">❤❤❤❤❤</div>
         <div id="level-info">
-            <span id="level-num">第 1 层</span>
+            <span id="level-num" onclick="Game.debugTap()">第 1 层</span>
             <div id="artifact-bar">冥器: 0/10</div>
         </div>
     </div>
@@ -33,6 +33,7 @@
     <button id="sprint-btn" aria-label="按住冲刺">疾行</button>
 </div>
 
+<div id="test-modal" class="overlay" role="dialog" aria-modal="true" aria-labelledby="test-title"><div class="pause-card"><div class="eyebrow">PLAYTEST</div><h2 id="test-title">古墓选关</h2><p>跳转会重置本局。物资、机关与敌人遵循正常规则。</p><div id="test-levels"></div><button class="btn secondary" onclick="Game.closeTest()">返回</button></div></div>
 <!-- Exit Confirm Modal -->
 <div id="exit-modal" class="overlay" role="dialog" aria-modal="true" aria-labelledby="exit-title">
     <div class="passage-card">
@@ -68,7 +69,7 @@
 <div id="start-screen" class="overlay active">
     <button id="lang-switch" onclick="Game.toggleLang()">中文 / English</button>
     <div class="eyebrow">SHUHAN SUN · TOMB RAIDER</div>
-    <h1 id="game-title">寻龙诀</h1>
+    <h1 id="game-title" onclick="Game.debugTap()">寻龙诀</h1>
     <p style="color:#ffd700; letter-spacing: 2px; text-shadow: 0 0 5px #ff6f00;" id="game-ver">十层古墓 · 一盏孤灯</p>
 
     <div class="intro-box">
@@ -77,7 +78,7 @@
         </p>
     </div>
 
-    <div class="guide-grid"><div><span>01</span><strong id="guide-move">循光探路</strong><p id="guide-move-desc">WASD / 方向键移动，Shift 疾行；手机使用摇杆。</p></div><div><span>02</span><strong id="guide-find">驻足开棺</strong><p id="guide-find-desc">靠近石棺停留片刻，寻找本层唯一的镇墓冥器。</p></div><div><span>03</span><strong id="guide-exit">寻龙脱身</strong><p id="guide-exit-desc">取得冥器并破印后，驻足机械开关拉闸，25秒内进入盗洞。</p></div></div>
+    <div class="guide-grid"><div><span>01</span><strong id="guide-move">循光探路</strong><p id="guide-move-desc">WASD / 方向键移动，Shift 疾行；手机在画面上按住拖动，松手停下。</p></div><div><span>02</span><strong id="guide-find">驻足开棺</strong><p id="guide-find-desc">靠近石棺停留片刻，寻找本层唯一的镇墓冥器。</p></div><div><span>03</span><strong id="guide-exit">寻龙脱身</strong><p id="guide-exit-desc">取得冥器并破印后，驻足机械开关拉闸，25秒内进入盗洞。</p></div></div>
     <button class="btn start-cta" style="margin-top:30px" onclick="Game.init()" id="start-btn-text">点灯摸金</button>
 
     <div class="audio-check"><button id="sound-test-btn" class="btn secondary" onclick="Sound.test()">开启 / 试音</button><p id="audio-status" role="status"></p></div>
@@ -88,11 +89,11 @@
     </div>
 </div>
 
-<script src="audio.js?v=7"></script>
-<script src="escape.js?v=7"></script>
-<script src="world.js?v=7"></script>
-<script src="art.js?v=7"></script>
-<script src="transitions.js?v=7"></script>
-<script src="game.js?v=7"></script>
+<script src="audio.js?v=8"></script>
+<script src="escape.js?v=8"></script>
+<script src="world.js?v=8"></script>
+<script src="art.js?v=8"></script>
+<script src="transitions.js?v=8"></script>
+<script src="game.js?v=8"></script>
 </body>
 </html>

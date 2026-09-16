@@ -64,12 +64,19 @@ const ExitGate={
  },
  draw(ctx,left,right,top,bottom){
   if(this.radius<=0)return;
-  const fog=this.flood.fog,bugs=this.flood.sprite===6;
-  for(let y=top;y<bottom;y++)for(let x=left;x<right;x++){
+  const fog=this.flood.fog;
+  ctx.save();ctx.beginPath();
+  for(let y=top;y<bottom;y++)for(let x=left;x<right;x++)if(MapSys.t[y*MapSys.w+x]!==1)ctx.rect(x*50,y*50,50,50);
+  ctx.clip();
+  for(let y=top-1;y<bottom+1;y++)for(let x=left-1;x<right+1;x++){
    const amount=this.levelAt(x*50+25,y*50+25);if(!amount)continue;
-   ctx.save();ctx.beginPath();ctx.rect(x*50,y*50,50,50);ctx.clip();ctx.globalAlpha=amount*.15;ctx.fillStyle=this.flood.color;ctx.fillRect(x*50,y*50,50,50);ctx.globalAlpha=amount*(fog?.5:.73);
-   const pulse=bugs?Math.sin(Game.elapsed*5+x+y)*2:fog?Math.sin(Game.elapsed+y)*3:0;
-   Art.mechanism(ctx,this.flood.sprite,x*50+25+pulse,y*50+25,54);ctx.restore();
+   const seed=Math.sin(x*127.1+y*311.7),px=x*50+25+seed*15,py=y*50+25+Math.cos(x*73+y*29)*15;
+   const radius=38+amount*20+Math.sin(Game.elapsed*1.4+seed*5)*3;
+   const gradient=ctx.createRadialGradient(px,py,0,px,py,radius);
+   gradient.addColorStop(0,this.flood.color+'99');gradient.addColorStop(.55,this.flood.color+'66');gradient.addColorStop(1,this.flood.color+'00');
+   ctx.globalAlpha=amount*(fog?.8:.65);ctx.fillStyle=gradient;ctx.fillRect(px-radius,py-radius,radius*2,radius*2);
+   if((x*3+y*7)%4===0){ctx.globalAlpha=amount*.5;Art.mechanism(ctx,this.flood.sprite,px,py,72+seed*16);}
   }
+  ctx.restore();
  }
 };

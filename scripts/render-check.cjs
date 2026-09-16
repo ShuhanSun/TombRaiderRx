@@ -14,8 +14,8 @@ const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:
     Art.tiles=[];
     const xs=[0,313,626,940,1254],ys=[0,302,618,918,1254];
     for(let i=0;i<16;i++) {
-        const c=createCanvas(100,100),x=i%4,y=Math.floor(i/4);
-        c.getContext('2d').drawImage(atlas,xs[x]+2,ys[y]+2,xs[x+1]-xs[x]-4,ys[y+1]-ys[y]-4,0,0,100,100);Art.tiles.push(c);
+        const c=createCanvas(400,400),x=i%4,y=Math.floor(i/4);
+        c.getContext('2d').drawImage(atlas,xs[x]+2,ys[y]+2,xs[x+1]-xs[x]-4,ys[y+1]-ys[y]-4,0,0,400,400);Art.tiles.push(c);
     }
     Art.ready=true;
     for(const floor of [1,4,7]) {

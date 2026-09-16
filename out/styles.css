@@ -264,3 +264,18 @@ html[lang='en'] h1 { font-size:clamp(32px,7vw,68px); letter-spacing:4px; }
 @keyframes passage-arrive { from { opacity:0; transform:translateY(16px) scale(.98); } to { opacity:1; transform:none; } }
 @media (max-width:380px) { .passage-copy { padding:20px 21px 16px; } #passage-description { font-size:14px; } }
 @media (max-height:500px) { .passage-card { display:grid; grid-template-columns:40% 60%; max-width:780px; } .passage-card>.eyebrow { grid-column:1/-1; padding:10px; } #passage-scene { align-self:center; } .passage-copy { padding:10px 22px; } #exit-title { font-size:24px; margin:8px 0; } #passage-description { font-size:12px; } #passage-detail { margin:8px 0; font-size:10px; } .passage-progress { margin:10px 0; } #exit-confirm-btn { min-height:42px; } }
+
+/* Free thumb steering and quieter, continuous interface. */
+#joystick-zone {inset:0;width:100%;height:100%;border:0;border-radius:0;background:none;box-shadow:none;z-index:1;}
+#joystick-knob {display:none;width:32px;height:3px;border:0;border-radius:4px;background:#dbc59688;box-shadow:0 0 14px #e8c87955;pointer-events:none;}
+#joystick-zone.steering #joystick-knob {display:block;}
+#sprint-btn,#game-actions {z-index:4;}
+#level-num {pointer-events:auto;position:relative;z-index:5;}
+#top-bar,#room-panel,#objective,#map-panel {z-index:3;}
+#room-panel {background:linear-gradient(90deg,#081012aa,transparent);border:0;box-shadow:none;}
+#map-panel {border:0;border-radius:50%;overflow:hidden;opacity:.85;box-shadow:0 0 28px #030807;}
+#map-caption {display:none;}
+#test-modal .pause-card {max-height:85vh;overflow:auto;}
+#test-levels {display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:18px 0;}
+#test-levels .btn {padding:12px 8px;font-size:14px;}
+#start-screen .guide-grid > div {border:0;background:transparent;box-shadow:none;}

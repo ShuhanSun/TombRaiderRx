@@ -194,7 +194,7 @@ const Input = {
     reset() {
         this.keys={}; this.pointer=null; this.sprintPointer=null;
         this.touchX=0; this.touchY=0; this.update();
-        document.getElementById('joystick-knob').style.transform='translate(-50%,-50%)';
+        document.getElementById('joystick-zone').classList.remove('steering');
         document.getElementById('sprint-btn').classList.remove('pressed');
     }
 };
@@ -202,21 +202,22 @@ const Input = {
     const zone=document.getElementById('joystick-zone'), knob=document.getElementById('joystick-knob');
     const move=e=>{
         if(e.pointerId!==Input.pointer) return;
-        const r=zone.getBoundingClientRect(), radius=r.width/2;
-        const dx=e.clientX-r.left-radius, dy=e.clientY-r.top-r.height/2;
-        const distance=Math.hypot(dx,dy), scale=distance>radius?radius/distance:1;
-        Input.touchX=dx*scale/radius; Input.touchY=dy*scale/radius; Input.update();
-        knob.style.transform=`translate(calc(-50% + ${Input.touchX*radius}px), calc(-50% + ${Input.touchY*radius}px))`;
+        const dx=e.clientX-Input.originX,dy=e.clientY-Input.originY,distance=Math.hypot(dx,dy);
+        const power=Math.min(1,Math.max(0,(distance-7)/32));
+        Input.touchX=distance?dx/distance*power:0;Input.touchY=distance?dy/distance*power:0;Input.update();
+        if(distance>65){Input.originX=e.clientX-dx/distance*65;Input.originY=e.clientY-dy/distance*65;}
+        knob.style.left=Input.originX+'px';knob.style.top=Input.originY+'px';
+        knob.style.transform=`translate(-50%,-50%) rotate(${Math.atan2(dy,dx)}rad)`;
     };
     zone.addEventListener('pointerdown',e=>{
         if(!Game.running||Game.pause||Input.pointer!==null) return;
-        e.preventDefault(); Input.pointer=e.pointerId; zone.setPointerCapture(e.pointerId); move(e);
+        e.preventDefault(); Input.pointer=e.pointerId;Input.originX=e.clientX;Input.originY=e.clientY;zone.classList.add('steering');zone.setPointerCapture(e.pointerId);move(e);
     });
     zone.addEventListener('pointermove',move);
     const release=e=>{
         if(e.pointerId!==Input.pointer) return;
         Input.pointer=null; Input.touchX=0; Input.touchY=0; Input.update();
-        knob.style.transform='translate(-50%,-50%)';
+        zone.classList.remove('steering');
     };
     ['pointerup','pointercancel','lostpointercapture'].forEach(name=>zone.addEventListener(name,release));
     const sprint=document.getElementById('sprint-btn');
@@ -682,7 +683,7 @@ const Game = {
         const cn=curLang==='CN';
         const labels={
             'guide-move':cn?'循光探路':'EXPLORE',
-            'guide-move-desc':cn?'WASD / 方向键移动，Shift 疾行；手机使用摇杆。':'Move with WASD / arrows. Hold Shift to sprint, or use touch controls.',
+            'guide-move-desc':cn?'WASD / 方向键移动，Shift 疾行；手机在画面上按住拖动，松手停下。':'Move with WASD / arrows. Hold Shift to sprint, or use touch controls.',
             'guide-find':cn?'驻足开棺':'DISCOVER',
             'guide-find-desc':cn?'靠近石棺停留片刻，寻找本层唯一的镇墓冥器。':'Stay beside a coffin to open it. Find the relic on each floor.',
             'guide-exit':cn?'寻龙脱身':'ESCAPE',
@@ -712,6 +713,19 @@ const Game = {
         this.restart();
     },
 
+    debugTap: function() {
+        const now=Date.now();this.debugTaps=now-(this.debugLast||0)<900?(this.debugTaps||0)+1:1;this.debugLast=now;
+        if(this.debugTaps<5)return;this.debugTaps=0;
+        this.debugWasPaused=this.pause;this.pause=true;Input.reset();
+        document.getElementById('test-levels').innerHTML=THEMES.map((t,i)=>`<button class="btn" onclick="Game.testLevel(${i+1})">${i+1} · ${curLang==='CN'?t.name:t.en}</button>`).join('');
+        document.getElementById('test-modal').classList.add('active');
+    },
+    closeTest: function(){document.getElementById('test-modal').classList.remove('active');this.pause=!!this.debugWasPaused;this.lastTime=null;},
+    testLevel: function(level){
+        if(!Number.isInteger(level)||level<1||level>10)return;
+        document.getElementById('start-screen').style.display='none';this.restart();this.art=level-1;this.load(level);
+        this.msg(curLang==='CN'?'测试选关 · 全新装备与物资':'Test floor · fresh equipment','#d7c49e');
+    },
     restart: function() {
         AudioSys.init();
         Passage.reset();this.lvl = 1; this.art = 0; this.saved = null; this.items = [];

@@ -92,7 +92,9 @@ test('compass renders before relic pickup, particles expire and text uses local 
 test('two pointers move and sprint independently; cancellation and blur clear input',()=>{
     const {Input,Game,els,windowEvents}=setup();
     const event=(pointerId,x=110)=>({pointerId,clientX:x,clientY:60,preventDefault(){}});
-    els['joystick-zone'].handlers.pointerdown(event(1));assert.ok(Input.x>0);
+    els['joystick-zone'].handlers.pointerdown(event(1));assert.equal(Input.active,false);
+    els['joystick-zone'].handlers.pointermove(event(1,114));assert.equal(Input.active,false);
+    els['joystick-zone'].handlers.pointermove(event(1,155));assert.ok(Input.x>0);
     els['sprint-btn'].handlers.pointerdown(event(2));assert.equal(Input.sprint,true);
     els['sprint-btn'].handlers.pointercancel(event(2));assert.equal(Input.sprint,false);assert.equal(Input.active,true);
     els['joystick-zone'].handlers.pointercancel(event(1));assert.equal(Input.active,false);
@@ -336,3 +338,12 @@ test('jade persists until one blocked hit; compass loss hides map and can be rec
  drop.update(1,Game.p);drop.update(0,Game.p);
  assert.equal(Game.p.hasCompass,1);assert.equal(els['map-panel'].style.display,'');
 });
+
+ test('hidden floor selector pauses, cancels and starts a fresh selected floor',()=>{
+ const {Game,els}=setup();
+ for(let i=0;i<4;i++)Game.debugTap();assert.equal(Game.pause,false);
+ Game.debugTap();assert.equal(Game.pause,true);Game.closeTest();assert.equal(Game.pause,false);
+ Game.p.hasCompass=1;Game.p.hp=1;Game.testLevel(7);
+ assert.equal(Game.lvl,7);assert.equal(Game.p.hp,5);assert.equal(Game.p.hasCompass,0);assert.equal(Game.art,6);assert.equal(Game.pause,false);
+ Game.testLevel(11);assert.equal(Game.lvl,7);
+ });

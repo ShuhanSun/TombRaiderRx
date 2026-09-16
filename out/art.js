@@ -13,9 +13,9 @@ const Art = {
             this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;this.mechanisms=mechanisms;
             const xs=[0,313,626,940,1254],ys=[0,302,618,918,1254];
             for(let i=0;i<16;i++) {
-                const c=document.createElement('canvas');c.width=c.height=100;
+                const c=document.createElement('canvas');c.width=c.height=400;
                 const x=i%4,y=Math.floor(i/4);
-                c.getContext('2d').drawImage(materials,xs[x]+2,ys[y]+2,xs[x+1]-xs[x]-4,ys[y+1]-ys[y]-4,0,0,100,100);
+                c.getContext('2d').drawImage(materials,xs[x]+2,ys[y]+2,xs[x+1]-xs[x]-4,ys[y+1]-ys[y]-4,0,0,400,400);
                 this.tiles.push(c);
             }
             this.prepareWalker();this.ready=true;
@@ -91,7 +91,7 @@ const Scene = {
             if(type===0&&room?.kind==='sanctuary')tile=11;
             if(type===0&&room?.kind==='seal')tile=6;
             if(type===0&&room?.kind==='supply'&&World.theme.tile!==8)tile=1;
-            ctx.drawImage(Art.tiles[tile],x%2*50,y%2*50,50,50,x*50,y*50,50,50);
+            ctx.drawImage(Art.tiles[tile],x%8*50,y%8*50,50,50,x*50,y*50,50.5,50.5);
             ctx.fillStyle=type===1?'#02070966':'#060a1138';ctx.fillRect(x*50,y*50,50,50);
             if(type===1&&MapSys.t[(y+1)*MapSys.w+x]!==1) {
                 ctx.fillStyle='#0008';ctx.fillRect(x*50,(y+1)*50,50,13);
