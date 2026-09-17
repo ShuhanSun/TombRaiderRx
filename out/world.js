@@ -1,8 +1,8 @@
 const THEMES = [
     {name:'沙海迷冢',en:'Buried in Sand',tile:0,wall:12,tint:'#b78c51',sight:320,water:0,hazard:'sand',seals:0,zombies:[0,0,0],trap:'ARROW',note:'沙下无声。驻足开棺，寻找镇墓之物。',enNote:'Stay beside coffins to uncover the relic.'},
-    {name:'千纹机关廊',en:'Hall of Hidden Bolts',tile:1,wall:13,tint:'#a5b4aa',sight:320,water:0,hazard:'spikes',seals:0,zombies:[0,1],trap:'ARROW',note:'弩机亮起红线后发射，横向躲开。',enNote:'Crossbows warn with a red line. Dodge sideways.'},
+    {name:'千纹机关廊',en:'Hall of Hidden Bolts',tile:1,wall:13,tint:'#a5b4aa',sight:320,water:0,hazard:'spikes',seals:0,zombies:[0,1],trap:'ARROW',note:'箭孔藏在墙缝中，靠近时会突然开启。',enNote:'Arrow slits hide in the masonry and fire when approached.'},
     {name:'青铜兽影厅',en:'Bronze Guardians',tile:2,wall:14,tint:'#8da98c',sight:310,water:0,hazard:'spikes',seals:0,zombies:[0,0,1],trap:'LOG',note:'青铜卫尸巡游。疾行的声响会惊动远处守卫。',enNote:'Bronze guardians patrol. Sprinting attracts distant enemies.'},
-    {name:'巨鼎炼魂室',en:'The Soul Furnace',tile:3,wall:15,tint:'#db8448',sight:340,water:0,hazard:'fire',seals:0,zombies:[1,0],trap:'FIRE',note:'地火先亮后燃。看清喷火口，等火势熄灭再走。',enNote:'Floor vents glow before burning. Wait for them to fade.'},
+    {name:'巨鼎炼魂室',en:'The Soul Furnace',tile:3,wall:15,tint:'#db8448',sight:340,water:0,hazard:'fire',seals:0,zombies:[1,0],trap:'FIRE',note:'炉口与龙首喷嘴平时闭合，靠近后突然喷发。',enNote:'Furnace mouths and dragon nozzles erupt at close range.'},
     {name:'石骨迷宫',en:'Labyrinth of Bones',tile:4,wall:13,tint:'#9cabb0',sight:240,water:0,hazard:'spikes',seals:0,zombies:[1,1,0],trap:'STONE',note:'深处灯影短。循已走过的地图寻找岔路。',enNote:'Light fades in the maze. Use explored paths to find new routes.'},
     {name:'荧光棺河',en:'River of Lost Coffins',tile:5,wall:13,tint:'#5fa9a3',sight:310,water:0.24,hazard:'poison',seals:0,zombies:[2,2,0],trap:'VENOM',note:'积水迟滞脚步。绿毒尸会隔水吐毒。',enNote:'Flooded tiles slow movement. Spitters attack across the water.'},
     {name:'九字封印井',en:'Well of Two Seals',tile:6,wall:15,tint:'#a68ec9',sight:290,water:0,hazard:'poison',seals:2,zombies:[0,2],trap:'ARROW',note:'两座封印锁住去路。靠近祭坛驻足破印。',enNote:'Two seals bar the exit. Stay beside each altar to break them.'},

@@ -6,6 +6,7 @@ const output=process.argv[2]||'tmp/render-check';fs.mkdirSync(output,{recursive:
 const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:[process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES]}));
 (async()=>{
     const {Game,Art,World,Passage,els,ExitGate,Expedition,TombDangers}=setup(2026);
+    Art.smokeCanvasFactory=()=>createCanvas(136,136);
     Art.coffinDetails=await loadImage('out/assets/tomb-coffin-details.png');
     Art.expedition=await loadImage('out/assets/tomb-expedition.png');
     Art.stone=await loadImage('out/assets/tomb-stone-realistic.png');

@@ -1,6 +1,6 @@
 /* Original generated atlases. Explicit source rectangles preserve uneven atlas gutters. */
 const Art = {
-    ready:false,failed:false,sprites:null,materials:null,tiles:[],
+    ready:false,failed:false,sprites:null,materials:null,tiles:[],smokePuffs:{},
     rects:[
         [0,0,314,321],[324,0,303,321],[638,0,302,321],[946,0,308,321],
         [0,326,314,299],[324,326,303,299],[637,326,303,299],[946,326,308,299],
@@ -122,6 +122,12 @@ const Art = {
         const g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,color);g.addColorStop(1,'transparent');
         ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);
     },
+    smokePuff(color){
+        if(this.smokePuffs[color])return this.smokePuffs[color];
+        const c=this.smokeCanvasFactory?this.smokeCanvasFactory():document.createElement('canvas');c.width=c.height=136;const p=c.getContext('2d');
+        const g=p.createRadialGradient(68,68,8,68,68,68);g.addColorStop(0,color+'a8');g.addColorStop(.65,color+'62');g.addColorStop(1,color+'00');
+        p.fillStyle=g;p.fillRect(0,0,136,136);return this.smokePuffs[color]=c;
+    },
     label(ctx,x,y,text,color='#ead6a9') {
         ctx.font='12px system-ui';ctx.textAlign='center';ctx.shadowColor='#000';ctx.shadowBlur=5;ctx.fillStyle=color;ctx.fillText(text,x,y);ctx.shadowBlur=0;
     },
@@ -155,12 +161,13 @@ const Scene = {
         const main=game.ents.find(e=>e.royal);
         if(main){ctx.save();ctx.fillStyle='#060c1399';ctx.fillRect(main.x-58,main.y-25,116,50);ctx.fillStyle=World.theme.tint+'55';ctx.fillRect(main.x-54,main.y-32,108,43);ctx.strokeStyle='#b4a28566';ctx.lineWidth=2;ctx.strokeRect(main.x-52,main.y-30,104,40);ctx.restore();}
         TombDangers.drawStains(ctx);
-        this.roomAtmosphere(ctx,time,'under');
+        this.roomAtmosphere(ctx,time,'under',left,right,top,bottom);
         ExitGate.draw(ctx,left,right,top,bottom);
         ctx.save();ctx.filter=Expedition.style.filter;this.masonry(ctx,left,right,top,bottom);ctx.restore();
         for(const wall of Expedition.walls)Expedition.render(ctx,wall);
         this.tombTraces(ctx,left,right,top,bottom);
         for(const hazard of World.hazards) {
+            if(hazard.x<(left-1)*50||hazard.x>(right+1)*50||hazard.y<(top-1)*50||hazard.y>(bottom+1)*50)continue;
             const phase=World.phase(hazard),active=phase>4.5,warn=phase>3.2;
             const kind=hazard.kind==='poison'?12:hazard.kind==='fire'?8:6;
             const index=kind===6?6:kind+(active?2:warn?1:0);
@@ -179,7 +186,7 @@ const Scene = {
         for(const e of objects.filter(e=>['tomb_remains','bone_pile'].includes(e.type)))this.entity(ctx,e,game);
         for(const e of objects.filter(e=>!['tomb_remains','bone_pile'].includes(e.type)))this.entity(ctx,e,game);
         TombDangers.drawJets(ctx);
-        this.roomAtmosphere(ctx,time,'over');
+        this.roomAtmosphere(ctx,time,'over',left,right,top,bottom);
         for(const t of game.texts) {ctx.save();ctx.translate(t.x,t.y);t.draw(ctx);ctx.restore();}
         ctx.restore();
         const sight=World.sight(),shade=ctx.createRadialGradient(w/2,h/2,60,w/2,h/2,sight);
@@ -197,8 +204,9 @@ const Scene = {
         TombDangers.drawClouds(ctx,left,right,top,bottom);
         ctx.restore();
     },
-    roomAtmosphere(ctx,time,layer){
+    roomAtmosphere(ctx,time,layer,left=0,right=MapSys.w,top=0,bottom=MapSys.h){
         for(const r of World.rooms){
+            if(r.x+r.w<left||r.x>right||r.y+r.h<top||r.y>bottom)continue;
             const x=r.x*50,y=r.y*50,w=r.w*50,h=r.h*50;
             if(layer==='under'&&r.flicker){
                 const pulse=.72+.18*Math.sin(time*7+r.x)+.1*Math.sin(time*17+r.y);
@@ -209,9 +217,10 @@ const Scene = {
             }
             if(layer==='over'&&r.haze){
                 ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
+                const fog=Art.smokePuff('#9aa6a0'),radius=Math.max(70,w*.32);
                 for(let i=0;i<5;i++){
                     const px=x+((i*.23+.11+Math.sin(time*.08+i)*.05)%1)*w,py=y+(i%2?.34:.7)*h+Math.sin(time*.22+i*2)*14;
-                    const fog=ctx.createRadialGradient(px,py,5,px,py,Math.max(70,w*.32));fog.addColorStop(0,'rgba(154,166,160,.11)');fog.addColorStop(.65,'rgba(103,116,111,.065)');fog.addColorStop(1,'rgba(76,88,84,0)');ctx.fillStyle=fog;ctx.fillRect(px-w*.4,py-h*.45,w*.8,h*.9);
+                    ctx.globalAlpha=.16;ctx.drawImage(fog,px-radius,py-radius,radius*2,radius*2);
                 }
                 ctx.restore();
             }
