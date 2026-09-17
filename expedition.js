@@ -1,6 +1,6 @@
 // Fixed per-floor contents, reusable local keys and optional shifting shortcuts.
 const TOMB_STYLES=[
- {name:'黄沙石祠',wall:12,floor:0,decor:0,filter:'sepia(.5)',trap:1},
+ {name:'汉阙长陵',wall:12,floor:0,decor:0,filter:'sepia(.5)',trap:1},
  {name:'木构机弩廊',wall:13,floor:1,decor:1,filter:'sepia(.7) brightness(.85)',trap:1},
  {name:'青铜兽面殿',wall:14,floor:2,decor:2,filter:'sepia(.5) hue-rotate(35deg)',trap:2},
  {name:'焦石炼魂炉',wall:15,floor:3,decor:3,filter:'brightness(.65) sepia(.4)',trap:3},
@@ -18,7 +18,9 @@ const Expedition={
   Game.ents=Game.ents.filter(e=>!['coffin','ground_item','zombie','vermin'].includes(e.type));
   const rooms=World.rooms.filter(r=>!['entry','sanctuary'].includes(r.kind));
   let spots=FLOOR_PLANS[Game.lvl-1].coffinSlots.map(([x,y])=>({x,y,room:rooms.find(r=>World.inside(r,x,y))}));
-  const main=spots.filter(p=>p.room===Game.exitRoom).sort((a,b)=>Math.abs(Math.hypot(a.x-Game.exitPos.x,a.y-Game.exitPos.y)-120)-Math.abs(Math.hypot(b.x-Game.exitPos.x,b.y-Game.exitPos.y)-120))[0]||spots[0];spots=spots.filter(p=>p!==main);
+  const royalRoom=Game.lvl===1?World.rooms.find(r=>r.kind==='main'):Game.exitRoom;
+  const royalCenter={x:(royalRoom.x+royalRoom.w/2)*50,y:(royalRoom.y+royalRoom.h/2)*50};
+  const main=spots.filter(p=>p.room===royalRoom).sort((a,b)=>Math.abs(Math.hypot(a.x-royalCenter.x,a.y-royalCenter.y)-80)-Math.abs(Math.hypot(b.x-royalCenter.x,b.y-royalCenter.y)-80))[0]||spots[0];spots=spots.filter(p=>p!==main);
   const mainCoffin=new Coffin(main.x,main.y,'exit_coffin');mainCoffin.royal=true;Game.spawn(mainCoffin);Game.mainCoffinPos={x:mainCoffin.x,y:mainCoffin.y};
   for(const offset of [-82,82])if(MapSys.canOccupy(mainCoffin.x+offset,mainCoffin.y-25,12))Game.spawn({type:'burial_decor',x:mainCoffin.x+offset,y:mainCoffin.y-25,sprite:this.style.decor,size:80,dead:0});
   const keySpot=spots.find(p=>p.room!==Game.exitRoom)||spots[0];spots=spots.filter(p=>p!==keySpot);

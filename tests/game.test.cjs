@@ -139,6 +139,13 @@ test('one continuous breath hold ends after sixty seconds',()=>{
     assert.equal(Game.p.holdingBreath,false);assert.equal(Game.p.breathRemaining,0);
 });
 
+test('breath HUD exposes active countdown, low-air warning and exhaustion',()=>{
+    const {Game,els}=setup();Game.p.startHoldingBreath();Game.refreshBuffs();
+    assert.ok(els['breath-status'].classList.contains('active'));assert.equal(els['breath-status-time'].textContent,'60s');
+    Game.p.breathRemaining=9.2;Game.refreshBuffs();assert.ok(els['breath-status'].classList.contains('low'));assert.equal(els['breath-status-time'].textContent,'10s');
+    Game.p.update(10);assert.equal(Game.p.holdingBreath,false);assert.ok(els['breath-status'].classList.contains('exhausted'));
+});
+
 test('ten-floor progression preserves equipment and requires a gate crank before exit',()=>{
     const {Game,MapSys,els,World,Passage,ExitGate}=setup();
     Game.p.hp=4;Game.p.buffs.candle=20;Game.p.hasCompass=1;
@@ -462,6 +469,19 @@ test('trap projectiles kill zombies and explosions respect walls',()=>{
  for(let i=0;i<3;i++){Game.elapsed=i;new Projectile(100,100,0,'ARROW').update(.3,Game.p);}assert.equal(z.dead,1);
  const other=new Zombie(150,150,0);Game.spawn(other);MapSys.t[2*MapSys.w+3]=1;Game.elapsed=5;TombDangers.blast(175,75,120,3);assert.equal(other.dead,0);
  MapSys.t.fill(0);TombDangers.blast(175,75,120,3);assert.equal(other.dead,1);
+});
+
+test('large stelae and pillars stop trap projectiles without becoming walls',()=>{
+ const {Game,MapSys,Projectile,World}=setup();MapSys.t.fill(0);Game.p.x=300;Game.p.y=100;Game.p.inv=0;Game.ents=[Game.p];
+ World.props=[{x:190,y:100,blocksProjectiles:true,blockRadius:28}];const shot=new Projectile(100,100,0,'ARROW');shot.update(.5,Game.p);
+ assert.equal(shot.dead,1);assert.equal(Game.p.hp,5);assert.equal(MapSys.canOccupy(190,100,10),true);
+});
+
+test('first floor follows a symmetric Han tomb sequence with projectile cover',()=>{
+ const {Game,World,FLOOR_PLANS}=setup();const plan=FLOOR_PLANS[0],by=k=>plan.rooms.find(r=>r.kind===k);
+ assert.equal(plan.rooms[0].layoutRole,'tomb_road');assert.ok(by('ear_left'));assert.ok(by('ear_right'));assert.ok(by('front'));assert.ok(by('main'));assert.equal(plan.rooms.at(-1).kind,'rear');
+ const left=by('ear_left'),right=by('ear_right');assert.equal(left.y,right.y);assert.equal(left.w,right.w);assert.equal(left.h,right.h);assert.equal(left.x+left.w/2+right.x+right.w/2,plan.size);
+ assert.ok(World.props.filter(p=>p.blocksProjectiles).length>=6);assert.ok(Game.ents.some(e=>e.royal&&World.inside(by('main'),e.x,e.y)));
 });
 
 test('explosive coffins warn before blast and only explode once',()=>{

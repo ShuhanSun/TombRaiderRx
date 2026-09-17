@@ -1,5 +1,5 @@
 const THEMES = [
-    {name:'沙海迷冢',en:'Buried in Sand',tile:0,wall:12,tint:'#b78c51',sight:320,water:0,hazard:'sand',seals:0,zombies:[0,0,0],trap:'ARROW',note:'沙下无声。驻足开棺，寻找机关钥匙。',enNote:'Stay beside coffins to find the bronze key.'},
+    {name:'汉阙长陵',en:'Han Ancestral Tomb',tile:0,wall:12,tint:'#b78c51',sight:320,water:0,hazard:'sand',seals:0,zombies:[0,0,0],trap:'ARROW',note:'沿中轴墓道进入前室，探索左右耳室、主室与后室。石碑和立柱可以挡住机关射击。',enNote:'Follow the central axis through the front, twin side chambers, main chamber and rear chamber. Stelae and pillars block trap fire.'},
     {name:'千纹机关廊',en:'Hall of Hidden Bolts',tile:1,wall:13,tint:'#a5b4aa',sight:320,water:0,hazard:'spikes',seals:0,zombies:[0,1],trap:'ARROW',note:'箭孔藏在墙缝中，靠近时会突然开启。',enNote:'Arrow slits hide in the masonry and fire when approached.'},
     {name:'青铜兽影厅',en:'Bronze Guardians',tile:2,wall:14,tint:'#8da98c',sight:310,water:0,hazard:'spikes',seals:0,zombies:[0,0,1],trap:'LOG',note:'青铜卫尸巡游。疾行的声响会惊动远处守卫。',enNote:'Bronze guardians patrol. Sprinting attracts distant enemies.'},
     {name:'巨鼎炼魂室',en:'The Soul Furnace',tile:3,wall:15,tint:'#db8448',sight:340,water:0,hazard:'fire',seals:0,zombies:[1,0],trap:'FIRE',note:'炉口与龙首喷嘴平时闭合，靠近后突然喷发。',enNote:'Furnace mouths and dragon nozzles erupt at close range.'},
@@ -19,6 +19,12 @@ const ROOM_TYPES = {
     trap:{cn:'机弩侧室',en:'Crossbow chamber',hint:'壁弩会转向追踪；甬道中的地面机关先预警后触发。',enHint:'Wall launchers turn to aim. Floor hazards guard the passages.'},
     seal:{cn:'封印室',en:'Seal chamber',hint:'靠近金色祭坛驻足，解除一道封印。',enHint:'Stay beside the gold altar to break a seal.'},
     exit:{cn:'主墓室',en:'Main burial chamber',hint:'找到钥匙、封印尽解后，驻足机械开关拉闸；盗洞限时 25 秒。',enHint:'After the key and seals, stand by the crank. The exit opens for 25 seconds.'}
+    ,tomb_road:{cn:'墓道',en:'Tomb passage',hint:'沿中轴向北进入前墓室；两侧结构保持汉墓常见的规整对称。',enHint:'Follow the central axis north into the front chamber.'}
+    ,ear_left:{cn:'左耳室',en:'Left side chamber',hint:'陪葬侧室与右耳室对称，石碑可遮挡机关射击。',enHint:'This burial side chamber mirrors the right chamber. Its stele blocks trap fire.'}
+    ,ear_right:{cn:'右耳室',en:'Right side chamber',hint:'陪葬侧室与左耳室对称，利用大型陪葬物作掩体。',enHint:'This chamber mirrors the left side. Use large funerary objects as cover.'}
+    ,front:{cn:'前墓室',en:'Front chamber',hint:'前室连接墓道、左右耳室与主墓室，是整座汉墓的交通核心。',enHint:'The front chamber joins the passage, side chambers and main chamber.'}
+    ,main:{cn:'主墓室',en:'Main chamber',hint:'墓葬中轴核心。立柱可以截断弓弩、飞石和火弹。',enHint:'The tomb core. Pillars stop arrows, stones and fireballs.'}
+    ,rear:{cn:'后墓室',en:'Rear chamber',hint:'中轴最深处，机械开关与盗洞藏在这里。',enHint:'The deepest axial chamber, containing the crank and escape passage.'}
 };
 
 const World = {
@@ -44,6 +50,7 @@ const World = {
 
             }
         });
+        this.placeProjectileCover();
         this.placePassageHazards();
         for(let i=0;i<this.theme.seals;i++) {
             const r=rooms.filter(r=>r.kind==='seal')[i]||rooms[1+i%Math.max(1,rooms.length-2)];r.kind='seal';
@@ -62,6 +69,23 @@ const World = {
         if(compass&&!Game.p.hasCompass) {compass.x=Game.p.x+65;compass.y=Game.p.y+50;}
         Expedition.setup();ExitGate.setup();this.baseSight=this.theme.sight;
         this.updateRoom();
+    },
+    placeProjectileCover() {
+        const add=(x,y,sprite,size=76)=>this.props.push({x,y,sprite,size,atlas:'expedition',blocksProjectiles:true,blockRadius:size*.28});
+        if(Game.lvl===1) {
+            const left=this.rooms.find(r=>r.kind==='ear_left'),right=this.rooms.find(r=>r.kind==='ear_right'),front=this.rooms.find(r=>r.kind==='front'),main=this.rooms.find(r=>r.kind==='main');
+            if(left)add((left.x+left.w-1.1)*50,(left.y+1.25)*50,0,74);
+            if(right)add((right.x+1.1)*50,(right.y+1.25)*50,0,74);
+            if(front){add((front.x+2)*50,(front.y+2)*50,6,84);add((front.x+front.w-2)*50,(front.y+2)*50,6,84);}
+            if(main){add((main.x+2.1)*50,(main.y+2)*50,8,90);add((main.x+main.w-2.1)*50,(main.y+2)*50,8,90);}
+            return;
+        }
+        for(const [i,r] of this.rooms.entries())if(i>0&&r.w>=8&&r.h>=7&&['burial','trap','exit','main'].includes(r.kind)){
+            add((r.x+r.w*.28)*50,(r.y+r.h*.42)*50,i%2?0:6,72+Math.min(18,Game.lvl));
+        }
+    },
+    projectileBlockerAt(x,y,radius=0) {
+        return this.props.find(p=>p.blocksProjectiles&&Math.hypot(x-p.x,y-p.y)<=p.blockRadius+radius);
     },
     placePassageHazards() {
         const candidates=[];
@@ -114,7 +138,7 @@ const World = {
         if(r===this.room)return;
         this.room=r;
         const label=document.getElementById('room-name'),hint=document.getElementById('room-hint');
-        const type=ROOM_TYPES[r?.kind],cn=curLang==='CN';
+        const role=r?.layoutRole||r?.kind,type=ROOM_TYPES[role],cn=curLang==='CN';
         label.textContent=type?(r?.kind==='exit'?(cn?Expedition.style.name+' · 主墓室':this.theme.en+' · Main tomb'):(cn?type.cn:type.en)):(cn?'连接甬道':'Connecting passage');
         hint.textContent=type?(cn?type.hint:type.enHint):(cn?'沿石壁前行，留意通向其他墓室的岔口。':'Follow the stone passage and watch for branching rooms.');
     },

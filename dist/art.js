@@ -275,7 +275,7 @@ const Scene = {
         if(e.type==='arrival_coffin'){Art.coffinDetail(ctx,1,e.x,e.y,155);return;}
         if(e.type==='bone_pile'){Art.coffinDetail(ctx,3,e.x,e.y,e.size);return;}
         if(e.type==='tomb_remains'){Art.remainsSprite(ctx,e.variant,e.x,e.y,e.size);return;}
-        if(e.type==='decoration') {if(e.glow)Art.glow(ctx,e.x,e.y-18,95,'#e9aa342b');Art.sprite(ctx,e.sprite,e.x,e.y,e.size);return;}
+        if(e.type==='decoration') {if(e.glow)Art.glow(ctx,e.x,e.y-18,95,'#e9aa342b');if(e.atlas==='expedition')Art.expeditionSprite(ctx,e.sprite,e.x,e.y,e.size);else Art.sprite(ctx,e.sprite,e.x,e.y,e.size);return;}
         if(e.type==='gate_switch') {
             const open=ExitGate.remaining>0;
             Art.glow(ctx,e.x,e.y,65,open?'#e4b95555':'#d4bd7040');
@@ -298,6 +298,13 @@ const Scene = {
             ctx.fillStyle='#0007';ctx.beginPath();ctx.ellipse(e.x,e.y+4,18-lift*.3,7-lift*.1,0,0,Math.PI*2);ctx.fill();
             if(player) {
                 if(e.buffs.candle>0)Art.glow(ctx,e.x,e.y-12,85,'#f4bf5945');
+                if(e.holdingBreath){
+                    const pulse=.55+.25*Math.sin(time*4);
+                    Art.glow(ctx,e.x,e.y-12,62,`rgba(111,218,199,${.12+pulse*.08})`);
+                    ctx.save();ctx.strokeStyle=e.breathRemaining<=10?'#ff9e78':'#a6ead7';ctx.globalAlpha=.45+pulse*.25;ctx.lineWidth=2.5;ctx.setLineDash?.([5,7]);ctx.beginPath();ctx.ellipse(e.x,e.y-5,29+pulse*4,17+pulse*2,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash?.([]);
+                    for(let i=0;i<3;i++){const a=time*.55+i*2.1,r=28+i*4;ctx.globalAlpha=.22;ctx.fillStyle='#c9fff0';ctx.beginPath();ctx.arc(e.x+Math.cos(a)*r,e.y-18+Math.sin(a)*8-i*5,2.2,0,Math.PI*2);ctx.fill();}ctx.restore();
+                    Art.label(ctx,e.x,e.y-74,`${curLang==='CN'?'屏气':'HOLD'} ${Math.ceil(e.breathRemaining)}s`,e.breathRemaining<=10?'#ffab83':'#c7f7e9');
+                }
                 if(e.buffs.jade>0||e.buffs.hoof>0) {ctx.strokeStyle=e.buffs.jade>0?'#b8f0d2':'#d8b077';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(e.x,e.y,25,12,0,0,Math.PI*2);ctx.stroke();}
                 ctx.save();if(e.inv>0)ctx.globalAlpha=.6+.4*Math.sin(time*25)**2;
                 const bob=e.moving?-Math.abs(Math.sin(e.stepPhase))*1.8:0;

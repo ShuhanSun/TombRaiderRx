@@ -6,8 +6,8 @@
 const CONFIG = { TILE: 50, BASE_SIGHT: 300, ZOMBIE_SPD: 55, SPRINTER_SPD: 140, GREEN_SPD: 40 };
 const TERRAIN = { FLOOR: 0, WALL: 1, WATER: 2 };
 
-const LEVEL_NAMES_CN = ["沙海迷冢", "千纹机关廊", "青铜兽影厅", "巨鼎炼魂室", "石骨迷宫", "荧光棺河", "九字封印井", "暗影葬主殿", "帝王沉眠室", "永劫天陨塔"];
-const LEVEL_NAMES_EN = ["Sand Sea Tomb", "Thousand Traps", "Bronze Beast Hall", "Cauldron Chamber", "Bone Labyrinth", "Fluorescent River", "Nine Seal Well", "Shadow Burial", "Emperor's Sleep", "Eternal Fall Tower"];
+const LEVEL_NAMES_CN = ["汉阙长陵", "千纹机关廊", "青铜兽影厅", "巨鼎炼魂室", "石骨迷宫", "荧光棺河", "九字封印井", "暗影葬主殿", "帝王沉眠室", "永劫天陨塔"];
+const LEVEL_NAMES_EN = ["Han Ancestral Tomb", "Thousand Traps", "Bronze Beast Hall", "Cauldron Chamber", "Bone Labyrinth", "Fluorescent River", "Nine Seal Well", "Shadow Burial", "Emperor's Sleep", "Eternal Fall Tower"];
 
 const TRAP_NAMES_CN = ["连弩塔", "投石机", "滚木阵", "喷火口", "混合阵", "飞刀口", "巨石阵", "鬼火阵", "万箭阵", "绝境塔"];
 const TRAP_NAMES_EN = ["Crossbow", "Catapult", "Log Trap", "Flamer", "Mix Trap", "Knives", "Boulders", "Ghost Fire", "Arrow Rain", "Despair Tower"];
@@ -546,6 +546,9 @@ class Projectile extends Entity {
         for(let i=0;i<steps&&!this.dead;i++){
             this.x+=this.vx*dt/steps;this.y+=this.vy*dt/steps;
             if(MapSys.get(this.x,this.y)===TERRAIN.WALL){this.dead=1;Game.spawn(new Effect(this.x,this.y,'dust'));break;}
+            if(World.projectileBlockerAt(this.x,this.y,this.info.size)){
+                this.dead=1;Game.spawn(new Effect(this.x,this.y,'dust'));break;
+            }
             if(this.source==='trap'){
                 const victim=TombDangers.enemies().find(e=>Math.hypot(this.x-e.x,this.y-e.y)<this.info.size+13);
                 if(victim){TombDangers.hurt(victim,this.pType==='STONE'||this.pType==='LOG'?2:1);this.dead=1;break;}
@@ -562,7 +565,7 @@ class Projectile extends Entity {
 }
 
 class Player extends Entity {
-    constructor(x,y){super(x,y,'player');this.hp=5;this.sight=CONFIG.BASE_SIGHT;this.inv=0;this.buffs={hoof:0,candle:0,jade:0};this.walkT=0;this.hasCompass=0;this.hasShovel=false;this.attackCooldown=0;this.attackT=0;this.attackAngle=0;this.holdingBreath=false;this.breathRemaining=60;this.stepPhase=0;this.direction=0;this.walkFrame=1;this.walkDistance=0;this.stepDistance=0;this.moving=false;this.inWater=MapSys.get(x,y)===TERRAIN.WATER;}
+    constructor(x,y){super(x,y,'player');this.hp=5;this.sight=CONFIG.BASE_SIGHT;this.inv=0;this.buffs={hoof:0,candle:0,jade:0};this.walkT=0;this.hasCompass=0;this.hasShovel=false;this.attackCooldown=0;this.attackT=0;this.attackAngle=0;this.holdingBreath=false;this.breathRemaining=60;this.breathExhausted=false;this.stepPhase=0;this.direction=0;this.walkFrame=1;this.walkDistance=0;this.stepDistance=0;this.moving=false;this.inWater=MapSys.get(x,y)===TERRAIN.WATER;}
     nearestTarget(){return Game.ents.filter(e=>!e.dead&&e.type==='zombie'&&Math.hypot(e.x-this.x,e.y-this.y)<=78&&MapSys.lineClear(this.x,this.y,e.x,e.y)).sort((a,b)=>Math.hypot(a.x-this.x,a.y-this.y)-Math.hypot(b.x-this.x,b.y-this.y))[0];}
     attack(target=this.nearestTarget()){
         if(!Game.running||Game.pause||!this.hasShovel||this.holdingBreath||this.attackCooldown>0||this.rollTime>0||!target)return false;
@@ -575,14 +578,21 @@ class Player extends Entity {
     }
     startHoldingBreath(){
         if(!Game.running||Game.pause||this.holdingBreath||this.breathRemaining<=0)return false;
-        this.holdingBreath=true;document.getElementById('breath-btn').classList.add('pressed');return true;
+        this.holdingBreath=true;this.breathExhausted=false;document.getElementById('breath-btn').classList.add('pressed');
+        Game.msg(curLang==='CN'?'屏气隐匿 · 守墓尸无法察觉':'Breath held · tomb guardians cannot detect you','#b9f4e2');
+        Game.refreshBuffs();return true;
     }
-    stopHoldingBreath(){
-        this.holdingBreath=false;this.breathRemaining=60;document.getElementById('breath-btn').classList.remove('pressed');Game.refreshBuffs();
+    stopHoldingBreath(exhausted=false){
+        const wasHolding=this.holdingBreath;
+        this.holdingBreath=false;this.breathExhausted=exhausted;
+        if(!exhausted)this.breathRemaining=60;
+        document.getElementById('breath-btn').classList.remove('pressed');
+        if(wasHolding)Game.msg(curLang==='CN'?(exhausted?'气息耗尽 · 守墓尸重新索敌':'恢复呼吸 · 守墓尸重新索敌'):(exhausted?'Breath exhausted · guardians can detect you':'Breathing resumed · guardians can detect you'),'#e7c58f');
+        Game.refreshBuffs();
     }
     update(dt){
         this.attackCooldown=Math.max(0,this.attackCooldown-dt);this.attackT=Math.max(0,this.attackT-dt);
-        if(this.holdingBreath){this.breathRemaining=Math.max(0,this.breathRemaining-dt);if(this.breathRemaining===0){this.holdingBreath=false;document.getElementById('breath-btn').classList.remove('pressed');}}
+        if(this.holdingBreath){this.breathRemaining=Math.max(0,this.breathRemaining-dt);if(this.breathRemaining===0)this.stopHoldingBreath(true);}
         else if(this.hasShovel)this.attack();
         if(this.inv>0)this.inv-=dt;
         if(this.buffs.hoof>0) this.buffs.hoof-=dt;
@@ -951,9 +961,15 @@ const Game = {
         if(World.canExit()&&Math.hypot(this.exitPos.x-this.p.x,this.exitPos.y-this.p.y)<30) this.showExitModal();
     },
     refreshBuffs: function() {
-        const breath=document.getElementById('breath-btn'),count=document.getElementById('breath-count');
+        const breath=document.getElementById('breath-btn'),count=document.getElementById('breath-count'),status=document.getElementById('breath-status');
         count.textContent=String(Math.ceil(this.p.breathRemaining));breath.setAttribute('aria-pressed',String(this.p.holdingBreath));
         breath.setAttribute('aria-label',curLang==='CN'?`按住屏气，剩余 ${Math.ceil(this.p.breathRemaining)} 秒`:`Hold breath, ${Math.ceil(this.p.breathRemaining)} seconds remaining`);
+        const seconds=Math.ceil(this.p.breathRemaining),ratio=Math.max(0,this.p.breathRemaining/60);
+        status.classList.toggle('active',this.p.holdingBreath);status.classList.toggle('low',this.p.holdingBreath&&seconds<=10);status.classList.toggle('exhausted',this.p.breathExhausted);
+        status.style.setProperty?.('--breath-angle',`${ratio*360}deg`);
+        document.getElementById('breath-status-time').textContent=`${seconds}s`;
+        document.getElementById('breath-status-title').textContent=curLang==='CN'?(this.p.breathExhausted?'气息耗尽':'屏气隐匿中'):(this.p.breathExhausted?'OUT OF BREATH':'HOLDING BREATH');
+        document.getElementById('breath-status-copy').textContent=curLang==='CN'?(this.p.breathExhausted?'松开按钮后可再次屏气':'僵尸无法发现或攻击你 · 松开恢复呼吸'):(this.p.breathExhausted?'Release to recover':'Guardians cannot detect or attack · release to breathe');
         let html='';
         if(this.p.buffs.hoof>0) html+=`<div class="buff buff-hoof">🐴 ${Math.ceil(this.p.buffs.hoof)}s</div>`;
         if(this.p.buffs.jade>0) html+=`<div class="buff buff-jade">🥋 ${curLang==='CN'?'护身 ×1':'Shield ×1'}</div>`;
