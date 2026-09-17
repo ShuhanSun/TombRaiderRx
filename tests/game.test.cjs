@@ -522,6 +522,16 @@ test('hidden jets trigger suddenly at close range, cool down, and smoke grows ab
  MapSys.t[10*MapSys.w+10]=1;Game.p.x=500;Game.p.y=700;v.state='idle';TombDangers.update(.1);assert.equal(v.state,'idle');
 });
 
+test('smoke flood-fill renders on every redesigned map width',()=>{
+ const {Game,MapSys,TombDangers,calls}=setup();
+ for(const floor of [1,5,10]){
+  Game.load(floor);MapSys.t.fill(0);TombDangers.clouds=[];calls.length=0;
+  TombDangers.addCloud(Game.p.x,Game.p.y);TombDangers.clouds[0].age=3;
+  TombDangers.drawClouds(Game.ctx,0,MapSys.w,0,MapSys.h);
+  assert.ok(calls.some(c=>c[0]==='drawImage'));
+ }
+});
+
 test('duplicate equipment is always picked up without stacking jade protection',()=>{
  const {Game}=setup();Game.getItem('item_jade');Game.getItem('item_compass');
  const Item=Game.ents.find(e=>e.type==='ground_item').constructor;

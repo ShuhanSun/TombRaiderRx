@@ -69,7 +69,7 @@ const TombDangers={
   for(const c of this.clouds){const radius=Math.min(360,c.age*34),fade=Math.min(1,c.life/3),density=Math.min(.25,c.age*.1)*fade;
    const reach=Math.ceil(radius/50)+2,cx=Math.floor(c.x/50),cy=Math.floor(c.y/50),cells=[];
    for(let y=Math.max(top,cy-reach);y<Math.min(bottom,cy+reach+1);y++)for(let x=Math.max(left,cx-reach);x<Math.min(right,cx+reach+1);x++){
-    const dist=c.dist[y*60+x];if(dist<0)continue;const amount=Math.max(0,Math.min(1,(radius-dist*50)/65));if(!amount)continue;
+    const dist=c.dist[y*MapSys.w+x];if(dist<0)continue;const amount=Math.max(0,Math.min(1,(radius-dist*50)/65));if(!amount)continue;
     cells.push({x,y,amount});
    }
    if(!cells.length)continue;ctx.save();ctx.beginPath();for(const p of cells)ctx.rect(p.x*50,p.y*50,50,50);ctx.clip();
