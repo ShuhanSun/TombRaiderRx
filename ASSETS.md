@@ -34,3 +34,8 @@ Prompt: A photorealistic orthographic two-panel ancient Chinese tomb material at
 
 ## Coffin detail atlas
 `assets/tomb-coffin-details.png`: generated with the built-in image tool. Prompt: transparent 2×2 realistic overhead Chinese tomb atlas containing a giant red lacquer coffin with descending stair passage, stone coffin arrival stairway, desiccated corpse inside open stone coffin, and scattered ivory bones/skulls. Isolated cutouts, neutral upper-left lighting, no text.
+# Shovel and tomb atmosphere update
+
+Generated with the built-in image-generation tool for this game: `assets/raider-shovel-attack.png` (four-direction, four-stage realistic shovel combat sheet), `assets/entrenching-shovel.png` (weathered steel and wood pickup), and `assets/tomb-remains.png` (aged severed remains in burial cloth). Transparent alpha is retained. Prompts requested elevated orthographic 2.5D sprites, weathered materials, consistent framing and no text. The attack sheet uses a mirrored right-facing row for coherent left-facing attacks. These assets are original generated art, not historical photographs.
+
+The same tool produced `assets/raider-coffin-push.png`, a four-direction four-stage heavy-pushing animation, and `assets/coffin-lid.png`, a detached carved stone lid retained beside opened coffins. Both preserve transparent alpha and contain no text.

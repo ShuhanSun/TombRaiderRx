@@ -10,13 +10,13 @@
         {name:'秦砖地宫', mark:'秦', motif:'seal', floor:'#2b211b', accent:'#8d6e63', zombies:2, pests:'beetle'},
         {name:'汉代陵寝', mark:'汉', motif:'cloud', floor:'#2c241d', accent:'#b08d57', zombies:2, pests:'spider'},
         {name:'唐墓壁画', mark:'唐', motif:'mural', floor:'#30231d', accent:'#b85c38', zombies:3, pests:'bat'},
-        {name:'宋代水墓', mark:'宋', motif:'wave', floor:'#1f2927', accent:'#5f9ea0', zombies:2, pests:'snake'},
+        {name:'宋代水墓', mark:'宋', motif:'wave', floor:'#1f2927', accent:'#5f9ea0', zombies:2, pests:'beetle'},
         {name:'元代沙窟', mark:'元', motif:'sand', floor:'#33291e', accent:'#c2a878', zombies:3, pests:'beetle'},
         {name:'明代石室', mark:'明', motif:'brick', floor:'#24282b', accent:'#8b9aa3', zombies:3, pests:'spider'},
-        {name:'清代毒陵', mark:'清', motif:'poison', floor:'#1f2a21', accent:'#6b8e23', zombies:3, pests:'snake'},
+        {name:'清代毒陵', mark:'清', motif:'poison', floor:'#1f2a21', accent:'#6b8e23', zombies:3, pests:'beetle'},
         {name:'机关长廊', mark:'机', motif:'gear', floor:'#29241f', accent:'#c17d3a', zombies:4, pests:'bat'},
         {name:'帝王玄宫', mark:'帝', motif:'royal', floor:'#221f27', accent:'#8c6ab1', zombies:4, pests:'spider'},
-        {name:'幽冥天宫', mark:'冥', motif:'abyss', floor:'#17191d', accent:'#a33c3c', zombies:4, pests:'snake'}
+        {name:'幽冥天宫', mark:'冥', motif:'abyss', floor:'#17191d', accent:'#a33c3c', zombies:4, pests:'beetle'}
     ];
 
     const RELIC_VALUES = [
@@ -72,7 +72,7 @@
     }
 
     class Pest extends Entity {
-        constructor(x,y,kind){ super(x,y,'pest'); this.kind=kind; this.dir=Math.random()*Math.PI*2; this.life=18; this.speed=kind==='bat'?95:kind==='snake'?55:70; this.change=0; }
+        constructor(x,y,kind){ super(x,y,'pest'); this.kind=kind; this.dir=Math.random()*Math.PI*2; this.life=18; this.speed=kind==='bat'?95:70; this.change=0; }
         update(dt,p){
             this.life-=dt; if(this.life<=0){this.dead=1;return;}
             this.change-=dt;if(this.change<=0){this.change=rand(.4,1.3);this.dir+=rand(-1.4,1.4);}
@@ -81,9 +81,8 @@
             if(Math.hypot(this.x-p.x,this.y-p.y)<15){ this.dead=1; Game.addText(this.x,this.y,'×','#bdbdbd'); }
         }
         draw(ctx){
-            ctx.save();ctx.fillStyle=this.kind==='snake'?'#6b8e23':this.kind==='spider'?'#3b2a23':'#5d4a66';
-            if(this.kind==='snake'){ctx.strokeStyle='#6b8e23';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-10,4);ctx.quadraticCurveTo(0,-8,10,3);ctx.stroke();}
-            else if(this.kind==='bat'){ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-13,-7);ctx.lineTo(-8,5);ctx.lineTo(0,1);ctx.lineTo(8,5);ctx.lineTo(13,-7);ctx.closePath();ctx.fill();}
+            ctx.save();ctx.fillStyle=this.kind==='spider'?'#3b2a23':'#5d4a66';
+            if(this.kind==='bat'){ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-13,-7);ctx.lineTo(-8,5);ctx.lineTo(0,1);ctx.lineTo(8,5);ctx.lineTo(13,-7);ctx.closePath();ctx.fill();}
             else {ctx.beginPath();ctx.arc(0,0,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#5f4b43';for(let i=-1;i<=1;i+=2){for(let j=-1;j<=1;j++){ctx.beginPath();ctx.moveTo(i*4,j*3);ctx.lineTo(i*11,j*7);ctx.stroke();}}}
             ctx.restore();
         }

@@ -52,7 +52,11 @@ const Expedition={
    for(const side of [0,1])Game.spawn({type:'burial_decor',x:(r.x+(side?r.w-.65:.65))*50,y:(r.y+.8)*50,sprite:r===Game.exitRoom?this.style.decor:(this.style.decor+i%3)%10,size,dead:0});
   }
   Game.spawn({type:'arrival_coffin',x:Game.p.x,y:Game.p.y-65,dead:0});
-  for(const r of World.rooms.filter(r=>r.kind!=='entry'))for(let i=0;i<2;i++)Game.spawn({type:'bone_pile',x:(r.x+.75+i*(r.w-1.5))*50,y:(r.y+r.h-.7)*50,size:40+i*10,dead:0});
+  for(const [roomIndex,r] of World.rooms.filter(r=>r.kind!=='entry').entries()){
+   for(let i=0;i<2;i++)Game.spawn({type:'bone_pile',x:(r.x+.75+i*(r.w-1.5))*50,y:(r.y+r.h-.7)*50,size:40+i*10,dead:0});
+   if((roomIndex+Game.lvl)%3===0)Game.spawn({type:'tomb_remains',variant:(roomIndex+Game.lvl)%4,x:(r.x+r.w*.52)*50,y:(r.y+r.h*.68)*50,size:62+Math.min(20,Game.lvl*2),dead:0});
+   if(Game.lvl>=7&&r===Game.exitRoom)Game.spawn({type:'tomb_remains',variant:2,x:(r.x+r.w*.28)*50,y:(r.y+r.h*.38)*50,size:88,dead:0});
+  }
   this.buildWalls();TombDangers.setup();
  },
  spawnEnemy(kind,x,y){
@@ -137,7 +141,7 @@ class TombCreature{
   if(this.windup>0){this.windup=Math.max(0,this.windup-dt);if(!this.windup){if(d<34&&MapSys.lineClear(this.x,this.y,p.x,p.y))p.hit();this.cooldown=1.8;}return;}
   if(d<28&&!this.cooldown){this.windup=.55;return;}
   if(d>220||d<25)return;
-  const speed={worm:24,beetle:49,spider:66,bat:88,snake:58}[this.kind],angle=Math.atan2(p.y-this.y,p.x-this.x)+(this.kind==='spider'?Math.sin(Game.elapsed*3)*.5:0);
+  const speed={worm:24,beetle:49,spider:66,bat:88}[this.kind]||42,angle=Math.atan2(p.y-this.y,p.x-this.x)+(this.kind==='spider'?Math.sin(Game.elapsed*3)*.5:0);
   const x=this.x+Math.cos(angle)*speed*dt,y=this.y+Math.sin(angle)*speed*dt;
   if(MapSys.canOccupy(x,this.y,7))this.x=x;if(MapSys.canOccupy(this.x,y,7))this.y=y;
  }

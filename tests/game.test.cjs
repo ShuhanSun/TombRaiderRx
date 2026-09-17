@@ -3,6 +3,27 @@ const vm=require('node:vm');
 const assert=require('node:assert/strict');
 const {setup}=require('./harness.cjs');
 
+test('coffin opening only releases red blood, never clouds or green liquid',()=>{
+ const {Game,TombDangers}=setup();
+ for(let i=0;i<12;i++)TombDangers.coffinFX({x:125+i*50,y:175});
+ assert.equal(TombDangers.clouds.length,0);
+ assert.equal(TombDangers.stains.length,12);
+ assert.ok(TombDangers.stains.every(s=>s.color==='#6f0915'));
+ assert.ok(TombDangers.bursts.every(b=>b.blood));
+ Game.load(2);assert.equal(TombDangers.stains.length,0);
+});
+
+test('room ambience is selective and decorative remains do not replace items or enemies',()=>{
+ const {Game,World}=setup();
+ for(let floor=1;floor<=10;floor++){
+  Game.load(floor);
+  const entry=World.rooms.find(r=>r.kind==='entry');assert.equal(entry.haze,false);assert.equal(entry.flicker,false);
+  assert.ok(World.rooms.some(r=>r.haze));assert.ok(World.rooms.some(r=>!r.haze));
+  assert.ok(Game.ents.some(e=>e.type==='tomb_remains'));
+  Game.render();
+ }
+});
+
 test('boot, language switches before and after play, and HiDPI sizing',()=>{
     const {Game,els}=setup();
     Game.toggleLang(); assert.equal(els['game-title'].innerText,'Tomb Raider');
@@ -433,9 +454,9 @@ test('explosive coffins warn before blast and only explode once',()=>{
  const count=TombDangers.bursts.length;c.reveal();assert.equal(c.fuse,0);assert.equal(TombDangers.bursts.length,count);
 });
 
-test('burrows respawn bounded stompable creatures; water rolls safely and smoke leaves sight radius unchanged',()=>{
+test('beetle burrows respawn bounded stompable creatures; water rolls safely and smoke leaves sight radius unchanged',()=>{
  const {Game,TombDangers,MapSys,World}=setup();MapSys.t.fill(0);Game.ents=[Game.p];Game.p.x=500;Game.p.y=500;
- const source={x:500,y:500,kind:'snake',timer:0};TombDangers.sources=[source];TombDangers.vents=[];
+ const source={x:500,y:500,kind:'beetle',timer:0};TombDangers.sources=[source];TombDangers.vents=[];
  for(let i=0;i<20;i++)TombDangers.update(4);assert.equal(Game.ents.filter(e=>e.source===source&&!e.dead).length,5);
  Game.p.moving=true;for(const e of Game.ents.filter(e=>e.source===source))e.update(.01,Game.p);assert.equal(Game.ents.filter(e=>e.source===source&&!e.dead).length,0);
  TombDangers.update(4);assert.equal(Game.ents.filter(e=>e.source===source&&!e.dead).length,1);
@@ -482,8 +503,22 @@ test('shovel pickup unlocks attack; melee respects cooldown, walls, range, pause
  Game.restart();assert.equal(Game.p.hasShovel,false);assert.equal(els['attack-btn'].style.display,'none');
 });
 
-test('stomping beetles and snakes makes one sound each and honors mute',()=>{
- const {Game,TombCreature,AudioSys}=setup();let sounds=0;const play=AudioSys.playStomp;AudioSys.playStomp=()=>sounds++;
- for(const kind of ['beetle','snake']){const c=new TombCreature(Game.p.x,Game.p.y,kind);c.stompable=true;Game.p.moving=true;c.update(.02,Game.p);c.update(.02,Game.p);assert.equal(c.dead,1);}
- assert.equal(sounds,2);AudioSys.playStomp=play;AudioSys.muted=true;AudioSys.ctx={state:'running',createBuffer(){throw Error('muted sound');}};AudioSys.playStomp();
+test('all continuous burrows contain beetles and stomping plays one sound',()=>{
+ const {Game,TombCreature,AudioSys,TombDangers}=setup();let sounds=0;const play=AudioSys.playStomp;AudioSys.playStomp=()=>sounds++;
+ assert.ok(TombDangers.sources.every(s=>s.kind==='beetle'));
+ const c=new TombCreature(Game.p.x,Game.p.y,'beetle');c.stompable=true;Game.p.moving=true;c.update(.02,Game.p);c.update(.02,Game.p);assert.equal(c.dead,1);
+ assert.equal(sounds,1);AudioSys.playStomp=play;AudioSys.muted=true;AudioSys.ctx={state:'running',createBuffer(){throw Error('muted sound');}};AudioSys.playStomp();
+});
+
+test('coffin pushing retains a displaced lid and non-loot decor never blocks movement',()=>{
+ const {Game,Expedition,MapSys}=setup();const c=Expedition.coffins[0];Game.p.x=c.x;Game.p.y=c.y+40;
+ c.interact(.3,Game.p);assert.equal(Game.p.pushingCoffin,c);assert.ok(c.interactTimer>0);
+ c.interact(.31,Game.p);assert.equal(c.opened,1);assert.ok(Number.isFinite(c.lidDirX));
+ c.update(.7);assert.equal(c.lidProgress,1);assert.equal(c.dead,0);
+ const decor=Game.ents.find(e=>['burial_decor','bone_pile','tomb_remains'].includes(e.type));assert.ok(decor);MapSys.t.fill(0);assert.equal(MapSys.canOccupy(decor.x,decor.y,10),true);
+});
+
+test('jade suit break triggers its dedicated sound without losing health',()=>{
+ const {Game,AudioSys}=setup();let breaks=0;AudioSys.playJadeBreak=()=>breaks++;Game.running=1;Game.p.inv=0;Game.p.buffs.jade=1;const hp=Game.p.hp;Game.p.hit();
+ assert.equal(breaks,1);assert.equal(Game.p.hp,hp);assert.equal(Game.p.buffs.jade,0);
 });

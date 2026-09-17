@@ -30,6 +30,8 @@ const World = {
         const types=['burial','supply','trap','sanctuary','burial','trap'];
         rooms.forEach((r,i)=>{
             r.kind=i===0?'entry':i===rooms.length-1?'exit':types[(i-1)%types.length];
+            r.haze=i>0&&((i+Game.lvl*2)%4===0||r.kind==='burial'&&Game.lvl>=6);
+            r.flicker=i>0&&((i*3+Game.lvl)%5===0||r.kind==='exit'&&Game.lvl%2===0);
             for(let y=r.y;y<r.y+r.h;y++)for(let x=r.x;x<r.x+r.w;x++)this.roomTiles[y*MapSys.w+x]=i;
             if(i===0||r.kind==='sanctuary'||i%3===0)this.props.push({x:(r.x+.65)*50,y:(r.y+.65)*50,sprite:7,size:65,glow:true});
             if(i>0&&i<rooms.length-1) {

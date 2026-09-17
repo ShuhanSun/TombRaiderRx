@@ -9,8 +9,8 @@ const Art = {
     ],
     load() {
         const load=src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src;});
-        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png'),load('assets/tomb-mechanisms.png'),load('assets/tomb-stone-realistic.png'),load('assets/tomb-expedition.png'),load('assets/tomb-coffin-details.png')]).then(([sprites,materials,walker,zombies,traps,mechanisms,stone,expedition,coffinDetails])=>{
-            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;this.mechanisms=mechanisms;this.stone=stone;this.expedition=expedition;this.coffinDetails=coffinDetails;
+        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png'),load('assets/tomb-mechanisms.png'),load('assets/tomb-stone-realistic.png'),load('assets/tomb-expedition.png'),load('assets/tomb-coffin-details.png'),load('assets/raider-shovel-attack.png'),load('assets/entrenching-shovel.png'),load('assets/tomb-remains.png'),load('assets/raider-coffin-push.png'),load('assets/coffin-lid.png')]).then(([sprites,materials,walker,zombies,traps,mechanisms,stone,expedition,coffinDetails,shovelAttack,shovelItem,remains,coffinPush,coffinLid])=>{
+            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;this.mechanisms=mechanisms;this.stone=stone;this.expedition=expedition;this.coffinDetails=coffinDetails;this.shovelAttack=shovelAttack;this.shovelItem=shovelItem;this.remains=remains;this.coffinPush=coffinPush;this.coffinLid=coffinLid;
             const xs=[0,313,626,940,1254],ys=[0,302,618,918,1254];
             for(let i=0;i<16;i++) {
                 const c=document.createElement('canvas');c.width=c.height=400;
@@ -24,6 +24,37 @@ const Art = {
     coffinDetail(ctx,index,x,y,size){
         if(!this.coffinDetails)return;const w=this.coffinDetails.width/2,h=this.coffinDetails.height/2;
         ctx.drawImage(this.coffinDetails,index%2*w,Math.floor(index/2)*h,w,h,x-size/2,y-size*.8,size,size);
+    },
+    shovelRaider(ctx,e,x,y,size){
+        if(!this.shovelAttack){this.raider(ctx,e,x,y,size);return;}
+        const xs=[0,330,650,997,1247],ys=[0,306,618,925,1261];
+        const progress=e.attackT>0?1-e.attackT/.48:0;
+        const pose=e.attackT>0?Math.min(3,Math.floor(progress*4)):0;
+        const direction=e.attackT>0?(Math.abs(Math.cos(e.attackAngle))>Math.abs(Math.sin(e.attackAngle))?(Math.cos(e.attackAngle)<0?1:2):(Math.sin(e.attackAngle)<0?3:0)):e.direction;
+        // Mirror the coherent right-facing row for left-facing strikes.
+        if(e.attackT<=0&&e.moving){
+            ctx.save();ctx.beginPath();ctx.rect(x-size/2,y-size*.36,size,size*.43);ctx.clip();this.raider(ctx,e,x,y,size*.9);ctx.restore();
+            ctx.save();ctx.beginPath();ctx.rect(x-size/2,y-size*.94,size,size*.69);ctx.clip();
+        }else ctx.save();
+        ctx.translate(x,y);if(direction===1)ctx.scale(-1,1);
+        const row=direction===1?2:direction,sx=xs[pose]+4,sy=ys[row]+4,sw=xs[pose+1]-sx-4,sh=ys[row+1]-sy-4;
+        ctx.drawImage(this.shovelAttack,sx,sy,sw,sh,-size/2,-size*.94,size,size);ctx.restore();
+    },
+    pushRaider(ctx,e,x,y,size){
+        if(!this.coffinPush){this.raider(ctx,e,x,y,size);return;}
+        const c=e.pushingCoffin,progress=c?.opened?Math.min(1,c.lidProgress):Math.min(.72,(c?.interactTimer||0)/.6*.72);
+        const pose=Math.min(3,Math.floor(progress*4)),sw=this.coffinPush.width/4,sh=this.coffinPush.height/4;
+        ctx.drawImage(this.coffinPush,pose*sw,e.direction*sh,sw,sh,x-size/2,y-size*.94,size,size);
+    },
+    coffinLidSprite(ctx,e,size=92){
+        if(!this.coffinLid)return;
+        const ease=1-Math.pow(1-(e.lidProgress||0),3),dx=(e.lidDirX||1)*ease*72,dy=(e.lidDirY||0)*ease*72;
+        ctx.save();ctx.translate(e.x+dx,e.y+dy);ctx.rotate((e.lidDirX||1)*ease*.16);ctx.drawImage(this.coffinLid,-size*.31,-size*.55,size*.62,size);ctx.restore();
+    },
+    remainsSprite(ctx,index,x,y,size){
+        if(!this.remains)return;
+        const sw=this.remains.width/2,sh=this.remains.height/2;
+        ctx.drawImage(this.remains,index%2*sw,Math.floor(index/2)*sh,sw,sh,x-size/2,y-size*.62,size,size*.67);
     },
     expeditionSprite(ctx,index,x,y,size){
         if(!this.expedition)return;
@@ -120,6 +151,7 @@ const Scene = {
         const main=game.ents.find(e=>e.royal);
         if(main){ctx.save();ctx.fillStyle='#060c1399';ctx.fillRect(main.x-58,main.y-25,116,50);ctx.fillStyle=World.theme.tint+'55';ctx.fillRect(main.x-54,main.y-32,108,43);ctx.strokeStyle='#b4a28566';ctx.lineWidth=2;ctx.strokeRect(main.x-52,main.y-30,104,40);ctx.restore();}
         TombDangers.drawStains(ctx);
+        this.roomAtmosphere(ctx,time,'under');
         ExitGate.draw(ctx,left,right,top,bottom);
         ctx.save();ctx.filter=Expedition.style.filter;this.masonry(ctx,left,right,top,bottom);ctx.restore();
         for(const wall of Expedition.walls)Expedition.render(ctx,wall);
@@ -139,8 +171,11 @@ const Scene = {
         }
         const visible=e=>e.x>cx-100&&e.x<cx+w+100&&e.y>cy-100&&e.y<cy+h+100;
         const objects=[...World.props.map(e=>({...e,type:'decoration'})),...World.altars.map(e=>({...e,type:'altar'})),...game.ents.filter(e=>!e.dead&&(!e.hidden||e.rising)),...Expedition.switches,...TombDangers.sources,ExitGate.switch,...(World.canExit()?[{...game.exitPos,type:'exit'}]:[])].filter(visible).sort((a,b)=>a.y-b.y);
-        for(const e of objects)this.entity(ctx,e,game);
+        // Ground remains must never cover an actor's body when their sort anchors overlap.
+        for(const e of objects.filter(e=>['tomb_remains','bone_pile'].includes(e.type)))this.entity(ctx,e,game);
+        for(const e of objects.filter(e=>!['tomb_remains','bone_pile'].includes(e.type)))this.entity(ctx,e,game);
         TombDangers.drawJets(ctx);
+        this.roomAtmosphere(ctx,time,'over');
         for(const t of game.texts) {ctx.save();ctx.translate(t.x,t.y);t.draw(ctx);ctx.restore();}
         ctx.restore();
         const sight=World.sight(),shade=ctx.createRadialGradient(w/2,h/2,60,w/2,h/2,sight);
@@ -157,6 +192,26 @@ const Scene = {
         }
         TombDangers.drawClouds(ctx,left,right,top,bottom);
         ctx.restore();
+    },
+    roomAtmosphere(ctx,time,layer){
+        for(const r of World.rooms){
+            const x=r.x*50,y=r.y*50,w=r.w*50,h=r.h*50;
+            if(layer==='under'&&r.flicker){
+                const pulse=.72+.18*Math.sin(time*7+r.x)+.1*Math.sin(time*17+r.y);
+                const lx=(r.x+r.w*.34)*50,ly=(r.y+r.h*.42)*50;
+                ctx.save();const glow=ctx.createRadialGradient(lx,ly,6,lx,ly,Math.max(95,w*.55));
+                glow.addColorStop(0,`rgba(231,151,54,${.22*pulse})`);glow.addColorStop(.5,`rgba(128,70,24,${.09*pulse})`);glow.addColorStop(1,'rgba(20,8,4,0)');ctx.fillStyle=glow;ctx.fillRect(x,y,w,h);
+                ctx.fillStyle=`rgba(255,184,70,${.6*pulse})`;ctx.beginPath();ctx.ellipse(lx,ly,3.5,8,Math.sin(time*5)*.12,0,Math.PI*2);ctx.fill();ctx.restore();
+            }
+            if(layer==='over'&&r.haze){
+                ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
+                for(let i=0;i<5;i++){
+                    const px=x+((i*.23+.11+Math.sin(time*.08+i)*.05)%1)*w,py=y+(i%2?.34:.7)*h+Math.sin(time*.22+i*2)*14;
+                    const fog=ctx.createRadialGradient(px,py,5,px,py,Math.max(70,w*.32));fog.addColorStop(0,'rgba(154,166,160,.11)');fog.addColorStop(.65,'rgba(103,116,111,.065)');fog.addColorStop(1,'rgba(76,88,84,0)');ctx.fillStyle=fog;ctx.fillRect(px-w*.4,py-h*.45,w*.8,h*.9);
+                }
+                ctx.restore();
+            }
+        }
     },
     masonry(ctx,left,right,top,bottom){
         const open=(x,y)=>x>=0&&y>=0&&x<MapSys.w&&y<MapSys.h&&MapSys.t[y*MapSys.w+x]!==1;
@@ -206,6 +261,7 @@ const Scene = {
         const time=game.elapsed,cn=curLang==='CN',distance=Math.hypot(e.x-game.p.x,e.y-game.p.y);
         if(e.type==='arrival_coffin'){Art.coffinDetail(ctx,1,e.x,e.y,155);return;}
         if(e.type==='bone_pile'){Art.coffinDetail(ctx,3,e.x,e.y,e.size);return;}
+        if(e.type==='tomb_remains'){Art.remainsSprite(ctx,e.variant,e.x,e.y,e.size);return;}
         if(e.type==='decoration') {if(e.glow)Art.glow(ctx,e.x,e.y-18,95,'#e9aa342b');Art.sprite(ctx,e.sprite,e.x,e.y,e.size);return;}
         if(e.type==='gate_switch') {
             const open=ExitGate.remaining>0;
@@ -232,8 +288,8 @@ const Scene = {
                 if(e.buffs.jade>0||e.buffs.hoof>0) {ctx.strokeStyle=e.buffs.jade>0?'#b8f0d2':'#d8b077';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(e.x,e.y,25,12,0,0,Math.PI*2);ctx.stroke();}
                 ctx.save();if(e.inv>0)ctx.globalAlpha=.6+.4*Math.sin(time*25)**2;
                 const bob=e.moving?-Math.abs(Math.sin(e.stepPhase))*1.8:0;
-                if(e.rollTime>0){ctx.translate(e.x,e.y-20);ctx.rotate((.65-e.rollTime)/.65*Math.PI*2);Art.raider(ctx,e,0,20,74);}else Art.raider(ctx,e,e.x,e.y+bob,74);ctx.restore();
-                if(e.hasShovel){ctx.save();ctx.translate(e.x,e.y-15);ctx.rotate(e.attackT>0?e.attackAngle+(.5-e.attackT/.28)*2: .7);if(e.attackT>0){ctx.strokeStyle='#f2dba170';ctx.lineWidth=5;ctx.beginPath();ctx.arc(0,0,46,-.9,.8);ctx.stroke();}Art.shovel(ctx,24,0,1);ctx.restore();}
+                if(e.rollTime>0){ctx.translate(e.x,e.y-20);ctx.rotate((.65-e.rollTime)/.65*Math.PI*2);Art.raider(ctx,e,0,20,74);}else if(e.pushingCoffin)Art.pushRaider(ctx,e,e.x,e.y,82);else if(e.hasShovel)Art.shovelRaider(ctx,e,e.x,e.y+bob,84);else Art.raider(ctx,e,e.x,e.y+bob,74);ctx.restore();
+                if(e.hasShovel&&e.attackT>0){const progress=1-e.attackT/.48;ctx.save();ctx.translate(e.x,e.y-18);ctx.rotate(e.attackAngle);ctx.globalAlpha=Math.sin(progress*Math.PI)*.8;for(let i=0;i<3;i++){ctx.strokeStyle=i===0?'#f5dfb8':'#aab6ac';ctx.lineWidth=5-i*1.4;ctx.beginPath();ctx.arc(0,0,47+i*5,-1.05+progress*.7,.25+progress*.7);ctx.stroke();}ctx.restore();}
             } else {
                 const pose=e.attackState==='windup'?2:e.attackState==='strike'?3:lift>2?1:0;
                 const lunge=e.attackState==='strike'?Math.sin((1-e.attackClock/.24)*Math.PI)*11:0;
@@ -251,7 +307,7 @@ const Scene = {
             ctx.save();
             if(game.p.y<e.y&&distance<85)ctx.globalAlpha=.62;
             if(e.rising){ctx.globalAlpha=e.elevation;ctx.translate(0,(1-e.elevation)*30);}
-            if(e.royal&&!e.opened){ctx.filter=Expedition.style.filter;Art.expeditionSprite(ctx,15,e.x,e.y,115);}else if(e.opened)Art.coffinDetail(ctx,2,e.x,e.y,95);else Art.sprite(ctx,4,e.x+(e.shake>0?Math.sin(time*50)*2:0),e.y,90);ctx.restore();
+            if(e.royal&&!e.opened){ctx.filter=Expedition.style.filter;Art.expeditionSprite(ctx,15,e.x,e.y,115);}else if(e.opened){Art.coffinDetail(ctx,2,e.x,e.y,95);Art.coffinLidSprite(ctx,e,e.royal?112:94);}else Art.sprite(ctx,4,e.x+(e.shake>0?Math.sin(time*50)*2:0),e.y,90);ctx.restore();
             if(!e.opened&&distance<130)Art.label(ctx,e.x,e.y-72,(cn?'靠近开棺':'STAY TO OPEN'));
             if(!e.opened&&e.interactTimer>0)Art.progress(ctx,e.x,e.y-61,e.interactTimer/.6,'#e8c981');return;
         }
@@ -293,6 +349,6 @@ const Scene = {
 };
 
 Art.shovel=function(ctx,x,y,scale){
- ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);ctx.strokeStyle='#29231d';ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(-18,0);ctx.lineTo(12,0);ctx.stroke();ctx.strokeStyle='#997449';ctx.lineWidth=4;ctx.stroke();
- const steel=ctx.createLinearGradient(10,-10,25,9);steel.addColorStop(0,'#e0e9e7');steel.addColorStop(.45,'#839590');steel.addColorStop(1,'#354640');ctx.fillStyle=steel;ctx.strokeStyle='#172221';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(10,-8);ctx.lineTo(23,-10);ctx.lineTo(29,0);ctx.lineTo(23,10);ctx.lineTo(10,8);ctx.closePath();ctx.fill();ctx.stroke();ctx.strokeStyle='#d5ddce';ctx.beginPath();ctx.moveTo(12,0);ctx.lineTo(24,0);ctx.stroke();ctx.restore();
+ if(Art.shovelItem){ctx.save();ctx.translate(x,y);ctx.rotate(-.18);ctx.drawImage(Art.shovelItem,-31*scale,-25*scale,62*scale,51*scale);ctx.restore();return;}
+ ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);ctx.strokeStyle='#997449';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-20,0);ctx.lineTo(12,0);ctx.stroke();ctx.fillStyle='#6e7b78';ctx.beginPath();ctx.moveTo(10,-8);ctx.lineTo(28,-10);ctx.lineTo(31,0);ctx.lineTo(28,10);ctx.lineTo(10,8);ctx.closePath();ctx.fill();ctx.restore();
 };
