@@ -123,6 +123,17 @@ test('two pointers move and sprint independently; cancellation and blur clear in
     windowEvents.blur();assert.equal(Input.sprint,false);assert.equal(Game.pause,true);
 });
 
+test('touch attack fires on pointerdown and suppresses compatibility click',()=>{
+    const {Game,els}=setup();
+    Game.getItem('item_shovel');
+    let prevented=0;
+    els['attack-btn'].handlers.pointerdown({pointerType:'touch',preventDefault(){prevented++;}});
+    assert.equal(Game.p.attackT,.48);assert.equal(prevented,1);
+    const cooldown=Game.p.attackCooldown;
+    els['attack-btn'].handlers.click({preventDefault(){prevented++;}});
+    assert.equal(Game.p.attackCooldown,cooldown);assert.equal(prevented,2);
+});
+
 test('ten-floor progression preserves equipment and requires a gate crank before exit',()=>{
     const {Game,MapSys,els,World,Passage,ExitGate}=setup();
     Game.p.hp=4;Game.p.buffs.candle=20;Game.p.hasCompass=1;
