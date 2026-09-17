@@ -178,6 +178,8 @@ test('wine can be picked up at full health, sanctuary heals once and hidden trap
     Game.p.x=trap.x+100;trap.update(1/60,Game.p);assert.ok(trap.windup>0);assert.ok(trap.revealT>0);assert.equal(Game.ents.filter(e=>e.type==='proj').length,before);
     for(let i=0;i<7;i++)trap.update(1/60,Game.p);
     assert.equal(Game.ents.filter(e=>e.type==='proj').length,before+1);
+    Game.p.x=trap.x+300;for(let i=0;i<60;i++)trap.update(1/60,Game.p);
+    assert.equal(trap.revealT,0);assert.equal(trap.revealed,true);
 });
 
 test('media audio starts from unlock, muted stays silent, and pause/resume restores playback',async()=>{
@@ -481,9 +483,11 @@ test('hidden jets trigger suddenly at close range, cool down, and smoke grows ab
  const v={x:500,y:500,kind:'smoke',angle:0,state:'idle',timer:0,age:0,cooldown:0};TombDangers.vents=[v];
  TombDangers.update(5);assert.equal(v.state,'idle');assert.equal(TombDangers.clouds.length,0);
  Game.p.x=550;Game.p.y=500;TombDangers.update(.1);assert.equal(v.state,'active');assert.equal(TombDangers.clouds.length,1);
+ assert.equal(v.revealed,true);
  const sight=World.sight();
  TombDangers.update(2);assert.ok(TombDangers.clouds[0].age>=2);assert.equal(World.sight(),sight);
  TombDangers.update(2);assert.equal(v.state,'cooldown');
+ assert.equal(v.revealed,true);
  MapSys.t[10*MapSys.w+10]=1;Game.p.x=500;Game.p.y=700;v.state='idle';TombDangers.update(.1);assert.equal(v.state,'idle');
 });
 
@@ -525,6 +529,16 @@ test('coffin pushing retains a displaced lid and non-loot decor never blocks mov
  c.interact(.31,Game.p);assert.equal(c.opened,1);assert.ok(Number.isFinite(c.lidDirX));
  c.update(.7);assert.equal(c.lidProgress,1);assert.equal(c.dead,0);
  const decor=Game.ents.find(e=>['burial_decor','bone_pile','tomb_remains'].includes(e.type));assert.ok(decor);MapSys.t.fill(0);assert.equal(MapSys.canOccupy(decor.x,decor.y,10),true);
+});
+
+test('coffins never block walking or forced movement',()=>{
+ const {Game,Expedition,Input,MapSys}=setup();MapSys.t.fill(0);const c=Expedition.coffins[0];Game.ents=[Game.p,c];
+ Game.p.x=c.x-45;Game.p.y=c.y;Input.x=1;Input.y=0;Input.active=true;
+ for(let i=0;i<40;i++)Game.p.update(1/60);
+ assert.ok(Game.p.x>c.x+30);
+ Game.p.x=c.x-45;Game.p.y=c.y;Game.p.rollTime=.65;Game.p.rollVX=290;Game.p.rollVY=0;
+ for(let i=0;i<40;i++)Game.p.update(1/60);
+ assert.ok(Game.p.x>c.x+30);
 });
 
 test('jade suit break triggers its dedicated sound without losing health',()=>{

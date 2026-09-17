@@ -331,7 +331,7 @@ const Scene = {
         }
         if(e.type==='trap') {
             if(e.vent)return;
-            if(!(e.revealT>0||e.windup>0||e.recoil>0))return;
+            if(!e.revealed&&!(e.revealT>0||e.windup>0||e.recoil>0))return;
             const kick=(e.recoil||0)/.28*7;
             ctx.save();ctx.translate(e.x,e.y);ctx.rotate(e.displayAim);ctx.translate(-kick,0);
             ctx.filter=Expedition.style.filter;

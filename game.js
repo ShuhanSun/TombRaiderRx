@@ -492,7 +492,7 @@ class Zombie extends Entity {
 class Trap extends Entity {
     constructor(x,y,lvlIndex){
         super(x,y,'trap');
-        this.life=3;this.cd=0;this.windup=0;this.aim=0;this.displayAim=0;this.recoil=0;this.revealT=0;
+        this.life=3;this.cd=0;this.windup=0;this.aim=0;this.displayAim=0;this.recoil=0;this.revealT=0;this.revealed=false;
         const data = LEVELS_DATA[Math.min(lvlIndex,9)];
         this.pType = data.type === 'MIX' ? Object.keys(PROJ_TYPES)[Math.floor((x+y)/50)%4] : data.type;
         this.color = data.col;
@@ -517,7 +517,7 @@ class Trap extends Entity {
         } else {
             this.cd=Math.max(0,this.cd-dt);
             if(this.cd<=0&&dist<175&&MapSys.lineClear(this.x,this.y,p.x,p.y)) {
-                this.aim=Math.atan2(p.y-this.y,p.x-this.x);this.displayAim=this.aim;this.windup=.1;this.revealT=.8;
+                this.aim=Math.atan2(p.y-this.y,p.x-this.x);this.displayAim=this.aim;this.windup=.1;this.revealT=.8;this.revealed=true;
             }
         }
     }
@@ -578,14 +578,13 @@ class Player extends Entity {
 
         if(this.rollTime>0){
             const step=Math.min(dt,this.rollTime),parts=Math.max(1,Math.ceil(290*step/6));this.rollTime=Math.max(0,this.rollTime-dt);
-            const clear=(x,y)=>MapSys.canOccupy(x,y,10)&&!Game.ents.some(e=>e.type==='coffin'&&!e.hidden&&!e.rising&&Math.hypot(e.x-x,e.y-y)<30);
+            const clear=(x,y)=>MapSys.canOccupy(x,y,10);
             for(let i=0;i<parts;i++){
                 const nx=this.x+this.rollVX*step/parts,ny=this.y+this.rollVY*step/parts;
                 if(clear(nx,this.y))this.x=nx;if(clear(this.x,ny))this.y=ny;
             }
             this.moving=true;this.stepPhase+=dt*20;return;
         }
-        if(this.pushingCoffin&&this.pushUntil>Game.elapsed){this.moving=false;this.stepPhase=0;return;}
         const oldX=this.x, oldY=this.y;
         let s=160*ExitGate.speed();
         if(Input.sprint) s *= 1.5; // Sprint!
@@ -598,15 +597,6 @@ class Player extends Entity {
 
             if(MapSys.canOccupy(nx,this.y,10))this.x=nx;
             if(MapSys.canOccupy(this.x,ny,10))this.y=ny;
-
-            // Coffin Collision
-            Game.ents.forEach(e => {
-                if(e.type === 'coffin'&&!e.hidden&&!e.rising) {
-                    if(Math.hypot(this.x-e.x, this.y-e.y) < 30 && Math.hypot(this.x-e.x,this.y-e.y)<=Math.hypot(oldX-e.x,oldY-e.y)) {
-                        this.x = oldX; this.y = oldY;
-                    }
-                }
-            });
 
         }
         const moved=Math.hypot(this.x-oldX,this.y-oldY);

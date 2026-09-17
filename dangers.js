@@ -24,7 +24,7 @@ const TombDangers={
   for(const t of Game.ents.filter(e=>e.type==='trap')){const c=anchor();t.x=c.x;t.y=c.y;World.mountTrap(t);}
   for(const kind of ['fire','water','smoke']){
    const c=anchor(),t=new Trap(c.x,c.y,Game.lvl-1);World.mountTrap(t);t.vent=true;Game.spawn(t);
-   this.vents.push({x:t.x,y:t.y,type:'jet',kind,angle:t.aim,length:0,cooldown:0,age:0,state:'idle',timer:0});
+   this.vents.push({x:t.x,y:t.y,type:'jet',kind,angle:t.aim,length:0,cooldown:0,age:0,state:'idle',timer:0,revealed:false});
   }
   const rooms=World.rooms.filter(r=>!['entry','sealed','sanctuary'].includes(r.kind));
   for(let i=0;i<2;i++){const r=rooms[(i+Game.lvl)%rooms.length];
@@ -88,7 +88,7 @@ const TombDangers={
   for(const v of this.vents){
    v.age+=dt;v.cooldown=Math.max(0,v.cooldown-dt);v.state=v.state||'idle';v.timer=v.timer||0;
    if(v.state==='idle'){
-    if(Math.hypot(Game.p.x-v.x,Game.p.y-v.y)<165&&MapSys.lineClear(v.x,v.y,Game.p.x,Game.p.y)){v.state='active';v.timer=3.5;if(v.kind==='smoke')this.addCloud(v.x,v.y);}else continue;
+    if(Math.hypot(Game.p.x-v.x,Game.p.y-v.y)<165&&MapSys.lineClear(v.x,v.y,Game.p.x,Game.p.y)){v.state='active';v.timer=3.5;v.revealed=true;if(v.kind==='smoke')this.addCloud(v.x,v.y);}else continue;
    }else if(v.state==='active'){
     v.timer-=dt;if(v.timer<=0){v.state='cooldown';v.timer=5;}
    }else if(v.state==='cooldown'){
@@ -114,9 +114,10 @@ const TombDangers={
  },
  drawJets(ctx){
   for(const v of this.vents){
-   if(v.state!=='active')continue;
+   if(!v.revealed&&v.state!=='active')continue;
    ctx.save();ctx.translate(v.x,v.y);ctx.rotate(v.angle);
    ctx.filter=Expedition.style.filter;Art.trapEmitter(ctx,v.kind,0,0,52);ctx.filter='none';
+   if(v.state!=='active'){ctx.restore();continue;}
    const colors={fire:['#ff4b1688','#ffce6877'],water:['#277ac0aa','#c0f6ffbb'],smoke:['#c0c8d588','#dde3eb44']},col=colors[v.kind];
    if(v.kind==='smoke'){ctx.restore();continue;}
    if(v.length>0){
