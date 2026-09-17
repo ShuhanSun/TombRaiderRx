@@ -13,6 +13,12 @@ const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:
     Art.walker=await loadImage('out/assets/raider-walk.png');Art.prepareWalker(()=>createCanvas(1,1));
     Art.zombies=await loadImage('out/assets/jiangshi-motion.png');Art.traps=await loadImage('out/assets/trap-motion.png');
     Art.mechanisms=await loadImage('out/assets/tomb-mechanisms.png');
+    Art.shovelAttack=await loadImage('out/assets/raider-shovel-attack.png');
+    Art.shovelItem=await loadImage('out/assets/entrenching-shovel.png');
+    Art.remains=await loadImage('out/assets/tomb-remains.png');
+    Art.coffinPush=await loadImage('out/assets/raider-coffin-push.png');
+    Art.coffinLid=await loadImage('out/assets/coffin-lid.png');
+    Art.trapEmitters=await loadImage('out/assets/trap-emitters.png');
     const atlas=await loadImage('out/assets/tomb-materials.png');
     Art.tiles=[];
     const xs=[0,313,626,940,1254],ys=[0,302,618,918,1254];
@@ -34,10 +40,27 @@ const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:
     const pc=createCanvas(640,320);els['passage-scene'].width=640;els['passage-scene'].height=320;els['passage-scene'].getContext=()=>pc.getContext('2d');
     for(const next of [1,3,5,6,8,9,10]){Passage.open(next);Passage.time=2;Passage.draw();fs.writeFileSync(path.join(output,'passage-'+next+'.png'),pc.toBuffer('image/png'));}
     Game.load(4);const hazard=World.hazards[0];Game.p.x=hazard.x;Game.p.y=hazard.y+80;Game.elapsed=4.7;Game.render();fs.writeFileSync(path.join(output,'corridor.png'),Game.cvs.toBuffer('image/png'));
+    const emitters=createCanvas(860,230),ec=emitters.getContext('2d');ec.fillStyle='#252d2d';ec.fillRect(0,0,860,230);
+    ['ARROW','STONE','LOG','FIRE','fire','water','smoke','VENOM'].forEach((kind,i)=>Art.trapEmitter(ec,kind,55+i*107,115,92));
+    fs.writeFileSync(path.join(output,'trap-emitters.png'),emitters.toBuffer('image/png'));
     for(const lvl of [1,2,3,4,5,6,7,8,9,10]){Game.load(lvl);Game.p.hasKey=true;Game.getArtifact();World.altars.forEach(a=>a.done=true);Game.p.x=ExitGate.switch.x;Game.p.y=ExitGate.switch.y+65;Game.render();fs.writeFileSync(path.join(output,'crank-'+lvl+'.png'),Game.cvs.toBuffer('image/png'));ExitGate.open();ExitGate.radius=5;Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y+100;Game.render();fs.writeFileSync(path.join(output,'flood-'+lvl+'.png'),Game.cvs.toBuffer('image/png'));}
     for(const lvl of [1,3,6,9,10]){Game.load(lvl);const royal=Game.ents.find(e=>e.royal);Game.p.x=royal.x;Game.p.y=royal.y+110;Game.render();fs.writeFileSync(path.join(output,'royal-'+lvl+'.png'),Game.cvs.toBuffer('image/png'));}
     Game.load(8);for(const c of Expedition.coffins.filter(c=>c.payload.enemy))c.reveal();const crawler=Game.ents.find(e=>e.crawler);Game.p.x=crawler.x+35;Game.p.y=crawler.y+80;Game.render();fs.writeFileSync(path.join(output,'crawler.png'),Game.cvs.toBuffer('image/png'));
     Game.load(4);for(const v of TombDangers.vents){v.age=3;v.state='active';v.timer=3;v.length=150;if(v.kind==='smoke'){TombDangers.addCloud(v.x,v.y);TombDangers.clouds[0].age=6;}Game.p.x=v.x+Math.cos(v.angle)*90;Game.p.y=v.y+Math.sin(v.angle)*90;Game.elapsed=3;Game.render();fs.writeFileSync(path.join(output,'jet-'+v.kind+'.png'),Game.cvs.toBuffer('image/png'));}
     const wall=Expedition.walls[0];if(wall){Game.p.x=wall.x;Game.p.y=wall.y+70;Game.render();fs.writeFileSync(path.join(output,'sealed-room.png'),Game.cvs.toBuffer('image/png'));}
+    Game.load(8);const room=World.rooms.find(r=>r.kind==='burial');room.haze=true;room.flicker=true;
+    const coffin=Game.ents.find(e=>e.type==='coffin'&&World.inside(room,e.x,e.y));
+    Game.p.x=(room.x+room.w/2)*50;Game.p.y=(room.y+room.h/2)*50;Game.p.hasShovel=true;
+    if(coffin){coffin.open();Game.p.x=coffin.x;Game.p.y=coffin.y+95;}
+    TombDangers.stains.forEach(s=>s.age=6);Game.elapsed=5;Game.p.attackT=0;Game.render();fs.writeFileSync(path.join(output,'horror-room.png'),Game.cvs.toBuffer('image/png'));
+    const attacks=createCanvas(760,440),ac=attacks.getContext('2d');ac.fillStyle='#33423e';ac.fillRect(0,0,760,440);
+    for(let row=0;row<4;row++)for(let col=0;col<4;col++)Art.shovelRaider(ac,{direction:row,attackAngle:[Math.PI/2,Math.PI,0,-Math.PI/2][row],attackT:col===0?0:.48*(1-(col+.2)/4)},70+col*180,100+row*110,105);
+    fs.writeFileSync(path.join(output,'shovel-motion.png'),attacks.toBuffer('image/png'));
+    const walking=createCanvas(760,440),wc=walking.getContext('2d');wc.fillStyle='#33423e';wc.fillRect(0,0,760,440);
+    for(let row=0;row<4;row++)for(let col=0;col<4;col++)Art.shovelRaider(wc,{direction:row,attackT:0,moving:true,walkFrame:col},70+col*180,100+row*110,105);
+    fs.writeFileSync(path.join(output,'shovel-walk.png'),walking.toBuffer('image/png'));
+    Game.load(5);const opening=Expedition.coffins[0];Game.p.x=opening.x;Game.p.y=opening.y+40;
+    for(let i=0;i<4;i++){opening.interact(.16,Game.p);opening.update(.16);Game.elapsed+=.16;Game.render();fs.writeFileSync(path.join(output,'coffin-push-'+i+'.png'),Game.cvs.toBuffer('image/png'));}
+    opening.open(Game.p);for(let i=0;i<4;i++){opening.update(.17);Game.elapsed+=.17;Game.render();fs.writeFileSync(path.join(output,'coffin-lid-'+i+'.png'),Game.cvs.toBuffer('image/png'));}
     console.log('Rendered floors 1, 4 and 7 at 390×844 using real Canvas and atlas PNGs.');
 })();

@@ -331,7 +331,7 @@ class Coffin extends Entity {
         if(this.opened||this.hidden||this.rising||this.locked) return;
         const dx=this.x-(p?.x??this.x-1),dy=this.y-(p?.y??this.y),d=Math.hypot(dx,dy)||1;
         this.lidDirX=dx/d;this.lidDirY=dy/d;this.lidProgress=0;
-        if(p){p.pushingCoffin=this;p.pushUntil=Game.elapsed+.72;}
+        if(p){const angle=Math.atan2(this.y-p.y,this.x-p.x);p.direction=Math.abs(Math.cos(angle))>Math.abs(Math.sin(angle))?(Math.cos(angle)<0?1:2):(Math.sin(angle)<0?3:0);p.pushingCoffin=this;p.pushUntil=Game.elapsed+.72;}
         this.opened = 1;TombDangers.coffinFX(this); this.shake = 0.5; this.revealTimer = 0.6; AudioSys.playOpen();
     }
     reveal() {
@@ -497,7 +497,7 @@ class Zombie extends Entity {
 class Trap extends Entity {
     constructor(x,y,lvlIndex){
         super(x,y,'trap');
-        this.life=3; this.cd=1.5+Math.random(); this.windup=0;this.aim=0;this.displayAim=0;this.recoil=0;
+        this.life=3;this.cd=0;this.windup=0;this.aim=0;this.displayAim=0;this.recoil=0;this.revealT=0;
         const data = LEVELS_DATA[Math.min(lvlIndex,9)];
         this.pType = data.type === 'MIX' ? Object.keys(PROJ_TYPES)[Math.floor(Math.random()*4)] : data.type;
         this.color = data.col;
@@ -508,12 +508,9 @@ class Trap extends Entity {
         if(this.vent)return;
         const dist=Math.hypot(this.x-p.x,this.y-p.y);
         this.recoil=Math.max(0,this.recoil-dt);
-        if(this.windup<=0&&this.recoil<=0&&dist<400&&MapSys.lineClear(this.x,this.y,p.x,p.y))this.aim=Math.atan2(p.y-this.y,p.x-this.x);
-        const turn=Math.atan2(Math.sin(this.aim-this.displayAim),Math.cos(this.aim-this.displayAim));
-        this.displayAim+=Math.sign(turn)*Math.min(Math.abs(turn),dt*3.8);
+        this.revealT=Math.max(0,this.revealT-dt);
         if(this.windup>0) {
             this.windup-=dt;
-            if(this.windup<=0&&Math.abs(Math.atan2(Math.sin(this.aim-this.displayAim),Math.cos(this.aim-this.displayAim)))>.01)this.windup=.001;
             if(this.windup<=0) {
                 this.displayAim=this.aim;
                 Game.spawn(new Projectile(this.x+Math.cos(this.aim)*20,this.y+Math.sin(this.aim)*20,this.aim,this.pType));
@@ -522,9 +519,11 @@ class Trap extends Entity {
                 AudioSys.playTrap(dist);
                 this.cd=LEVELS_DATA[this.lvlIdx].delay+0.4;
             }
-        } else if(dist<400&&MapSys.lineClear(this.x,this.y,p.x,p.y)) {
-            this.cd-=dt;
-            if(this.cd<=0) {this.windup=.8;this.aim=Math.atan2(p.y-this.y,p.x-this.x);}
+        } else {
+            this.cd=Math.max(0,this.cd-dt);
+            if(this.cd<=0&&dist<175&&MapSys.lineClear(this.x,this.y,p.x,p.y)) {
+                this.aim=Math.atan2(p.y-this.y,p.x-this.x);this.displayAim=this.aim;this.windup=.1;this.revealT=.8;
+            }
         }
     }
     draw(ctx){
@@ -900,7 +899,7 @@ const Game = {
         // Direct Pickup (No Modal)
         AudioSys.playUse();
 
-        if(c==='item_shovel'){this.p.hasShovel=true;this.msg(curLang==='CN'?'兵工铲入手 · 点击右下角攻击僵尸':'Shovel equipped · tap ATTACK',col);this.refreshBuffs();}
+        if(c==='item_shovel'){this.p.hasShovel=true;this.msg(curLang==='CN'?'兵工铲入手 · 点击左侧攻击僵尸':'Shovel acquired · tap ATTACK on the left',col);this.refreshBuffs();}
         if(c==='item_candle'){ this.p.buffs.candle=20; this.msg(LANG[curLang].msgs.candle, col); }
         if(c==='item_compass'){ this.p.hasCompass=1; this.drawMinimap(); this.msg(LANG[curLang].msgs.compass, col); }
         if(c==='item_wine'){ this.p.hp=Math.min(5,this.p.hp+1); this.msg(LANG[curLang].msgs.heal, col); this.updateHUD(); }
@@ -995,7 +994,8 @@ const Game = {
         if(bar.innerHTML!==html) bar.innerHTML=html;
         const itemBar=document.getElementById('item-bar');
         const lamp=this.p.buffs.candle>0?`<div class="item-slot ${this.p.buffs.candle<5?'lamp-low':''}">🪔 ${curLang==='CN'?'灯油':'Oil'} ${Math.ceil(this.p.buffs.candle)}s</div>`:'';
-        if(itemBar.innerHTML!==lamp) itemBar.innerHTML=lamp;
+        const shovel=this.p.hasShovel?`<div class="item-slot shovel-slot"><img src="assets/entrenching-shovel.png" alt="">${curLang==='CN'?'兵工铲':'Shovel'}</div>`:'';
+        if(itemBar.innerHTML!==lamp+shovel) itemBar.innerHTML=lamp+shovel;
     },
     refreshExploration: function() {
         const px=Math.floor(this.p.x/CONFIG.TILE), py=Math.floor(this.p.y/CONFIG.TILE);
