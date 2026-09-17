@@ -285,15 +285,14 @@ html[lang='en'] h1 { font-size:clamp(32px,7vw,68px); letter-spacing:4px; }
 #end-desc,#win-desc {white-space:pre-line;line-height:1.8;max-height:65vh;overflow:auto;padding:0 18px;font-size:15px;text-align:left;}
 #end-desc,#win-desc {touch-action:pan-y;}
 
-#attack-btn {position:absolute;left:max(112px,calc(env(safe-area-inset-left) + 112px));bottom:max(62px,calc(env(safe-area-inset-bottom) + 26px));width:78px;height:78px;border:2px solid #bf9b66;border-radius:50%;background:#342c25e8;color:#ffe2b4;font-size:18px;font-weight:700;align-items:center;justify-content:center;pointer-events:auto;touch-action:manipulation;z-index:5;box-shadow:0 4px 20px #0008;}
-#attack-btn:active {background-color:#755335;transform:scale(.94);}
-#attack-btn:disabled {opacity:.6;}
+#breath-btn {position:absolute;left:max(112px,calc(env(safe-area-inset-left) + 112px));bottom:max(62px,calc(env(safe-area-inset-bottom) + 26px));width:78px;height:78px;display:flex;align-items:flex-end;justify-content:center;pointer-events:auto;touch-action:none;z-index:5;box-shadow:0 4px 20px #0008;background:url('assets/breath-button.svg') center/cover no-repeat;border:0;border-radius:50%;padding:0 0 7px;color:#d9fff2;}
+#breath-btn.pressed {transform:scale(.94);filter:brightness(1.22);box-shadow:0 0 24px #78d9bd66;}
+#breath-count {min-width:26px;padding:1px 5px;border-radius:9px;background:#07100dda;color:#d9fff2;font:700 12px/1.2 system-ui;text-align:center;}
 
 /* Disable double-tap zoom on controls without disabling pinch zoom elsewhere. */
 button { touch-action: manipulation; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
-#joystick-zone, #attack-btn, #sprint-btn {touch-action:none;}
-#attack-btn,#sprint-btn,#pause-btn,#sound-btn {background-image:url('assets/control-buttons.png');background-repeat:no-repeat;background-size:200% 200%;border:0;border-radius:50%;color:transparent;padding:0;}
-#attack-btn {background-position:0 0;}
+#joystick-zone, #breath-btn, #sprint-btn {touch-action:none;}
+#sprint-btn,#pause-btn,#sound-btn {background-image:url('assets/control-buttons.png');background-repeat:no-repeat;background-size:200% 200%;border:0;border-radius:50%;color:transparent;padding:0;}
 #sprint-btn {background-position:100% 0;}
 #pause-btn {background-position:0 100%;}
 #sound-btn {background-position:100% 100%;}

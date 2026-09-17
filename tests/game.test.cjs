@@ -123,15 +123,20 @@ test('two pointers move and sprint independently; cancellation and blur clear in
     windowEvents.blur();assert.equal(Input.sprint,false);assert.equal(Game.pause,true);
 });
 
-test('touch attack fires on pointerdown and suppresses compatibility click',()=>{
-    const {Game,els}=setup();
-    Game.getItem('item_shovel');
-    let prevented=0;
-    els['attack-btn'].handlers.pointerdown({pointerType:'touch',preventDefault(){prevented++;}});
-    assert.equal(Game.p.attackT,.48);assert.equal(prevented,1);
-    const cooldown=Game.p.attackCooldown;
-    els['attack-btn'].handlers.click({preventDefault(){prevented++;}});
-    assert.equal(Game.p.attackCooldown,cooldown);assert.equal(prevented,2);
+test('breath button hides the player while held and resets on release',()=>{
+    const {Game,Input,els}=setup();let prevented=0;
+    const event={pointerId:3,preventDefault(){prevented++;}};
+    els['breath-btn'].handlers.pointerdown(event);
+    assert.equal(Game.p.holdingBreath,true);assert.equal(Input.breathPointer,3);assert.equal(prevented,1);
+    Game.p.update(1);assert.equal(Game.p.breathRemaining,59);
+    els['breath-btn'].handlers.pointerup(event);
+    assert.equal(Game.p.holdingBreath,false);assert.equal(Game.p.breathRemaining,60);assert.equal(Input.breathPointer,null);
+});
+
+test('one continuous breath hold ends after sixty seconds',()=>{
+    const {Game}=setup();Game.p.startHoldingBreath();
+    for(let i=0;i<61;i++)Game.p.update(1);
+    assert.equal(Game.p.holdingBreath,false);assert.equal(Game.p.breathRemaining,0);
 });
 
 test('ten-floor progression preserves equipment and requires a gate crank before exit',()=>{
@@ -503,17 +508,24 @@ test('traps are dispersed after coffin placement',()=>{
  for(let lvl=1;lvl<=10;lvl++){Game.load(lvl);const traps=Game.ents.filter(e=>e.type==='trap');for(let i=0;i<traps.length;i++)for(let j=i+1;j<traps.length;j++)assert.ok(Math.hypot(traps[i].x-traps[j].x,traps[i].y-traps[j].y)>=175);assert.equal(TombDangers.vents.length,3);}
 });
 
-test('shovel pickup unlocks attack; melee respects cooldown, walls, range, pause and restart',()=>{
- const {Game,MapSys,Zombie,els}=setup();MapSys.t.fill(0);Game.ents=[Game.p];Game.p.x=125;Game.p.y=125;
+test('shovel attacks nearby zombies automatically and respects stealth, cooldown and walls',()=>{
+ const {Game,MapSys,Zombie}=setup();MapSys.t.fill(0);Game.ents=[Game.p];Game.p.x=125;Game.p.y=125;
  const z=new Zombie(185,125,0);Game.spawn(z);
- assert.equal(Game.p.attack(),false);Game.refreshBuffs();assert.equal(els['attack-btn'].style.display,'none');
- Game.getItem('item_shovel');assert.equal(els['attack-btn'].style.display,'flex');
- els['attack-btn'].handlers.click();assert.equal(z.hp,2);assert.equal(Game.p.attack(),false);
- Game.elapsed+=.7;Game.p.attackCooldown=0;MapSys.t[2*MapSys.w+3]=1;Game.p.attack();assert.equal(z.hp,2);
- MapSys.t.fill(0);Game.p.attackCooldown=0;z.x=210;Game.p.attack();assert.equal(z.hp,2);
- z.x=185;Game.p.attackCooldown=0;Game.pause=1;assert.equal(Game.p.attack(),false);Game.pause=0;
- Game.p.attack();assert.equal(z.hp,1);Game.elapsed+=.7;Game.p.attackCooldown=0;Game.p.attack();assert.equal(z.dead,1);
- Game.restart();assert.equal(Game.p.hasShovel,false);assert.equal(els['attack-btn'].style.display,'none');
+ Game.p.update(.01);assert.equal(z.hp,undefined);
+ Game.getItem('item_shovel');Game.p.update(.01);assert.equal(z.hp,2);Game.p.update(.01);assert.equal(z.hp,2);
+ Game.elapsed+=.7;Game.p.attackCooldown=0;Game.p.startHoldingBreath();Game.p.update(.01);assert.equal(z.hp,2);
+ Game.p.stopHoldingBreath();MapSys.t[2*MapSys.w+3]=1;Game.p.update(.01);assert.equal(z.hp,2);
+ MapSys.t.fill(0);z.x=210;Game.p.update(.01);assert.equal(z.hp,2);
+ z.x=185;Game.p.attackCooldown=0;Game.p.update(.01);assert.equal(z.hp,1);Game.elapsed+=.7;Game.p.attackCooldown=0;Game.p.update(.01);assert.equal(z.dead,1);
+ Game.restart();assert.equal(Game.p.hasShovel,false);
+});
+
+test('zombies cancel attacks and wander slowly while the player holds breath',()=>{
+ const {Game,MapSys,Zombie}=setup(17);MapSys.t.fill(0);Game.p.x=300;Game.p.y=300;
+ const z=new Zombie(325,300,0);Game.ents=[Game.p,z];z.update(.01,Game.p);assert.equal(z.attackState,'windup');
+ Game.p.startHoldingBreath();const start=Math.hypot(z.x-Game.p.x,z.y-Game.p.y);
+ for(let i=0;i<180;i++)z.update(1/60,Game.p);
+ assert.equal(z.attackState,'');assert.equal(Game.p.hp,5);assert.ok(Math.hypot(z.x-Game.p.x,z.y-Game.p.y)>start);
 });
 
 test('all continuous burrows contain beetles and stomping plays one sound',()=>{

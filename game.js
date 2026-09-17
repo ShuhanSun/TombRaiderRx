@@ -48,7 +48,7 @@ const LANG = {
         winDesc: "穿越十层，逃出生天！",
         winBtn: "再来一局",
         items: {
-            shovel: {n:"兵工铲", d:"近战武器：点击攻击按钮，挥击身边的僵尸。"},
+            shovel: {n:"兵工铲", d:"近战武器：靠近僵尸时自动挥击。"},
             candle: {n:"残油铜灯", d:"<b>添油续火</b>: 扩大视野 20 秒，每层仅一盏。"},
             wine: {n:"糯米酒", d:"<b>祛阴补阳</b>: 恢复 1 点生命值。"},
             hoof: {n:"黑驴蹄子", d:"<b>生人勿近</b>: 僵尸退避 15 秒。"},
@@ -88,7 +88,7 @@ const LANG = {
         winDesc: "Artifacts found. You survived!",
         winBtn: "Play Again",
         items: {
-            shovel: {n:"Entrenching Shovel", d:"Tap ATTACK to strike nearby zombies."},
+            shovel: {n:"Entrenching Shovel", d:"Automatically strikes nearby zombies."},
             candle: {n:"Oil Lamp", d:"<b>Last Oil</b>: Wider sight for 20 seconds. One lamp per floor."},
             wine: {n:"Rice Wine", d:"<b>Vitality</b>: Restore 1 HP."},
             hoof: {n:"Donkey Hoof", d:"<b>Repel</b>: Zombies fear you for 15s."},
@@ -193,10 +193,11 @@ const Input = {
         this.sprint=!!(this.keys.ShiftLeft||this.keys.ShiftRight||this.sprintPointer!==null);
     },
     reset() {
-        this.keys={}; this.pointer=null; this.sprintPointer=null;
+        this.keys={}; this.pointer=null; this.sprintPointer=null;this.breathPointer=null;
         this.touchX=0; this.touchY=0; this.update();
         document.getElementById('joystick-zone').classList.remove('steering');
         document.getElementById('sprint-btn').classList.remove('pressed');
+        Game.p?.stopHoldingBreath?.();
     }
 };
 (function(){
@@ -221,19 +222,16 @@ const Input = {
         zone.classList.remove('steering');
     };
     ['pointerup','pointercancel','lostpointercapture'].forEach(name=>zone.addEventListener(name,release));
-    const attack=document.getElementById('attack-btn');
-    let attackTouchUntil=0;
-    // iOS can turn two quick button taps into a page zoom even with touch-action:none.
-    // Handle touch/pen attacks on pointerdown and suppress the compatibility click.
-    attack.addEventListener('pointerdown',e=>{
-        if(e.pointerType!=='touch'&&e.pointerType!=='pen')return;
-        e.preventDefault();attackTouchUntil=Date.now()+800;Game.p?.attack();
+    const breath=document.getElementById('breath-btn');
+    breath.addEventListener('pointerdown',e=>{
+        if(!Game.running||Game.pause||Input.breathPointer!==null)return;
+        e.preventDefault();Input.breathPointer=e.pointerId;breath.setPointerCapture(e.pointerId);Game.p?.startHoldingBreath();
     });
-    attack.addEventListener('click',e=>{
-        e?.preventDefault?.();
-        if(Date.now()>=attackTouchUntil)Game.p?.attack();
-    });
-    attack.addEventListener('dblclick',e=>e.preventDefault());
+    const releaseBreath=e=>{
+        if(e.pointerId!==Input.breathPointer)return;
+        Input.breathPointer=null;Game.p?.stopHoldingBreath();
+    };
+    ['pointerup','pointercancel','lostpointercapture'].forEach(name=>breath.addEventListener(name,releaseBreath));
     document.addEventListener('dblclick',e=>{
         if(e.target?.closest?.('button,#joystick-zone'))e.preventDefault();
     },{capture:true,passive:false});
@@ -250,13 +248,13 @@ const Input = {
     ['pointerup','pointercancel','lostpointercapture'].forEach(name=>sprint.addEventListener(name,releaseSprint));
     const movement=['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','ShiftLeft','ShiftRight'];
     window.addEventListener('keydown',e=>{
-        if(['Space','KeyJ'].includes(e.code)&&Game.running&&!Game.pause){e.preventDefault();if(!e.repeat)Game.p.attack();return;}
+        if(e.code==='KeyB'&&Game.running&&!Game.pause){e.preventDefault();if(!e.repeat)Game.p.startHoldingBreath();return;}
         if(e.code==='Escape'&&!e.repeat) { Game.togglePause(); return; }
         if(e.code==='KeyM'&&!e.repeat) { Game.toggleSound(); return; }
         if(!Game.running||Game.pause||!movement.includes(e.code)) return;
         e.preventDefault(); Input.keys[e.code]=true; Input.update();
     });
-    window.addEventListener('keyup',e=>{ delete Input.keys[e.code]; Input.update(); });
+    window.addEventListener('keyup',e=>{if(e.code==='KeyB')Game.p?.stopHoldingBreath();delete Input.keys[e.code]; Input.update(); });
     window.addEventListener('blur',()=>{ Input.reset(); Game.togglePause(true); });
     document.addEventListener('visibilitychange',()=>{ if(document.hidden) { Input.reset(); Game.togglePause(true); } });
 })();
@@ -415,8 +413,9 @@ class Zombie extends Entity {
         const dx=p.x-this.x,dy=p.y-this.y,d=Math.hypot(dx,dy),repel=p.buffs.hoof>0;
         this.attackCD=Math.max(0,this.attackCD-dt);
         this.landT=Math.max(0,this.landT-dt);this.moving=false;
-        if(repel&&this.attackState) {this.attackState='';this.attackClock=0;this.attackCD=.6;}
-        if(this.attackState) {
+        const concealed=p.holdingBreath;
+        if((repel||concealed)&&this.attackState) {this.attackState='';this.attackClock=0;this.attackCD=.6;}
+        if(!concealed&&this.attackState) {
             this.hopHeight=0;this.attackClock-=dt;
             if(this.attackClock<=0) {
                 if(this.attackState==='windup') {
@@ -437,12 +436,17 @@ class Zombie extends Entity {
             return;
         }
         const inRange=this.zType===2?d<this.species.sense:d<36;
-        if(!repel&&inRange&&this.attackCD<=0&&MapSys.lineClear(this.x,this.y,p.x,p.y)) {
+        if(!concealed&&!repel&&inRange&&this.attackCD<=0&&MapSys.lineClear(this.x,this.y,p.x,p.y)) {
             this.attackState='windup';this.attackClock=this.species.windup;
             this.attackAim=Math.atan2(dy,dx);this.hopHeight=0;return;
         }
         let vx=0,vy=0;
-        if(repel&&d<350) {vx=-dx/(d||1);vy=-dy/(d||1);}
+        if(concealed) {
+            this.changeDirT-=dt;
+            if(this.changeDirT<=0){this.changeDirT=1.2+Math.random()*1.8;const away=Math.atan2(-dy,-dx);this.dir=away+(Math.random()-.5)*Math.PI*1.4;}
+            vx=Math.cos(this.dir);vy=Math.sin(this.dir);
+        }
+        else if(repel&&d<350) {vx=-dx/(d||1);vy=-dy/(d||1);}
         else if(this.zType===1) {
             if(d<this.species.sense) {vx=dx/(d||1);vy=dy/(d||1);}
             else {
@@ -456,7 +460,7 @@ class Zombie extends Entity {
         this.hopPhase=(this.hopPhase+dt/period)%1;
         const airborne=this.hopPhase<.68;
         this.hopHeight=airborne?Math.sin(this.hopPhase/.68*Math.PI)*(this.zType===1?17:13):0;
-        const speed=this.spd*(repel?1.5:1)*(MapSys.get(this.x,this.y)===TERRAIN.WATER&&!this.species.aquatic?.45:1);
+        const speed=this.spd*(repel?1.5:concealed?.28:1)*(MapSys.get(this.x,this.y)===TERRAIN.WATER&&!this.species.aquatic?.45:1);
         const distance=airborne?speed*dt/.68:0,oldX=this.x,oldY=this.y;
         const nx=this.x+vx*distance,ny=this.y+vy*distance;
         if(MapSys.canOccupy(nx,this.y,9))this.x=nx;else if(this.zType===1)this.dir=Math.PI-this.dir;
@@ -558,19 +562,28 @@ class Projectile extends Entity {
 }
 
 class Player extends Entity {
-    constructor(x,y){super(x,y,'player');this.hp=5;this.sight=CONFIG.BASE_SIGHT;this.inv=0;this.buffs={hoof:0,candle:0,jade:0};this.walkT=0;this.hasCompass=0;this.hasShovel=false;this.attackCooldown=0;this.attackT=0;this.attackAngle=0;this.stepPhase=0;this.direction=0;this.walkFrame=1;this.walkDistance=0;this.stepDistance=0;this.moving=false;this.inWater=MapSys.get(x,y)===TERRAIN.WATER;}
-    attack(){
-        if(!Game.running||Game.pause||!this.hasShovel||this.attackCooldown>0||this.rollTime>0)return false;
+    constructor(x,y){super(x,y,'player');this.hp=5;this.sight=CONFIG.BASE_SIGHT;this.inv=0;this.buffs={hoof:0,candle:0,jade:0};this.walkT=0;this.hasCompass=0;this.hasShovel=false;this.attackCooldown=0;this.attackT=0;this.attackAngle=0;this.holdingBreath=false;this.breathRemaining=60;this.stepPhase=0;this.direction=0;this.walkFrame=1;this.walkDistance=0;this.stepDistance=0;this.moving=false;this.inWater=MapSys.get(x,y)===TERRAIN.WATER;}
+    nearestTarget(){return Game.ents.filter(e=>!e.dead&&e.type==='zombie'&&Math.hypot(e.x-this.x,e.y-this.y)<=78&&MapSys.lineClear(this.x,this.y,e.x,e.y)).sort((a,b)=>Math.hypot(a.x-this.x,a.y-this.y)-Math.hypot(b.x-this.x,b.y-this.y))[0];}
+    attack(target=this.nearestTarget()){
+        if(!Game.running||Game.pause||!this.hasShovel||this.holdingBreath||this.attackCooldown>0||this.rollTime>0||!target)return false;
         this.attackCooldown=.68;this.attackT=.48;
-        const target=Game.ents.filter(e=>!e.dead&&e.type==='zombie'&&Math.hypot(e.x-this.x,e.y-this.y)<=78&&MapSys.lineClear(this.x,this.y,e.x,e.y)).sort((a,b)=>Math.hypot(a.x-this.x,a.y-this.y)-Math.hypot(b.x-this.x,b.y-this.y))[0];
-        this.attackAngle=target?Math.atan2(target.y-this.y,target.x-this.x):[Math.PI/2,Math.PI,0,-Math.PI/2][this.direction];
+        this.attackAngle=Math.atan2(target.y-this.y,target.x-this.x);
         AudioSys.tone(220,'triangle',.1,.09,70);
         const slash=new Effect(this.x+Math.cos(this.attackAngle)*42,this.y+Math.sin(this.attackAngle)*42,'slash');slash.angle=this.attackAngle;Game.spawn(slash);
         if(target&&TombDangers.hurt(target,1)){Game.spawn(new Effect(target.x,target.y,'dust'));AudioSys.playStomp();}
         return true;
     }
+    startHoldingBreath(){
+        if(!Game.running||Game.pause||this.holdingBreath||this.breathRemaining<=0)return false;
+        this.holdingBreath=true;document.getElementById('breath-btn').classList.add('pressed');return true;
+    }
+    stopHoldingBreath(){
+        this.holdingBreath=false;this.breathRemaining=60;document.getElementById('breath-btn').classList.remove('pressed');Game.refreshBuffs();
+    }
     update(dt){
         this.attackCooldown=Math.max(0,this.attackCooldown-dt);this.attackT=Math.max(0,this.attackT-dt);
+        if(this.holdingBreath){this.breathRemaining=Math.max(0,this.breathRemaining-dt);if(this.breathRemaining===0){this.holdingBreath=false;document.getElementById('breath-btn').classList.remove('pressed');}}
+        else if(this.hasShovel)this.attack();
         if(this.inv>0)this.inv-=dt;
         if(this.buffs.hoof>0) this.buffs.hoof-=dt;
         if(this.buffs.candle>0) this.buffs.candle=Math.max(0,this.buffs.candle-dt);
@@ -703,7 +716,7 @@ const Game = {
         const cn=curLang==='CN';
         const labels={
             'guide-move':cn?'循光探路':'EXPLORE',
-            'guide-move-desc':cn?'WASD / 方向键移动，Shift 疾行；手机在画面上按住拖动，松手停下。':'Move with WASD / arrows. Hold Shift to sprint, or use touch controls.',
+            'guide-move-desc':cn?'拖动移动，按住疾行；危险时按住屏气，最多 60 秒。':'Drag to move, hold sprint, and hold your breath for up to 60 seconds near danger.',
             'guide-find':cn?'驻足开棺':'DISCOVER',
             'guide-find-desc':cn?'驻足开棺寻找钥匙与补给，留意通往主墓室的路线。':'Stay beside a coffin to open it. Find the bronze key on each floor.',
             'guide-exit':cn?'寻龙脱身':'ESCAPE',
@@ -712,7 +725,7 @@ const Game = {
             'pause-desc':cn?'歇息片刻，古墓中的时间已暂停。':'Take a breath. The tomb is paused.',
             'resume-btn':cn?'继续探索':'Resume exploration',
             'map-caption':cn?'探索地图 · 金点为目标':'Explored map · gold = target',
-            'control-hint':cn?'WASD 移动 · Shift 疾行 · Esc 暂停 · M 静音':'WASD Move · Shift Sprint · Esc Pause · M Mute',
+            'control-hint':cn?'WASD 移动 · Shift 疾行 · B 屏气 · Esc 暂停':'WASD Move · Shift Sprint · B Hold Breath · Esc Pause',
 
         };
         for(const [id,value] of Object.entries(labels)) document.getElementById(id).textContent=value;
@@ -859,7 +872,7 @@ const Game = {
         // Direct Pickup (No Modal)
         AudioSys.playUse();
 
-        if(c==='item_shovel'){this.p.hasShovel=true;this.msg(curLang==='CN'?'兵工铲入手 · 点击左侧攻击僵尸':'Shovel acquired · tap ATTACK on the left',col);this.refreshBuffs();}
+        if(c==='item_shovel'){this.p.hasShovel=true;this.msg(curLang==='CN'?'兵工铲入手 · 靠近僵尸自动攻击':'Shovel acquired · approach zombies to attack automatically',col);this.refreshBuffs();}
         if(c==='item_candle'){ this.p.buffs.candle=20; this.msg(LANG[curLang].msgs.candle, col); }
         if(c==='item_compass'){ this.p.hasCompass=1; this.drawMinimap(); this.msg(LANG[curLang].msgs.compass, col); }
         if(c==='item_wine'){ this.p.hp=Math.min(5,this.p.hp+1); this.msg(LANG[curLang].msgs.heal, col); this.updateHUD(); }
@@ -938,7 +951,9 @@ const Game = {
         if(World.canExit()&&Math.hypot(this.exitPos.x-this.p.x,this.exitPos.y-this.p.y)<30) this.showExitModal();
     },
     refreshBuffs: function() {
-        const attack=document.getElementById('attack-btn');attack.style.display=this.p.hasShovel?'flex':'none';attack.disabled=this.p.attackCooldown>0;
+        const breath=document.getElementById('breath-btn'),count=document.getElementById('breath-count');
+        count.textContent=String(Math.ceil(this.p.breathRemaining));breath.setAttribute('aria-pressed',String(this.p.holdingBreath));
+        breath.setAttribute('aria-label',curLang==='CN'?`按住屏气，剩余 ${Math.ceil(this.p.breathRemaining)} 秒`:`Hold breath, ${Math.ceil(this.p.breathRemaining)} seconds remaining`);
         let html='';
         if(this.p.buffs.hoof>0) html+=`<div class="buff buff-hoof">🐴 ${Math.ceil(this.p.buffs.hoof)}s</div>`;
         if(this.p.buffs.jade>0) html+=`<div class="buff buff-jade">🥋 ${curLang==='CN'?'护身 ×1':'Shield ×1'}</div>`;
