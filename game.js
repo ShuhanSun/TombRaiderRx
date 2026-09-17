@@ -22,19 +22,6 @@ const LEVELS_DATA = [
 
 const WALL_COLORS = ['#4e342e', '#3e2723', '#263238', '#1b1b1b', '#37474f', '#212121', '#1a237e', '#b71c1c', '#004d40', '#000000'];
 
-const ARTIFACTS = [
-    {n: "战国玉蝉", en: "Jade Cicada", i: "🪲", d: "玉质温润，含于口中可保尸身不腐。", end: "Keeps the body from decaying."},
-    {n: "错金铜镜", en: "Gold Mirror", i: "📀", d: "精美的青铜镜，背面错金工艺繁复。", end: "Exquisite bronze craftsmanship."},
-    {n: "盘龙金印", en: "Dragon Seal", i: "🧧", d: "王侯之印，盘龙钮栩栩如生。", end: "Seal of an ancient prince."},
-    {n: "象牙酒杯", en: "Ivory Cup", i: "🍷", d: "象牙雕刻而成的酒杯，价值连城。", end: "Priceless ivory carving."},
-    {n: "水晶头骨", en: "Crystal Skull", i: "💀", d: "通体透明的水晶头骨，眼神深邃。", end: "Mysterious transparent skull."},
-    {n: "越王古剑", en: "King's Sword", i: "🗡️", d: "千年不锈，寒光凛凛的绝世名剑。", end: "Sharp after thousands of years."},
-    {n: "凤头金钗", en: "Phoenix Pin", i: "🥢", d: "宫廷御用金钗，做工极尽奢华。", end: "Luxury from the royal court."},
-    {n: "夜明龙珠", en: "Night Pearl", i: "🔮", d: "黑暗中发出幽幽绿光的稀世奇珍。", end: "Glows in the dark."},
-    {n: "传国玉玺", en: "Imperial Seal", i: "👑", d: "受命于天，既寿永昌。", end: "Symbol of supreme power."},
-    {n: "彼岸花",   en: "Equinox Flower", i: "🌺", d: "通往彼岸的神秘之花，终极宝藏。", end: "The ultimate treasure."}
-];
-
 const SPECIAL_ITEMS = ['item_candle', 'item_wine', 'item_hoof', 'item_jade', 'item_compass'];
 const PROJ_TYPES = {
     ARROW: { spd: 350, size: 3, col: '#eee', trail: true },
@@ -49,17 +36,16 @@ const LANG = {
     CN: {
         title: "寻龙诀",
         ver: "古墓新篇 · 画境与回声",
-        p1: "一盏灯，十重墓。你要找到每层的<b>镇墓冥器</b>，在机关与守墓尸的追逐中寻到盗洞。供奉室留有补给，安息室可借祭火护身；越往深处，越要留意封印与地火。",
+        p1: "一盏灯，十重墓。你要找到每层的<b>机关钥匙</b>，在机关与守墓尸的追逐中寻到盗洞。供奉室留有补给，安息室可借祭火护身；越往深处，越要留意封印与地火。",
         startBtn: "点灯摸金",
         level: "第 %s 层 | %m",
         trapLabel: "机关",
-        artLabel: "冥器",
         modalBtn: "收入囊中",
         endTitle: "灯尽于此",
         endDesc: "记住来路，下一次离天光更近。",
         endBtn: "再探古墓",
         winTitle: "摸金校尉 凯旋",
-        winDesc: "找到冥器，逃出生天！",
+        winDesc: "穿越十层，逃出生天！",
         winBtn: "再来一局",
         items: {
             shovel: {n:"兵工铲", d:"近战武器：点击攻击按钮，挥击身边的僵尸。"},
@@ -90,11 +76,10 @@ const LANG = {
     EN: {
         title: "Tomb Raider",
         ver: "TEN FLOORS · ONE FLAME",
-        p1: "One lantern. Ten buried floors. Find each <b>relic</b>, evade ancient traps, and reach the exit. Seek supplies and sanctuary altars; deeper chambers hide fire and seals.",
+        p1: "One lantern. Ten buried floors. Find each <b>bronze key</b>, evade ancient traps, and reach the exit. Seek supplies and sanctuary altars; deeper chambers hide fire and seals.",
         startBtn: "Start Raid",
         level: "Level %s | %m",
         trapLabel: "Trap",
-        artLabel: "Relic",
         modalBtn: "Collect",
         endTitle: "You Died",
         endDesc: "Better luck next time.",
@@ -337,12 +322,7 @@ class Coffin extends Entity {
     reveal() {
             if(this.revealed)return;this.revealed=true;
             if(Expedition.reveal(this))return;
-            if(this.content === 'artifact') {
-                Game.getArtifact();
-                Game.addText(this.x, this.y, ARTIFACTS[Game.lvl-1][curLang==='CN'?'n':'en'], '#ffd700');
-                Game.spawn(new Effect(this.x,this.y,'gold'));
-            }
-            else if(this.content === 'supply') {
+            if(this.content === 'supply') {
                 Game.spawn(new GroundItem(this.x+35,this.y,'item_wine'));
                 Game.spawn(new GroundItem(this.x-35,this.y,'item_jade'));
                 Game.addText(this.x,this.y,curLang==='CN'?'供物尚存':'Offerings remain','#aaddbb');
@@ -499,7 +479,7 @@ class Trap extends Entity {
         super(x,y,'trap');
         this.life=3;this.cd=0;this.windup=0;this.aim=0;this.displayAim=0;this.recoil=0;this.revealT=0;
         const data = LEVELS_DATA[Math.min(lvlIndex,9)];
-        this.pType = data.type === 'MIX' ? Object.keys(PROJ_TYPES)[Math.floor(Math.random()*4)] : data.type;
+        this.pType = data.type === 'MIX' ? Object.keys(PROJ_TYPES)[Math.floor((x+y)/50)%4] : data.type;
         this.color = data.col;
         this.name = LANG[curLang].trapNames[Math.min(lvlIndex,9)];
         this.lvlIdx = Math.min(lvlIndex,9);
@@ -607,14 +587,16 @@ class Player extends Entity {
             // Coffin Collision
             Game.ents.forEach(e => {
                 if(e.type === 'coffin'&&!e.hidden&&!e.rising) {
-                    if(Math.hypot(this.x-e.x, this.y-e.y) < 30) {
+                    if(Math.hypot(this.x-e.x, this.y-e.y) < 30 && Math.hypot(this.x-e.x,this.y-e.y)<=Math.hypot(oldX-e.x,oldY-e.y)) {
                         this.x = oldX; this.y = oldY;
                     }
                 }
             });
 
         }
-        const moved=Math.hypot(this.x-oldX,this.y-oldY);this.moving=moved>.01;
+        const moved=Math.hypot(this.x-oldX,this.y-oldY);
+        if(Game.tutorialActive){Game.tutorialDistance+=moved;if(Game.tutorialDistance>=100){Game.tutorialActive=false;document.getElementById('move-tutorial').style.display='none';}}
+this.moving=moved>.01;
         const water=MapSys.get(this.x,this.y)===TERRAIN.WATER,enteredWater=water&&!this.inWater;
         this.inWater=water;
         if(enteredWater&&this.moving){AudioSys.playStep(true,Input.sprint);this.stepDistance=0;}
@@ -660,33 +642,16 @@ class Player extends Entity {
 const MapSys = {
     w:60, h:60, t:[],
     gen: function(l){
-        this.t=new Uint8Array(this.w*this.h).fill(1);
-        const rms=[];
-        for(let i=0;i<350 && rms.length<(l===5?18:l===9?8:7+l);i++){
-            const w=(l===2?4:l===9?9:6)+Math.floor(Math.random()*(l===5?2:6));
-            const h=(l===2?9:l===6?5:6)+Math.floor(Math.random()*(l===5?2:5));
-            const x=2+Math.floor(Math.random()*(this.w-w-4)), y=2+Math.floor(Math.random()*(this.h-h-4));
-            if(!rms.some(r=>x<r.x+r.w+1 && x+w+1>r.x && y<r.y+r.h+1 && y+h+1>r.y)){
-                rms.push({x,y,w,h});
-                for(let Y=y;Y<y+h;Y++)for(let X=x;X<x+w;X++) this.t[Y*this.w+X] = 0;
-                if(rms.length>1){
-                    let p=rms[rms.length-2], cx1=p.x+p.w/2|0, cy1=p.y+p.h/2|0, cx2=x+w/2|0, cy2=y+h/2|0;
-                    while(cx1!=cx2){cx1+=cx1<cx2?1:-1;if(this.t[cy1*this.w+cx1]==1)this.t[cy1*this.w+cx1]=0;}
-                    while(cy1!=cy2){cy1+=cy1<cy2?1:-1;if(this.t[cy1*this.w+cx1]==1)this.t[cy1*this.w+cx1]=0;}
-                }
-            }
+        const plan=FLOOR_PLANS[l-1];this.w=this.h=plan.size;
+        this.t=new Uint8Array(this.w*this.h).fill(TERRAIN.WALL);
+        const rms=plan.rooms.map(r=>({...r}));
+        for(const r of rms)for(let y=r.y;y<r.y+r.h;y++)for(let x=r.x;x<r.x+r.w;x++)this.t[y*this.w+x]=0;
+        for(const [from,to] of plan.links){
+            const a=rms[from],b=rms[to];let x=Math.floor(a.x+a.w/2),y=Math.floor(a.y+a.h/2);
+            const bx=Math.floor(b.x+b.w/2),by=Math.floor(b.y+b.h/2);
+            const carve=()=>{this.t[y*this.w+x]=0;this.t[y*this.w+x+1]=0;};
+            carve();while(x!==bx){x+=Math.sign(bx-x);carve();}while(y!==by){y+=Math.sign(by-y);carve();}
         }
-        // A deterministic fallback guarantees a playable map even with pathological randomness.
-        if(rms.length<3) {
-            this.t.fill(TERRAIN.WALL); rms.length=0;
-            for(const x of [4,24,44]) {
-                const room={x,y:24,w:8,h:8}; rms.push(room);
-                for(let y=24;y<32;y++) for(let xx=x;xx<x+8;xx++) this.t[y*this.w+xx]=TERRAIN.FLOOR;
-            }
-            for(let x=8;x<48;x++) this.t[28*this.w+x]=TERRAIN.FLOOR;
-        }
-        let main=1;for(let i=2;i<rms.length;i++)if(rms[i].w*rms[i].h>rms[main].w*rms[main].h)main=i;
-        [rms[main],rms[rms.length-1]]=[rms[rms.length-1],rms[main]];
         return rms;
     },
     lineClear: function(x1,y1,x2,y2) {
@@ -707,7 +672,7 @@ const MapSys = {
 // --- Game Engine ---
 const Game = {
     cvs:document.getElementById('gameCanvas'), ctx:document.getElementById('gameCanvas').getContext('2d'),
-    ents:[], texts:[], lvl:1, art:0, exit:0, pause:0, shake:0, running:0, artifactPos: null, items: [], raf:null, lastTime:null, accumulator:0, elapsed:0, hudTimer:0,
+    ents:[], texts:[], lvl:1, exit:0, pause:0, shake:0, running:0, mainCoffinPos: null, items: [], raf:null, lastTime:null, accumulator:0, elapsed:0, hudTimer:0,
 
     toggleLang: function() {
         curLang = curLang === 'CN' ? 'EN' : 'CN';
@@ -735,15 +700,15 @@ const Game = {
             'guide-move':cn?'循光探路':'EXPLORE',
             'guide-move-desc':cn?'WASD / 方向键移动，Shift 疾行；手机在画面上按住拖动，松手停下。':'Move with WASD / arrows. Hold Shift to sprint, or use touch controls.',
             'guide-find':cn?'驻足开棺':'DISCOVER',
-            'guide-find-desc':cn?'驻足开棺寻找钥匙与补给，主墓室中藏着冥器。':'Stay beside a coffin to open it. Find the relic on each floor.',
+            'guide-find-desc':cn?'驻足开棺寻找钥匙与补给，留意通往主墓室的路线。':'Stay beside a coffin to open it. Find the bronze key on each floor.',
             'guide-exit':cn?'寻龙脱身':'ESCAPE',
-            'guide-exit-desc':cn?'棺中寻钥匙，主棺取冥器；解印拉闸后，25秒内回主墓室。':'Find the relic, break seals, then turn the crank. Reach the exit within 25 seconds.',
+            'guide-exit-desc':cn?'棺中寻钥匙；解印拉闸后，25秒内回主墓室。':'Find the key, break seals, then turn the crank. Reach the exit within 25 seconds.',
             'pause-title':cn?'灯火未熄':'The flame awaits',
             'pause-desc':cn?'歇息片刻，古墓中的时间已暂停。':'Take a breath. The tomb is paused.',
             'resume-btn':cn?'继续探索':'Resume exploration',
             'map-caption':cn?'探索地图 · 金点为目标':'Explored map · gold = target',
             'control-hint':cn?'WASD 移动 · Shift 疾行 · Esc 暂停 · M 静音':'WASD Move · Shift Sprint · Esc Pause · M Mute',
-            'sprint-btn':cn?'疾行':'RUN'
+
         };
         for(const [id,value] of Object.entries(labels)) document.getElementById(id).textContent=value;
         document.getElementById('pause-btn').setAttribute('aria-label',cn?'暂停':'Pause');
@@ -780,7 +745,7 @@ const Game = {
     },
     restart: function() {
         AudioSys.init();
-        Passage.reset();this.lvl = 1; this.art = 0; this.collected=[]; this.saved = null; this.items = [];
+        Passage.reset();this.lvl = 1; this.saved = null; this.items = [];
         document.getElementById('game-over-modal').classList.remove('active');
         document.getElementById('victory-modal').classList.remove('active');
         this.running = 1;
@@ -809,7 +774,7 @@ const Game = {
     toggleSound: function() { Sound.toggle(); },
     updateSoundButton: function() {
         const btn=document.getElementById('sound-btn');
-        btn.textContent=AudioSys.muted?'×♪':'♪';
+        btn.classList.toggle('muted',AudioSys.muted);
         btn.setAttribute('aria-pressed',String(AudioSys.muted));
         btn.setAttribute('aria-label',curLang==='CN'?(AudioSys.muted?'开启声音':'静音'):(AudioSys.muted?'Unmute':'Mute'));
     },
@@ -839,21 +804,25 @@ const Game = {
     },
 
     load: function(l){
-        this.lvl=l; this.ents=[]; this.texts=[]; this.exit=0; this.artifactPos = null; this.shake=0; this.pause=false; Input.reset();
-        this.explored=new Uint8Array(MapSys.w*MapSys.h); this.hudTimer=0; this.lastTime=null; this.accumulator=0;
+        this.lvl=l; this.ents=[]; this.texts=[]; this.exit=1; this.mainCoffinPos = null; this.shake=0; this.pause=false; Input.reset();
+        this.hudTimer=0; this.lastTime=null; this.accumulator=0;
         document.getElementById('item-bar').innerHTML = '';
 
         const rms=MapSys.gen(l), s=rms[0], e=rms[rms.length-1];
+        this.explored=new Uint8Array(MapSys.w*MapSys.h);
         this.p=new Player((s.x+s.w/2)*CONFIG.TILE, (s.y+s.h/2)*CONFIG.TILE);
         if(this.saved) { Object.assign(this.p,this.saved); }
+        this.tutorialDistance=0;this.tutorialActive=l===1;
+        document.getElementById('move-tutorial').style.display=l===1?'block':'none';
+        document.getElementById('tutorial-copy').textContent=curLang==='CN'?'按住空白处拖动 → 人物移动；松手停止。电脑使用 WASD / 方向键。试着走几步！':'Hold and drag the play area to move; release to stop. On desktop use WASD / arrows. Try a few steps!';
         this.p.inv=2; // Safe arrival on every floor.
         this.ents.push(this.p);
 
         const trapCount = Math.min(6,1+Math.floor(l/2));
         let trapsPlaced = 0;
         while(trapsPlaced < trapCount) {
-             const r=rms[1+Math.floor(Math.random()*(rms.length-1))];
-             const tx = (r.x + 1.5 + Math.floor(Math.random()*(r.w-2))) * CONFIG.TILE;
+             const r=rms[1+(trapsPlaced*3+l)%(rms.length-1)];
+             const tx = (r.x + 1.5 + (trapsPlaced*2+l)%(r.w-2)) * CONFIG.TILE;
              const ty = (r.y+.5) * CONFIG.TILE;
              this.ents.push(new Trap(tx, ty, l-1));
              trapsPlaced++;
@@ -876,20 +845,6 @@ const Game = {
         document.getElementById('level-title-box').classList.add('show-level-title');
     },
 
-    getArtifact: function() {
-        if(this.exit||!this.running) return;
-        AudioSys.playItem(true);
-        const a = ARTIFACTS[this.lvl-1];
-        const name = curLang === 'CN' ? a.n : a.en;
-
-
-
-        this.art++; this.exit=1;if(!this.collected)this.collected=[];if(!this.collected.includes(this.lvl-1))this.collected.push(this.lvl-1);
-        this.msg(`${name} · ${World.remaining()?(curLang==='CN'?'冥器入囊，还需解除封印':'Relic secured. Break the remaining seals.'):(curLang==='CN'?'寻找机械开关，拉闸开启盗洞':'Find the mechanical crank to open the exit')}`, "#dfc58c");
-        this.updateHUD();
-
-
-    },
     getItem: function(c) {
         AudioSys.playItem(true);
         const key = c.replace('item_','');
@@ -916,35 +871,27 @@ const Game = {
         const levelBase = LANG[curLang].level.split('|')[0].replace('%s', this.lvl).trim();
         document.getElementById('level-num').innerText = `${levelBase} | ${lName}`;
 
-        document.getElementById('artifact-bar').innerText = `${LANG[curLang].artLabel}: ${this.art}/10`;
-        document.getElementById('relic-strip').innerHTML=(this.collected||[]).map(i=>`<span class="relic-owned" title="${ARTIFACTS[i][curLang==='CN'?'n':'en']} · 人民币 ¥${RELIC_VALUES[i]}">${ARTIFACTS[i].i}<small>¥${RELIC_VALUES[i]}</small></span>`).join('');
-        document.getElementById('relic-total').textContent=(this.collected?.length?`${curLang==='CN'?'人民币 ¥':'CNY ¥'} ${(this.collected||[]).reduce((sum,i)=>sum+RELIC_VALUES[i],0)}`:'')+(this.p.hasKey?' · 🔑':'');
         const cn=curLang==='CN';
-        const objective=World.remaining()&&this.exit?(cn?`③ 冥器已得 · 破除剩余 ${World.remaining()} 道封印`:`③ Relic secured · break ${World.remaining()} remaining seals`):this.exit?(ExitGate.remaining>0?(cn?`④ 返回主墓室 · 主棺入口 ${Math.ceil(ExitGate.remaining)}秒`:`④ Return to the main chamber · ${Math.ceil(ExitGate.remaining)}s`):(this.p.hasKey?(cn?'④ 寻找远处机械开关 · 驻足开启主棺盗洞':'④ Find the remote crank and open the main-coffin exit'):(cn?'① 开启普通棺材 · 找到机关钥匙':'① Open ordinary coffins and find the key'))):(this.p.hasKey?(cn?'② 钥匙已得 · 探索密室并寻找主墓室冥器':'② Key found · explore the sealed room and locate the main relic'):(cn?'① 开启普通棺材找钥匙 · 再寻找主墓室冥器':'① Search ordinary coffins for the key, then find the main relic'));
+        const objective=!this.p.hasKey?(cn?'① 驻足开棺 · 寻找机关钥匙':'① Open coffins · find the bronze key'):World.remaining()?(cn?`② 破除剩余 ${World.remaining()} 道封印`:`② Break ${World.remaining()} remaining seals`):ExitGate.remaining>0?(cn?`③ 返回主墓室 · 盗洞 ${Math.ceil(ExitGate.remaining)}秒`:`③ Return to the tomb · ${Math.ceil(ExitGate.remaining)}s`):(cn?'③ 找到机械开关 · 驻足拉闸开启盗洞':'③ Find the crank · stand beside it to open the exit');
         document.getElementById('objective').textContent=objective;
         document.getElementById('exit-confirm-btn').textContent=this.lvl===10?(cn?'逃出生天':'Escape the tomb'):LANG[curLang].exitModal.yes;
     },
     over: function(){
         this.running=0; Input.reset();Sound.pause();
-        document.getElementById('end-desc').textContent=this.runSummary()+'\n\n'+this.settlement();
+        document.getElementById('end-desc').textContent=this.runSummary();
         document.getElementById('game-over-modal').classList.add('active');
         document.getElementById('end-btn').focus();
     },
     victory: function(){
         this.running=0; Input.reset();Sound.pause();
-        document.getElementById('win-desc').textContent=this.runSummary()+'\n\n'+this.settlement();
+        document.getElementById('win-desc').textContent=this.runSummary();
         document.getElementById('victory-modal').classList.add('active');
         document.getElementById('win-btn').focus();
     },
 
-    settlement: function(){
-        const list=(this.collected||[]).map(i=>`${ARTIFACTS[i].i} ${ARTIFACTS[i][curLang==='CN'?'n':'en']}：¥${RELIC_VALUES[i].toLocaleString('zh-CN')}`).join('\n');
-        const total=(this.collected||[]).reduce((sum,i)=>sum+RELIC_VALUES[i],0);
-        return `${curLang==='CN'?'冥器结算（人民币·游戏估值）':'Relic settlement (CNY · game valuation)'}\n${list||'—'}\n${curLang==='CN'?'总金额':'Total'}：¥${total.toLocaleString('zh-CN')}`;
-    },
     runSummary: function() {
         const time=`${Math.floor(this.elapsed/60)}:${String(Math.floor(this.elapsed%60)).padStart(2,'0')}`;
-        return curLang==='CN'?`抵达第 ${this.lvl} 层 · 收集 ${this.art}/10 件冥器 · 探索 ${time}`:`Floor ${this.lvl} · ${this.art}/10 relics · ${time}`;
+        return curLang==='CN'?`抵达第 ${this.lvl} 层 · 探索 ${time}`:`Floor ${this.lvl} · ${time}`;
     },
     loop: function(timestamp){
         this.raf=null;
@@ -986,7 +933,7 @@ const Game = {
         if(World.canExit()&&Math.hypot(this.exitPos.x-this.p.x,this.exitPos.y-this.p.y)<30) this.showExitModal();
     },
     refreshBuffs: function() {
-        const attack=document.getElementById('attack-btn');attack.style.display=this.p.hasShovel?'flex':'none';attack.textContent=curLang==='CN'?'攻击':'ATTACK';attack.disabled=this.p.attackCooldown>0;
+        const attack=document.getElementById('attack-btn');attack.style.display=this.p.hasShovel?'flex':'none';attack.disabled=this.p.attackCooldown>0;
         let html='';
         if(this.p.buffs.hoof>0) html+=`<div class="buff buff-hoof">🐴 ${Math.ceil(this.p.buffs.hoof)}s</div>`;
         if(this.p.buffs.jade>0) html+=`<div class="buff buff-jade">🥋 ${curLang==='CN'?'护身 ×1':'Shield ×1'}</div>`;
@@ -1025,7 +972,7 @@ const Game = {
         const target=World.target();
         if(target&&this.p.hasCompass) dot(target,'#ffd47d',3);
         for(const a of World.altars) {
-            const index=Math.floor(a.y/50)*60+Math.floor(a.x/50);
+            const index=Math.floor(a.y/50)*MapSys.w+Math.floor(a.x/50);
             if(!a.done&&(this.explored[index]||(this.exit&&a.kind==='seal')))dot(a,a.kind==='seal'?'#e9bd75':'#80dcb9',2.5);
         }
         dot(this.p,'#c3ffe5',3);
@@ -1095,9 +1042,9 @@ const Game = {
             ctx.save(); ctx.translate(t.x,t.y); t.draw(ctx); ctx.restore();
         });
 
-        if(this.p.hasCompass && (this.exit || this.artifactPos)) {
+        if(this.p.hasCompass && (this.exit || this.mainCoffinPos)) {
             let target = this.exitPos;
-            if(!this.exit && this.artifactPos) target = this.artifactPos;
+            if(!this.exit && this.mainCoffinPos) target = this.mainCoffinPos;
             const dx=target.x-this.p.x, dy=target.y-this.p.y;
             const ang=Math.atan2(dy,dx);
             ctx.translate(this.p.x, this.p.y); ctx.rotate(ang); ctx.translate(70, 0);

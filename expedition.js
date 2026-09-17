@@ -11,23 +11,16 @@ const TOMB_STYLES=[
  {name:'鎏金帝陵',wall:14,floor:8,decor:8,filter:'sepia(.8) saturate(1.3)',trap:8},
  {name:'天陨玄宫',wall:15,floor:9,decor:9,filter:'hue-rotate(220deg) brightness(.8)',trap:9}
 ];
-const RELIC_VALUES=[1200,1800,2600,3300,4200,5600,6800,8500,12000,18000];
 const Expedition={
  walls:[],switches:[],style:TOMB_STYLES[0],
  setup(){
   this.style=TOMB_STYLES[Game.lvl-1];this.walls=[];this.switches=[];Game.p.hasKey=false;
   Game.ents=Game.ents.filter(e=>!['coffin','ground_item','zombie','vermin'].includes(e.type));
   const rooms=World.rooms.filter(r=>!['entry','sanctuary'].includes(r.kind));
-  let spots=[];
-  for(const r of rooms)for(let y=r.y+1;y<r.y+r.h-1;y+=2)for(let x=r.x+1;x<r.x+r.w-1;x+=2){
-   const p={x:x*50+25,y:y*50+25,room:r};
-   if(Math.hypot(p.x-Game.exitPos.x,p.y-Game.exitPos.y)<85||World.altars.some(a=>Math.hypot(a.x-p.x,a.y-p.y)<75))continue;
-   spots.push(p);
-  }
-  for(let i=spots.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[spots[i],spots[j]]=[spots[j],spots[i]];}
+  let spots=FLOOR_PLANS[Game.lvl-1].coffinSlots.map(([x,y])=>({x,y,room:rooms.find(r=>World.inside(r,x,y))}));
   const main=spots.filter(p=>p.room===Game.exitRoom).sort((a,b)=>Math.abs(Math.hypot(a.x-Game.exitPos.x,a.y-Game.exitPos.y)-120)-Math.abs(Math.hypot(b.x-Game.exitPos.x,b.y-Game.exitPos.y)-120))[0]||spots[0];spots=spots.filter(p=>p!==main);
-  const relic=new Coffin(main.x,main.y,'artifact');relic.royal=true;Game.spawn(relic);Game.artifactPos={x:relic.x,y:relic.y};
-  for(const offset of [-82,82])if(MapSys.canOccupy(relic.x+offset,relic.y-25,12))Game.spawn({type:'burial_decor',x:relic.x+offset,y:relic.y-25,sprite:this.style.decor,size:80,dead:0});
+  const mainCoffin=new Coffin(main.x,main.y,'exit_coffin');mainCoffin.royal=true;Game.spawn(mainCoffin);Game.mainCoffinPos={x:mainCoffin.x,y:mainCoffin.y};
+  for(const offset of [-82,82])if(MapSys.canOccupy(mainCoffin.x+offset,mainCoffin.y-25,12))Game.spawn({type:'burial_decor',x:mainCoffin.x+offset,y:mainCoffin.y-25,sprite:this.style.decor,size:80,dead:0});
   const keySpot=spots.find(p=>p.room!==Game.exitRoom)||spots[0];spots=spots.filter(p=>p!==keySpot);
   const key=new Coffin(keySpot.x,keySpot.y,'key');Game.spawn(key);this.keyCoffin=key;
   // First find is a compass in a coffin; only one emergency wine sits in the open.
@@ -54,7 +47,7 @@ const Expedition={
   Game.spawn({type:'arrival_coffin',x:Game.p.x,y:Game.p.y-65,dead:0});
   for(const [roomIndex,r] of World.rooms.filter(r=>r.kind!=='entry').entries()){
    for(let i=0;i<2;i++)Game.spawn({type:'bone_pile',x:(r.x+.75+i*(r.w-1.5))*50,y:(r.y+r.h-.7)*50,size:40+i*10,dead:0});
-   if((roomIndex+Game.lvl)%3===0)Game.spawn({type:'tomb_remains',variant:(roomIndex+Game.lvl)%4,x:(r.x+r.w*.52)*50,y:(r.y+r.h*.68)*50,size:62+Math.min(20,Game.lvl*2),dead:0});
+   if(r===Game.exitRoom||(roomIndex+Game.lvl)%3===0)Game.spawn({type:'tomb_remains',variant:(roomIndex+Game.lvl)%4,x:(r.x+r.w*.52)*50,y:(r.y+r.h*.68)*50,size:62+Math.min(20,Game.lvl*2),dead:0});
    if(Game.lvl>=7&&r===Game.exitRoom)Game.spawn({type:'tomb_remains',variant:2,x:(r.x+r.w*.28)*50,y:(r.y+r.h*.38)*50,size:88,dead:0});
   }
   this.buildWalls();TombDangers.setup();
@@ -100,7 +93,7 @@ const Expedition={
   TombDangers.update(dt);if(!Game.running)return;
   let changed=false;
   for(const c of this.hidden)if(c.hidden&&!c.rising&&Math.hypot(c.x-Game.p.x,c.y-Game.p.y)<100){c.rising=true;c.liftTarget=1;AudioSys.playOpen();}
-  for(const c of this.hidden)if(c.rising){c.elevation=Math.max(0,Math.min(1,c.elevation+(c.liftTarget?1:-1)*dt*.65));if(c.elevation===c.liftTarget){c.hidden=c.elevation===0;c.rising=false;}}
+  for(const c of this.hidden)if(c.rising){c.elevation=Math.max(0,Math.min(1,c.elevation+(c.liftTarget?1:-1)*dt*.65));if(c.elevation===c.liftTarget && (c.liftTarget===0||Math.hypot(c.x-Game.p.x,c.y-Game.p.y)>=34)){c.hidden=c.elevation===0;c.rising=false;}}
   for(const w of this.walls){
    w.target=Math.hypot(Game.p.x-w.x,Game.p.y-w.y)<90?0:1;
    const occupied=Game.ents.some(e=>['player','zombie','vermin'].includes(e.type)&&Math.abs(e.x-w.x)<39&&Math.abs(e.y-w.y)<39);

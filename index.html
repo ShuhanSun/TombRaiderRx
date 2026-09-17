@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>寻龙诀 · 十层古墓</title>
-    <link rel="stylesheet" href="styles.css?v=14">
+    <link rel="stylesheet" href="styles.css?v=15">
 
 </head>
 <body>
@@ -15,13 +15,11 @@
         <div id="hp-bar">❤❤❤❤❤</div>
         <div id="level-info">
             <span id="level-num" onclick="Game.debugTap()">第 1 层</span>
-            <div id="artifact-bar">冥器: 0/10</div>
         </div>
     </div>
-    <div id="relic-hud"><div id="relic-strip"></div><span id="relic-total"></span></div>
     <div id="objective" class="hud"></div>
     <div id="room-panel"><strong id="room-name"></strong><p id="room-hint"></p></div>
-    <div id="game-actions"><button id="pause-btn" class="icon-btn" onclick="Game.togglePause()" aria-label="暂停">Ⅱ</button><button id="sound-btn" class="icon-btn" onclick="Game.toggleSound()" aria-label="静音">♪</button></div>
+    <div id="game-actions"><button id="pause-btn" class="icon-btn" onclick="Game.togglePause()" aria-label="暂停"></button><button id="sound-btn" class="icon-btn" onclick="Game.toggleSound()" aria-label="静音"></button></div>
     <div id="map-panel" style="display:none"><canvas id="minimap" width="180" height="180" aria-label="已探索区域地图"></canvas><div id="map-caption">探索地图 · 金点为目标</div></div>
     <div id="control-hint" class="hud"></div>
     <div id="item-bar"></div>
@@ -29,10 +27,11 @@
     <div id="msg-box" role="status" aria-live="polite"></div>
     <div id="level-title-box"><div id="level-title-text"></div><p id="level-note"></p></div>
 
+    <div id="move-tutorial" role="status"><div class="drag-demo"><i></i><b>→</b></div><p id="tutorial-copy"></p></div>
     <!-- Controls -->
     <div id="joystick-zone"><div id="joystick-knob"></div></div>
-    <button id="attack-btn" style="display:none" aria-label="兵工铲攻击">攻击</button>
-    <button id="sprint-btn" aria-label="按住冲刺">疾行</button>
+    <button id="attack-btn" style="display:none" aria-label="兵工铲攻击"></button>
+    <button id="sprint-btn" aria-label="按住冲刺"></button>
 </div>
 
 <div id="test-modal" class="overlay" role="dialog" aria-modal="true" aria-labelledby="test-title"><div class="pause-card"><div class="eyebrow">PLAYTEST</div><h2 id="test-title">古墓选关</h2><p>跳转会重置本局。物资、机关与敌人遵循正常规则。</p><div id="test-levels"></div><button class="btn secondary" onclick="Game.closeTest()">返回</button></div></div>
@@ -63,7 +62,7 @@
 <div id="victory-modal" class="overlay">
     <h2 id="win-title">摸金校尉 凯旋</h2>
     <div style="font-size:80px; margin-bottom:20px">🏆</div>
-    <p style="color:#ffd700; font-size:20px; margin-bottom:30px" id="win-desc">找到冥器，逃出生天！</p>
+    <p style="color:#ffd700; font-size:20px; margin-bottom:30px" id="win-desc">穿越十层，逃出生天！</p>
     <button class="btn" onclick="Game.restart()" id="win-btn">再来一局</button>
 </div>
 
@@ -76,11 +75,11 @@
 
     <div class="intro-box">
         <p class="intro-text" id="intro-p1">
-            传说中的古墓埋藏着无数金银财宝，但也由古代机关和复活的僵尸守卫。玩家扮演一名摸金校尉，需深入十层地下迷宫。每一层都有无数危险，只有开启棺材，<b>找到镇墓冥器</b>，才能打开通往下一层的盗洞，带着荣耀重返人间。
+            传说中的古墓埋藏着无数金银财宝，但也由古代机关和复活的僵尸守卫。玩家扮演一名摸金校尉，需深入十层地下迷宫。每一层都有无数危险，只有开启棺材，<b>找到机关钥匙</b>，才能打开通往下一层的盗洞，带着荣耀重返人间。
         </p>
     </div>
 
-    <div class="guide-grid"><div><span>01</span><strong id="guide-move">循光探路</strong><p id="guide-move-desc">WASD / 方向键移动，Shift 疾行；手机在画面上按住拖动，松手停下。</p></div><div><span>02</span><strong id="guide-find">驻足开棺</strong><p id="guide-find-desc">靠近石棺停留片刻，寻找本层唯一的镇墓冥器。</p></div><div><span>03</span><strong id="guide-exit">寻龙脱身</strong><p id="guide-exit-desc">取得冥器并破印后，驻足机械开关拉闸，25秒内进入盗洞。</p></div></div>
+    <div class="guide-grid"><div><span>01</span><strong id="guide-move">循光探路</strong><p id="guide-move-desc">WASD / 方向键移动，Shift 疾行；手机在画面上按住拖动，松手停下。</p></div><div><span>02</span><strong id="guide-find">驻足开棺</strong><p id="guide-find-desc">靠近石棺停留片刻，寻找本层唯一的机关钥匙。</p></div><div><span>03</span><strong id="guide-exit">寻龙脱身</strong><p id="guide-exit-desc">取得钥匙并破印后，驻足机械开关拉闸，25秒内进入盗洞。</p></div></div>
     <button class="btn start-cta" style="margin-top:30px" onclick="Game.init()" id="start-btn-text">点灯摸金</button>
 
     <div class="audio-check"><button id="sound-test-btn" class="btn secondary" onclick="Sound.test()">开启 / 试音</button><p id="audio-status" role="status"></p></div>
@@ -91,13 +90,14 @@
     </div>
 </div>
 
-<script src="audio.js?v=14"></script>
-<script src="escape.js?v=14"></script>
-<script src="dangers.js?v=14"></script>
-<script src="expedition.js?v=14"></script>
-<script src="world.js?v=14"></script>
-<script src="art.js?v=14"></script>
-<script src="transitions.js?v=14"></script>
-<script src="game.js?v=14"></script>
+<script src="levels.js?v=15"></script>
+<script src="audio.js?v=15"></script>
+<script src="escape.js?v=15"></script>
+<script src="dangers.js?v=15"></script>
+<script src="expedition.js?v=15"></script>
+<script src="world.js?v=15"></script>
+<script src="art.js?v=15"></script>
+<script src="transitions.js?v=15"></script>
+<script src="game.js?v=15"></script>
 </body>
 </html>

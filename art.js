@@ -280,7 +280,7 @@ const Scene = {
             const open=ExitGate.remaining>0;
             Art.glow(ctx,e.x,e.y,65,open?'#e4b95555':'#d4bd7040');
             Art.mechanism(ctx,open?1:0,e.x,e.y-15,84);
-            Art.label(ctx,e.x,e.y-65,open?(cn?`闸门开启 ${Math.ceil(ExitGate.remaining)}秒`:`OPEN ${Math.ceil(ExitGate.remaining)}s`):ExitGate.ready()?(cn?'驻足拉闸 · 开启盗洞':'STAND TO TURN CRANK'):(cn?(game.p.hasKey?'机械开关 · 冥器与封印未就绪':'机械开关 · 需要棺中钥匙'):'CRANK · KEY / RELIC / SEALS REQUIRED'));
+            Art.label(ctx,e.x,e.y-65,open?(cn?`闸门开启 ${Math.ceil(ExitGate.remaining)}秒`:`OPEN ${Math.ceil(ExitGate.remaining)}s`):ExitGate.ready()?(cn?'驻足拉闸 · 开启盗洞':'STAND TO TURN CRANK'):(cn?(game.p.hasKey?'机械开关 · 封印未解除':'机械开关 · 需要棺中钥匙'):'CRANK · KEY / SEALS REQUIRED'));
             if(ExitGate.progress>0)Art.progress(ctx,e.x,e.y-52,ExitGate.progress,'#efd496');return;
         }
         if(e.type==='exit') {

@@ -37,8 +37,8 @@ const TombDangers={
  inJet(v,p){const dx=p.x-v.x,dy=p.y-v.y,along=dx*Math.cos(v.angle)+dy*Math.sin(v.angle),across=-dx*Math.sin(v.angle)+dy*Math.cos(v.angle);return along>5&&along<v.length&&Math.abs(across)<16+along*.1&&MapSys.lineClear(v.x,v.y,p.x,p.y);},
  addCloud(x,y,color='#66736b',duration=14){
   const dist=new Int16Array(MapSys.w*MapSys.h).fill(-1),at=Math.floor(y/50)*MapSys.w+Math.floor(x/50),queue=[at];dist[at]=0;
-  for(let i=0;i<queue.length;i++)for(const to of [queue[i]-1,queue[i]+1,queue[i]-60,queue[i]+60]){
-   if(to<0||to>=dist.length||Math.abs(to%60-queue[i]%60)>1||MapSys.t[to]===1||dist[to]>=0||dist[queue[i]]>=9)continue;
+  for(let i=0;i<queue.length;i++)for(const to of [queue[i]-1,queue[i]+1,queue[i]-MapSys.w,queue[i]+MapSys.w]){
+   if(to<0||to>=dist.length||Math.abs(to%MapSys.w-queue[i]%MapSys.w)>1||MapSys.t[to]===1||dist[to]>=0||dist[queue[i]]>=9)continue;
    dist[to]=dist[queue[i]]+1;queue.push(to);
   }
   this.clouds.push({x,y,color,dist,age:0,life:duration});if(this.clouds.length>12)this.clouds.shift();

@@ -18,7 +18,7 @@ body { margin: 0; overflow: hidden; background: #050505; touch-action: none; fon
             user-select: none;
         }
         @media (pointer: coarse) { #sprint-btn { display: flex; } }
-        #sprint-btn:active { background: rgba(255, 215, 0, 0.3); border-color: #ffd700; }
+        #sprint-btn:active { background-color: rgba(255, 215, 0, 0.3); border-color: #ffd700; }
 
         /* HUD */
         .hud { position: absolute; color: #d4c4a8; text-shadow: 2px 2px 4px #000; pointer-events: none; font-weight: bold; }
@@ -26,7 +26,6 @@ body { margin: 0; overflow: hidden; background: #050505; touch-action: none; fon
         #hp-bar { font-size: 32px; color: #b71c1c; letter-spacing: 2px; filter: drop-shadow(0 0 5px #b71c1c); }
         #level-info { text-align: right; font-size: 16px; line-height: 1.5; color: #aaa; }
         #level-num { font-size: 20px; color: #ffd700; display: block; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
-        #artifact-bar { margin-top: 5px; color: #f1c40f; font-size: 14px; }
 
         /* Item Bar */
         #item-bar { position: absolute; top: 70px; left: 20px; display: flex; gap: 10px; }
@@ -131,7 +130,6 @@ h1 { font-size:clamp(52px,9vw,84px); letter-spacing:16px; margin:28px 0 0; color
 #top-bar { top:max(18px,env(safe-area-inset-top)); left:20px; right:116px; }
 #hp-bar { font-size:23px; color:#e08b76; letter-spacing:4px; filter:none; }
 #level-num { font-size:16px; color:#e0c28c; text-shadow:none; }
-#artifact-bar { font-size:12px; color:#acaa94; }
 #objective { top:58px; left:20px; font-size:13px; font-weight:400; color:#dfc58c; max-width:65%; }
 #item-bar { top:87px; }
 #buff-bar { top:127px; gap:6px; }
@@ -146,7 +144,7 @@ h1 { font-size:clamp(52px,9vw,84px); letter-spacing:16px; margin:28px 0 0; color
 #joystick-zone { bottom:max(36px,env(safe-area-inset-bottom)); right:24px; width:120px; height:120px; touch-action:none; }
 #joystick-knob { width:46px; height:46px; }
 #sprint-btn { bottom:56px; right:166px; width:64px; height:64px; font-size:16px; touch-action:none; color:#e5cfa5; border-color:#a58a5666; }
-#sprint-btn.pressed { background:#8c652e88; }
+#sprint-btn.pressed { background-color:#8c652e88; }
 .pause-card, .item-card { width:min(100%,420px); padding:32px; border:1px solid #a58a5666; border-radius:8px; background:#141b17; color:#cbb992; }
 .pause-card h2 { color:#e4cea1; font-size:32px; font-weight:500; }
 .pause-card p { font-size:14px; line-height:1.7; margin-bottom:28px; }
@@ -281,10 +279,6 @@ html[lang='en'] h1 { font-size:clamp(32px,7vw,68px); letter-spacing:4px; }
 #test-levels .btn {padding:12px 8px;font-size:14px;}
 #start-screen .guide-grid > div {border:0;background:transparent;box-shadow:none;}
 
-#relic-hud {position:absolute;top:max(60px,calc(env(safe-area-inset-top) + 43px));left:16px;right:16px;display:flex;align-items:center;gap:10px;color:#d7bb83;font-size:11px;pointer-events:none;z-index:6;}
-#relic-strip {display:flex;gap:5px;flex-wrap:wrap;max-width:80%;}
-.relic-owned {display:flex;flex-direction:column;align-items:center;font-size:20px;text-shadow:0 2px 5px #000;}
-.relic-owned small {font-size:9px;color:#e0c58e;}
 #objective {top:max(108px,calc(env(safe-area-inset-top) + 90px));}
 #room-panel {top:max(142px,calc(env(safe-area-inset-top) + 122px));}
 
@@ -292,5 +286,22 @@ html[lang='en'] h1 { font-size:clamp(32px,7vw,68px); letter-spacing:4px; }
 #end-desc,#win-desc {touch-action:pan-y;}
 
 #attack-btn {position:absolute;left:max(112px,calc(env(safe-area-inset-left) + 112px));bottom:max(62px,calc(env(safe-area-inset-bottom) + 26px));width:78px;height:78px;border:2px solid #bf9b66;border-radius:50%;background:#342c25e8;color:#ffe2b4;font-size:18px;font-weight:700;align-items:center;justify-content:center;pointer-events:auto;touch-action:manipulation;z-index:5;box-shadow:0 4px 20px #0008;}
-#attack-btn:active {background:#755335;transform:scale(.94);}
+#attack-btn:active {background-color:#755335;transform:scale(.94);}
 #attack-btn:disabled {opacity:.6;}
+
+/* Disable double-tap zoom on controls without disabling pinch zoom elsewhere. */
+button { touch-action: manipulation; -webkit-user-select:none; user-select:none; }
+#joystick-zone, #attack-btn, #sprint-btn {touch-action:none;}
+#attack-btn,#sprint-btn,#pause-btn,#sound-btn {background-image:url('assets/control-buttons.png');background-repeat:no-repeat;background-size:200% 200%;border:0;border-radius:50%;color:transparent;padding:0;}
+#attack-btn {background-position:0 0;}
+#sprint-btn {background-position:100% 0;}
+#pause-btn {background-position:0 100%;}
+#sound-btn {background-position:100% 100%;}
+#sound-btn.muted {opacity:.45;}
+#move-tutorial {display:none;position:absolute;left:50%;top:29%;transform:translateX(-50%);width:min(310px,78vw);padding:14px 20px;border:1px solid #bd9c5c;border-radius:14px;background:#15140fee;color:#ffe0a1;text-align:center;pointer-events:none;z-index:25;}
+#move-tutorial p {font-size:15px;line-height:1.6;margin:8px 0 0;}
+.drag-demo {height:40px;position:relative;width:110px;margin:auto;}
+.drag-demo i {position:absolute;left:5px;top:6px;width:24px;height:24px;border:3px solid #ffda8d;border-radius:50%;animation:drag-lesson 2.2s infinite;}
+.drag-demo b {position:absolute;right:10px;top:0;font-size:30px;}
+@keyframes drag-lesson {0%,15%{transform:translateX(0);opacity:.3}35%{opacity:1}75%{transform:translateX(65px);opacity:1}100%{transform:translateX(65px);opacity:0}}
+@media(prefers-reduced-motion:reduce){.drag-demo i{animation:none;}}

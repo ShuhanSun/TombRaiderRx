@@ -32,17 +32,17 @@ test('boot, language switches before and after play, and HiDPI sizing',()=>{
     assert.equal(els['exit-confirm-btn'].textContent,'进入下一层');
 });
 
-test('300 generated floors have one reachable relic, connected terrain and safe spawns',()=>{
+test('ten authored floors have one reachable key, connected terrain and safe spawns',()=>{
     const {Game,MapSys,World}=setup(19);
-    for(let n=0;n<300;n++) {
+    for(let n=0;n<10;n++) {
         Game.load(n%10+1);
-        const relics=Game.ents.filter(e=>e.content==='artifact');assert.equal(relics.length,1);assert.equal(Game.ents.filter(e=>e.payload?.loot?.includes('item_candle')).length,1);
-        const index=p=>Math.floor(p.y/50)*60+Math.floor(p.x/50);
+        const relics=Game.ents.filter(e=>e.content==='key');assert.equal(relics.length,1);assert.equal(Game.ents.filter(e=>e.payload?.loot?.includes('item_candle')).length,1);
+        const index=p=>Math.floor(p.y/50)*MapSys.w+Math.floor(p.x/50);
         const seen=new Set([index(Game.p)]),queue=[index(Game.p)];
         for(let i=0;i<queue.length;i++) {
             const at=queue[i];
-            for(const to of [at-60,at+60,at-1,at+1]) {
-                if(to<0||to>=3600||Math.abs(to%60-at%60)>1||MapSys.t[to]===1||seen.has(to))continue;
+            for(const to of [at-MapSys.w,at+MapSys.w,at-1,at+1]) {
+                if(to<0||to>=MapSys.t.length||Math.abs(to%MapSys.w-at%MapSys.w)>1||MapSys.t[to]===1||seen.has(to))continue;
                 seen.add(to);queue.push(to);
             }
         }
@@ -55,9 +55,9 @@ test('300 generated floors have one reachable relic, connected terrain and safe 
     }
 });
 
-test('pathological RNG still produces a relic, compass and a connected fallback',()=>{
+test('constant RNG leaves authored key and compass intact',()=>{
     const env=setup();vm.runInContext('Math.random=()=>0;',env.context);env.Game.load(1);
-    assert.equal(env.Game.ents.filter(e=>e.content==='artifact').length,1);
+    assert.equal(env.Game.ents.filter(e=>e.content==='key').length,1);
     assert.equal(env.Game.ents.filter(e=>e.payload?.loot?.includes('item_compass')).length,1);
     assert.equal(env.MapSys.get(-0.1,1200),1);
 });
@@ -78,15 +78,15 @@ test('simulation speed is stable at 30, 60 and 144 Hz',()=>{
 
 test('pause freezes coffin reveals and buffs; restart discards old reveals and extra loops',()=>{
     const env=setup(),{Game,tick,Coffin}=env;
-    const coffin=new Coffin(Game.p.x+35,Game.p.y,'artifact');Game.ents=[Game.p,coffin];
+    const coffin=new Coffin(Game.p.x+35,Game.p.y,'key');Game.ents=[Game.p,coffin];
     coffin.open();Game.p.buffs.jade=10;
     tick(0);Game.togglePause();tick(5000);
-    assert.equal(coffin.revealTimer,0.6);assert.equal(Game.art,0);assert.equal(Game.p.buffs.jade,10);
+    assert.equal(coffin.revealTimer,0.6);assert.equal(Game.p.hasKey,false);assert.equal(Game.p.buffs.jade,10);
     Game.togglePause();tick(5001);
     for(let i=1;i<=40;i++)tick(5001+i*1000/60);
-    assert.equal(Game.art,1);
+    assert.equal(Game.p.hasKey,true);
     Game.restart();Game.restart();assert.equal(env.frames.size,1);
-    tick(10000);tick(10020);assert.equal(Game.art,0);assert.equal(Game.pause,false);
+    tick(10000);tick(10020);assert.equal(Game.p.hasKey,false);assert.equal(Game.pause,false);
 });
 
 test('repel prevents zombie attacks but traps hurt; jade prevents trap damage',()=>{
@@ -127,9 +127,9 @@ test('ten-floor progression preserves equipment and requires a gate crank before
     const {Game,MapSys,els,World,Passage,ExitGate}=setup();
     Game.p.hp=4;Game.p.buffs.candle=20;Game.p.hasCompass=1;
     for(let floor=1;floor<=10;floor++) {
-        assert.equal(Game.lvl,floor);assert.equal(Game.art,floor-1);
+        assert.equal(Game.lvl,floor);assert.equal(Game.p.hasKey,false);
         if(!World.theme.water)assert.equal([...MapSys.t].filter(t=>t===2).length,0);
-        Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();assert.equal(Game.art,floor);
+        Game.ents.find(e=>e.content==='key').reveal();Game.ents.find(e=>e.content==='key').reveal();assert.equal(Game.p.hasKey,true);
         assert.equal(ExitGate.remaining,0);
         World.altars.forEach(a=>a.done=true);ExitGate.open();Game.showExitModal();Game.confirmNextLevel();Passage.update(1.3);
         assert.equal(Game.p.hp,4);assert.equal(Game.p.buffs.candle,0);assert.equal(Game.p.hasCompass,1);
@@ -141,7 +141,7 @@ test('ten-floor progression preserves equipment and requires a gate crank before
 
 test('seals block the exit until all required altars are activated',()=>{
     const {Game,World,Passage,ExitGate}=setup();
-    Game.load(7);Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();assert.equal(World.remaining(),2);assert.equal(World.canExit(),false);
+    Game.load(7);Game.ents.find(e=>e.content==='key').reveal();assert.equal(World.remaining(),2);assert.equal(World.canExit(),false);
     Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y;Game.step(1/60);assert.equal(Game.pause,false);
     Game.showExitModal();Game.confirmNextLevel();assert.equal(Game.lvl,7);Game.pause=false;
     for(const altar of World.altars.filter(a=>a.kind==='seal')) {
@@ -156,7 +156,7 @@ test('wine can be picked up at full health, sanctuary heals once and hidden trap
     const {Game,World,MapSys}=setup();
     const wine=Game.ents.find(e=>e.code==='item_wine');Game.p.x=wine.x;Game.p.y=wine.y;
     wine.update(1/60,Game.p);assert.equal(wine.dead,1);assert.equal(Game.p.hp,5);Game.p.hp=4;
-    const shrine=World.altars.find(a=>a.kind==='sanctuary');assert.ok(shrine);
+    Game.load(3);Game.p.hp=4;const shrine=World.altars.find(a=>a.kind==='sanctuary');assert.ok(shrine);
     Game.p.x=shrine.x;Game.p.y=shrine.y;
     for(let i=0;i<150;i++)World.update(1/60);
     assert.equal(Game.p.hp,5);assert.equal(shrine.done,true);
@@ -287,12 +287,12 @@ test('terrain detection still tracks entering and leaving water with playback di
 });
 
 test('descent previews next theme, freezes play, ignores duplicate taps and can restart safely',()=>{
-    const {Game,Passage,World,THEMES,els,tick,ExitGate}=setup();Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();ExitGate.open();Game.showExitModal();
+    const {Game,Passage,World,THEMES,els,tick,ExitGate}=setup();Game.ents.find(e=>e.content==='key').reveal();ExitGate.open();Game.showExitModal();
     assert.equal(els['exit-title'].textContent,THEMES[1].name);assert.equal(Passage.mode,'bolts');
     Game.p.buffs.candle=10;const elapsed=Game.elapsed;Game.confirmNextLevel();Game.confirmNextLevel();
     tick(0);tick(100);assert.equal(Game.lvl,1);assert.equal(Game.elapsed,elapsed);assert.equal(Game.p.buffs.candle,10);
     Passage.update(1.3);assert.equal(Game.lvl,2);assert.equal(Passage.active,false);assert.equal(Game.pause,false);
-    Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();World.altars.forEach(a=>a.done=true);ExitGate.open();Game.showExitModal();Game.confirmNextLevel();Game.restart();Passage.update(2);assert.equal(Game.lvl,1);
+    Game.ents.find(e=>e.content==='key').reveal();World.altars.forEach(a=>a.done=true);ExitGate.open();Game.showExitModal();Game.confirmNextLevel();Game.restart();Passage.update(2);assert.equal(Game.lvl,1);
     assert.equal(new Set(Passage.modes).size,11);
     for(let next=1;next<=10;next++){Passage.open(next);Passage.update(.1);assert.ok(els['passage-description'].textContent.length>10);}
 });
@@ -301,7 +301,7 @@ test('crank reveals the hidden exit, expires, requires rearming and can reopen',
  const {Game,ExitGate,World,Input,Scene,calls}=setup();Input.active=false;
  assert.equal(World.canExit(),false);assert.equal(ExitGate.open(),false);
  calls.length=0;Scene.draw(Game);assert.ok(!calls.some(c=>c[0]==='fillText'&&String(c[1]).startsWith('盗洞 ·')));
- Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();assert.equal(World.canExit(),false);assert.equal(ExitGate.radius,0);
+ Game.ents.find(e=>e.content==='key').reveal();assert.equal(World.canExit(),false);assert.equal(ExitGate.radius,0);
  Game.p.x=ExitGate.switch.x;Game.p.y=ExitGate.switch.y;Game.p.moving=false;
  for(let i=0;i<61;i++)ExitGate.update(1/60);assert.ok(World.canExit());assert.ok(ExitGate.remaining>24);
  for(let i=0;i<26*60;i++)ExitGate.update(1/60);assert.equal(World.canExit(),false);assert.equal(ExitGate.remaining,0);
@@ -310,10 +310,10 @@ test('crank reveals the hidden exit, expires, requires rearming and can reopen',
 });
 
 test('flood grows along reachable tiles, respects walls, recedes, and resets each floor',()=>{
- const {Game,ExitGate,MapSys,World}=setup();Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();ExitGate.open();
+ const {Game,ExitGate,MapSys,World}=setup();Game.ents.find(e=>e.content==='key').reveal();ExitGate.open();
  assert.equal(ExitGate.radius,0);ExitGate.update(2);assert.ok(ExitGate.levelAt(Game.exitPos.x,Game.exitPos.y)>0);
  for(let i=0;i<MapSys.t.length;i++)if(MapSys.t[i]===1)assert.equal(ExitGate.dist[i],-1);
- const far=ExitGate.dist.findIndex(d=>d>4);assert.equal(ExitGate.levelAt(far%60*50+25,Math.floor(far/60)*50+25),0);
+ const far=ExitGate.dist.findIndex(d=>d>4);assert.equal(ExitGate.levelAt(far%MapSys.w*50+25,Math.floor(far/MapSys.w)*50+25),0);
  ExitGate.remaining=0;ExitGate.latched=true;const radius=ExitGate.radius;Game.p.x=ExitGate.switch.x+100;ExitGate.update(.2);assert.ok(ExitGate.radius<radius);
  for(let lvl=1;lvl<=10;lvl++){Game.load(lvl);assert.equal(ExitGate.radius,0);assert.equal(ExitGate.remaining,0);assert.ok(MapSys.canOccupy(ExitGate.switch.x,ExitGate.switch.y,10));assert.ok(!World.hazards.some(h=>Math.hypot(h.x-ExitGate.switch.x,h.y-ExitGate.switch.y)<65));}
 });
@@ -321,14 +321,14 @@ test('flood grows along reachable tiles, respects walls, recedes, and resets eac
 test('each floor applies its guardian species and flood; pause freezes the gate',()=>{
  const {Game,SPECIES,FLOOD_TYPES,ExitGate,tick}=setup();assert.equal(new Set(SPECIES.map(s=>s.name)).size,10);assert.equal(new Set(FLOOD_TYPES.map(s=>s.sprite)).size,10);
  for(let lvl=1;lvl<=10;lvl++){Game.load(lvl);for(const z of Game.ents.filter(e=>e.type==='zombie')){assert.equal(z.species.name,SPECIES[lvl-1].name);assert.equal(z.spd,SPECIES[lvl-1].speed);}assert.equal(ExitGate.flood,FLOOD_TYPES[lvl-1]);}
- Game.load(1);Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();ExitGate.open();tick(0);Game.togglePause();tick(5000);assert.equal(ExitGate.remaining,25);assert.equal(ExitGate.radius,0);
+ Game.load(1);Game.ents.find(e=>e.content==='key').reveal();ExitGate.open();tick(0);Game.togglePause();tick(5000);assert.equal(ExitGate.remaining,25);assert.equal(ExitGate.radius,0);
 });
 
 test('flood effects slow or obscure and harmful contact has a grace period',()=>{
- const {Game,ExitGate,World}=setup();Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();ExitGate.open();ExitGate.radius=3;
+ const {Game,ExitGate,World}=setup();Game.ents.find(e=>e.content==='key').reveal();ExitGate.open();ExitGate.radius=3;
  Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y;assert.ok(ExitGate.speed()<1);
- Game.load(5);Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();ExitGate.open();Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y;const clear=World.sight();ExitGate.radius=3;assert.ok(World.sight()<clear);
- Game.load(7);Game.ents.find(e=>e.content==='key').reveal();Game.getArtifact();World.altars.forEach(a=>a.done=true);ExitGate.open();ExitGate.radius=3;Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y;Game.p.inv=0;
+ Game.load(5);Game.ents.find(e=>e.content==='key').reveal();ExitGate.open();Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y;const clear=World.sight();ExitGate.radius=3;assert.ok(World.sight()<clear);
+ Game.load(7);Game.ents.find(e=>e.content==='key').reveal();World.altars.forEach(a=>a.done=true);ExitGate.open();ExitGate.radius=3;Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y;Game.p.inv=0;
  ExitGate.update(2);assert.equal(Game.p.hp,5);ExitGate.update(.3);assert.equal(Game.p.hp,4);
 });
 
@@ -365,7 +365,7 @@ test('jade persists until one blocked hit; compass loss hides map and can be rec
  for(let i=0;i<4;i++)Game.debugTap();assert.equal(Game.pause,false);
  Game.debugTap();assert.equal(Game.pause,true);Game.closeTest();assert.equal(Game.pause,false);
  Game.p.hasCompass=1;Game.p.hp=1;Game.testLevel(7);
- assert.equal(Game.lvl,7);assert.equal(Game.p.hp,5);assert.equal(Game.p.hasCompass,0);assert.equal(Game.art,0);assert.equal(Game.pause,false);
+ assert.equal(Game.lvl,7);assert.equal(Game.p.hp,5);assert.equal(Game.p.hasCompass,0);assert.equal(Game.p.hasKey,false);assert.equal(Game.pause,false);
  Game.testLevel(11);assert.equal(Game.lvl,7);
  });
 
@@ -391,7 +391,7 @@ test('fixed hidden contents, reachable single key, no duplicate coffin rewards',
 });
 
 test('auxiliary locks are removed; exit key remains necessary and hidden coffins rise nearby',()=>{
- const {Game,Expedition,ExitGate,World}=setup(72);Game.getArtifact();World.altars.forEach(a=>a.done=true);
+ const {Game,Expedition,ExitGate,World}=setup(72);World.altars.forEach(a=>a.done=true);
  assert.equal(Expedition.switches.length,0);assert.equal(ExitGate.open(),false);
  Expedition.keyCoffin.reveal();assert.ok(ExitGate.open());
  Game.load(6);const hidden=Expedition.hidden[0];assert.ok(hidden);hidden.open();assert.equal(hidden.opened,0);
@@ -406,12 +406,9 @@ test('moving walls change collision and never close on an actor',()=>{
  Game.p.x+=100;Expedition.update(2);assert.equal(MapSys.t[wall.at],1);
 });
 
-test('relic collection keeps actual icons and values; restarting clears it',()=>{
- const {Game,RELIC_VALUES,els}=setup();Game.getArtifact();Game.getArtifact();assert.deepEqual([...Game.collected],[0]);
- assert.ok(els['relic-strip'].innerHTML.includes(String(RELIC_VALUES[0])));
- Game.load(2);Game.getArtifact();assert.deepEqual([...Game.collected],[0,1]);
- assert.ok(els['relic-total'].textContent.includes(String(RELIC_VALUES[0]+RELIC_VALUES[1])));
- Game.restart();assert.equal(Game.collected.length,0);
+test('relic and monetary UI is removed',()=>{
+ const {Game,els}=setup();assert.equal(els['relic-strip'],undefined);assert.equal(els['artifact-bar'],undefined);
+ assert.ok(!/冥器|¥|CNY/.test(Game.runSummary()));assert.equal(Game.getArtifact,undefined);
 });
 
 test('creatures telegraph attacks, respect warding and use finite coffin spawns',()=>{
@@ -430,10 +427,10 @@ test('sealed chambers have one moving entrance and required relic/key remain out
   Game.load(lvl);assert.ok(Expedition.sealedRooms.length);
   for(const r of Expedition.sealedRooms){
    const walls=Expedition.walls.filter(w=>w.room===r);assert.equal(walls.length,1);const w=walls[0];
-   const perimeter=[];for(let x=r.x-1;x<=r.x+r.w;x++)perimeter.push((r.y-1)*60+x,(r.y+r.h)*60+x);
-   for(let y=r.y;y<r.y+r.h;y++)perimeter.push(y*60+r.x-1,y*60+r.x+r.w);
+   const perimeter=[];for(let x=r.x-1;x<=r.x+r.w;x++)perimeter.push((r.y-1)*MapSys.w+x,(r.y+r.h)*MapSys.w+x);
+   for(let y=r.y;y<r.y+r.h;y++)perimeter.push(y*MapSys.w+r.x-1,y*MapSys.w+r.x+r.w);
    assert.ok(perimeter.every(at=>MapSys.t[at]===1));
-   assert.ok(!World.inside(r,Expedition.keyCoffin.x,Expedition.keyCoffin.y));assert.ok(!World.inside(r,Game.artifactPos.x,Game.artifactPos.y));
+   assert.ok(!World.inside(r,Expedition.keyCoffin.x,Expedition.keyCoffin.y));assert.ok(!World.inside(r,Game.mainCoffinPos.x,Game.mainCoffinPos.y));
    assert.equal(Expedition.switches.length,0);
    assert.ok(Game.ents.some(c=>c.type==='coffin'&&World.inside(r,c.x,c.y)&&c.payload?.loot?.some(k=>['item_shovel','item_jade'].includes(k))));
    Game.p.x=w.x;Game.p.y=w.y;Expedition.update(2);assert.equal(MapSys.t[w.at],0);
@@ -445,7 +442,7 @@ test('trap projectiles kill zombies and explosions respect walls',()=>{
  const {Game,MapSys,Zombie,Projectile,TombDangers}=setup();MapSys.t.fill(0);Game.p.x=200;Game.p.y=300;Game.ents=[Game.p];
  const z=new Zombie(150,100,0);Game.spawn(z);
  for(let i=0;i<3;i++){Game.elapsed=i;new Projectile(100,100,0,'ARROW').update(.3,Game.p);}assert.equal(z.dead,1);
- const other=new Zombie(150,150,0);Game.spawn(other);MapSys.t[2*60+3]=1;Game.elapsed=5;TombDangers.blast(175,75,120,3);assert.equal(other.dead,0);
+ const other=new Zombie(150,150,0);Game.spawn(other);MapSys.t[2*MapSys.w+3]=1;Game.elapsed=5;TombDangers.blast(175,75,120,3);assert.equal(other.dead,0);
  MapSys.t.fill(0);TombDangers.blast(175,75,120,3);assert.equal(other.dead,1);
 });
 
@@ -462,9 +459,8 @@ test('beetle burrows respawn bounded stompable creatures; water rolls safely and
  Game.p.moving=true;for(const e of Game.ents.filter(e=>e.source===source))e.update(.01,Game.p);assert.equal(Game.ents.filter(e=>e.source===source&&!e.dead).length,0);
  TombDangers.update(4);assert.equal(Game.ents.filter(e=>e.source===source&&!e.dead).length,1);
  const jet={x:450,y:500,angle:0,kind:'water',state:'active',timer:3,age:2,cooldown:0,length:180};TombDangers.vents=[jet];TombDangers.update(.1);assert.ok(Game.p.rollTime>0);
- MapSys.t[10*60+11]=1;Game.p.update(.45);assert.ok(Game.p.x<550);
+ MapSys.t[10*MapSys.w+11]=1;Game.p.update(.45);assert.ok(Game.p.x<550);
  Game.p.x=500;jet.kind='smoke';const fog=World.sight();TombDangers.vents=[];assert.equal(World.sight(),fog);
- assert.ok(Game.settlement().includes('人民币'));Game.getArtifact();assert.ok(Game.settlement().includes('¥1,200'));
 });
 
 
@@ -477,7 +473,7 @@ test('hidden jets trigger suddenly at close range, cool down, and smoke grows ab
  const sight=World.sight();
  TombDangers.update(2);assert.ok(TombDangers.clouds[0].age>=2);assert.equal(World.sight(),sight);
  TombDangers.update(2);assert.equal(v.state,'cooldown');
- MapSys.t[10*60+10]=1;Game.p.x=500;Game.p.y=700;v.state='idle';TombDangers.update(.1);assert.equal(v.state,'idle');
+ MapSys.t[10*MapSys.w+10]=1;Game.p.x=500;Game.p.y=700;v.state='idle';TombDangers.update(.1);assert.equal(v.state,'idle');
 });
 
 test('duplicate equipment is always picked up without stacking jade protection',()=>{
@@ -498,7 +494,7 @@ test('shovel pickup unlocks attack; melee respects cooldown, walls, range, pause
  assert.equal(Game.p.attack(),false);Game.refreshBuffs();assert.equal(els['attack-btn'].style.display,'none');
  Game.getItem('item_shovel');assert.equal(els['attack-btn'].style.display,'flex');
  els['attack-btn'].handlers.click();assert.equal(z.hp,2);assert.equal(Game.p.attack(),false);
- Game.elapsed+=.7;Game.p.attackCooldown=0;MapSys.t[2*60+3]=1;Game.p.attack();assert.equal(z.hp,2);
+ Game.elapsed+=.7;Game.p.attackCooldown=0;MapSys.t[2*MapSys.w+3]=1;Game.p.attack();assert.equal(z.hp,2);
  MapSys.t.fill(0);Game.p.attackCooldown=0;z.x=210;Game.p.attack();assert.equal(z.hp,2);
  z.x=185;Game.p.attackCooldown=0;Game.pause=1;assert.equal(Game.p.attack(),false);Game.pause=0;
  Game.p.attack();assert.equal(z.hp,1);Game.elapsed+=.7;Game.p.attackCooldown=0;Game.p.attack();assert.equal(z.dead,1);
@@ -523,4 +519,33 @@ test('coffin pushing retains a displaced lid and non-loot decor never blocks mov
 test('jade suit break triggers its dedicated sound without losing health',()=>{
  const {Game,AudioSys}=setup();let breaks=0;AudioSys.playJadeBreak=()=>breaks++;Game.running=1;Game.p.inv=0;Game.p.buffs.jade=1;const hp=Game.p.hp;Game.p.hit();
  assert.equal(breaks,1);assert.equal(Game.p.hp,hp);assert.equal(Game.p.buffs.jade,0);
+});
+
+test('saved maps and item positions repeat exactly and grow on every floor',()=>{
+ const a=setup(1),b=setup(987);let size=0,area=0;const signatures=new Set();
+ const snapshot=e=>JSON.stringify({tiles:[...e.MapSys.t],rooms:e.World.rooms,coffins:e.Game.ents.filter(c=>c.type==='coffin').map(c=>[c.x,c.y,c.content,c.payload,c.extra,c.hidden]),hazards:e.World.hazards,gate:e.ExitGate.switch});
+ for(let l=1;l<=10;l++){
+  a.Game.load(l);b.Game.load(l);assert.equal(snapshot(a),snapshot(b));
+  assert.ok(a.MapSys.w>size);size=a.MapSys.w;
+  const floorArea=[...a.MapSys.t].filter(t=>t!==1).length;assert.ok(floorArea>area);area=floorArea;
+  signatures.add(JSON.stringify(a.FLOOR_PLANS[l-1].coffinSlots));
+ }
+ assert.equal(signatures.size,10);
+});
+test('rising coffin waits for player clearance and embedded player can walk out',()=>{
+ const {Game,Expedition,Input,MapSys}=setup();Game.load(6);const c=Expedition.hidden[0];
+ Game.p.x=c.x;Game.p.y=c.y;Expedition.update(2);assert.equal(c.rising,true);
+ MapSys.t.fill(0);Game.ents=[Game.p,c];Input.x=1;Input.y=0;Input.active=true;
+ for(let i=0;i<20;i++)Game.p.update(1/60);
+ Expedition.update(.1);assert.equal(c.rising,false);assert.equal(c.hidden,false);
+ Game.p.x=c.x;Game.p.y=c.y;Game.p.pushUntil=0;
+ for(let i=0;i<20;i++)Game.p.update(1/60);
+ assert.ok(Game.p.x>c.x+30);
+});
+test('movement lesson dismisses only after movement and reappears on restart',()=>{
+ const {Game,Input,MapSys,els}=setup();assert.equal(els['move-tutorial'].style.display,'block');
+ MapSys.t.fill(0);Game.ents=[Game.p];Input.x=1;Input.y=0;Input.active=true;
+ for(let i=0;i<45;i++)Game.p.update(1/60);
+ assert.equal(els['move-tutorial'].style.display,'none');Game.load(2);assert.equal(els['move-tutorial'].style.display,'none');
+ Game.restart();assert.equal(els['move-tutorial'].style.display,'block');
 });

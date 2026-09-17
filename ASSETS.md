@@ -41,3 +41,7 @@ Generated with the built-in image-generation tool for this game: `assets/raider-
 The same tool produced `assets/raider-coffin-push.png`, a four-direction four-stage heavy-pushing animation, and `assets/coffin-lid.png`, a detached carved stone lid retained beside opened coffins. Both preserve transparent alpha and contain no text.
 
 `assets/trap-emitters.png` is an original generated transparent 4×2 atlas. It contains, in order, a concealed arrow slit, rolling-stone chute, timber release gate, fireball furnace, flame nozzle, water-pressure pipe, smoke grille and poison nozzle. The runtime uses each device only for its matching hazard.
+
+## Control icons (v15)
+
+`assets/control-buttons.png`: generated with the built-in image tool. Prompt: a 2×2 sheet of aged bronze Chinese tomb game buttons, shovel attack, running figure, pause bars, speaker, ivory symbols, black background, no text. Used for attack, sprint, pause and sound controls.
