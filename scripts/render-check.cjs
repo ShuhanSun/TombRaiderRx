@@ -18,6 +18,7 @@ const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:
     Art.remains=await loadImage('assets/tomb-remains.png');
     Art.coffinPush=await loadImage('assets/raider-coffin-push.png');
     Art.coffinLid=await loadImage('assets/coffin-lid.png');
+    Art.trapEmitters=await loadImage('assets/trap-emitters.png');
     const atlas=await loadImage('assets/tomb-materials.png');
     Art.tiles=[];
     const xs=[0,313,626,940,1254],ys=[0,302,618,918,1254];
@@ -39,6 +40,9 @@ const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:
     const pc=createCanvas(640,320);els['passage-scene'].width=640;els['passage-scene'].height=320;els['passage-scene'].getContext=()=>pc.getContext('2d');
     for(const next of [1,3,5,6,8,9,10]){Passage.open(next);Passage.time=2;Passage.draw();fs.writeFileSync(path.join(output,'passage-'+next+'.png'),pc.toBuffer('image/png'));}
     Game.load(4);const hazard=World.hazards[0];Game.p.x=hazard.x;Game.p.y=hazard.y+80;Game.elapsed=4.7;Game.render();fs.writeFileSync(path.join(output,'corridor.png'),Game.cvs.toBuffer('image/png'));
+    const emitters=createCanvas(860,230),ec=emitters.getContext('2d');ec.fillStyle='#252d2d';ec.fillRect(0,0,860,230);
+    ['ARROW','STONE','LOG','FIRE','fire','water','smoke','VENOM'].forEach((kind,i)=>Art.trapEmitter(ec,kind,55+i*107,115,92));
+    fs.writeFileSync(path.join(output,'trap-emitters.png'),emitters.toBuffer('image/png'));
     for(const lvl of [1,2,3,4,5,6,7,8,9,10]){Game.load(lvl);Game.p.hasKey=true;Game.getArtifact();World.altars.forEach(a=>a.done=true);Game.p.x=ExitGate.switch.x;Game.p.y=ExitGate.switch.y+65;Game.render();fs.writeFileSync(path.join(output,'crank-'+lvl+'.png'),Game.cvs.toBuffer('image/png'));ExitGate.open();ExitGate.radius=5;Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y+100;Game.render();fs.writeFileSync(path.join(output,'flood-'+lvl+'.png'),Game.cvs.toBuffer('image/png'));}
     for(const lvl of [1,3,6,9,10]){Game.load(lvl);const royal=Game.ents.find(e=>e.royal);Game.p.x=royal.x;Game.p.y=royal.y+110;Game.render();fs.writeFileSync(path.join(output,'royal-'+lvl+'.png'),Game.cvs.toBuffer('image/png'));}
     Game.load(8);for(const c of Expedition.coffins.filter(c=>c.payload.enemy))c.reveal();const crawler=Game.ents.find(e=>e.crawler);Game.p.x=crawler.x+35;Game.p.y=crawler.y+80;Game.render();fs.writeFileSync(path.join(output,'crawler.png'),Game.cvs.toBuffer('image/png'));

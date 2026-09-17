@@ -152,7 +152,7 @@ test('seals block the exit until all required altars are activated',()=>{
     Game.showExitModal();Game.confirmNextLevel();Passage.update(1.3);assert.equal(Game.lvl,8);
 });
 
-test('wine can be picked up at full health, sanctuary heals once and trap shots are telegraphed',()=>{
+test('wine can be picked up at full health, sanctuary heals once and hidden traps fire only at close range',()=>{
     const {Game,World,MapSys}=setup();
     const wine=Game.ents.find(e=>e.code==='item_wine');Game.p.x=wine.x;Game.p.y=wine.y;
     wine.update(1/60,Game.p);assert.equal(wine.dead,1);assert.equal(Game.p.hp,5);Game.p.hp=4;
@@ -161,10 +161,11 @@ test('wine can be picked up at full health, sanctuary heals once and trap shots 
     for(let i=0;i<150;i++)World.update(1/60);
     assert.equal(Game.p.hp,5);assert.equal(shrine.done,true);
     const trap=Game.ents.find(e=>e.type==='trap');MapSys.t.fill(0);trap.cd=0;
-    Game.p.x=trap.x+100;Game.p.y=trap.y;
+    Game.p.x=trap.x+200;Game.p.y=trap.y;
     const before=Game.ents.filter(e=>e.type==='proj').length;
-    trap.update(1/60,Game.p);assert.ok(trap.windup>0);assert.equal(Game.ents.filter(e=>e.type==='proj').length,before);
-    for(let i=0;i<50;i++)trap.update(1/60,Game.p);
+    trap.update(1/60,Game.p);assert.equal(trap.windup,0);assert.equal(trap.revealT,0);
+    Game.p.x=trap.x+100;trap.update(1/60,Game.p);assert.ok(trap.windup>0);assert.ok(trap.revealT>0);assert.equal(Game.ents.filter(e=>e.type==='proj').length,before);
+    for(let i=0;i<7;i++)trap.update(1/60,Game.p);
     assert.equal(Game.ents.filter(e=>e.type==='proj').length,before+1);
 });
 
@@ -266,11 +267,11 @@ test('passage hazards stay outside rooms and launchers mount beside walls on eve
     }
 });
 
-test('launcher turns smoothly across angle wrap and its muzzle matches the fired projectile',()=>{
-    const {Game,MapSys,Trap}=setup();MapSys.t.fill(0);Game.ents=[Game.p];Game.p.x=400;Game.p.y=500;
-    const trap=new Trap(500,500,0);trap.displayAim=Math.PI-.1;trap.aim=-Math.PI+.1;trap.windup=.01;
-    trap.update(.01,Game.p);assert.ok(Math.abs(trap.displayAim-(Math.PI-.1))<=.03801);assert.equal(Game.ents.length,1);
-    for(let i=0;i<10;i++)trap.update(.01,Game.p);
+test('concealed launcher snaps toward a close target and its muzzle matches the projectile',()=>{
+    const {Game,MapSys,Trap,Art}=setup();MapSys.t.fill(0);Game.ents=[Game.p];Game.p.x=400;Game.p.y=500;
+    assert.deepEqual(['ARROW','STONE','LOG','FIRE','fire','water','smoke','VENOM'].map(k=>Art.trapEmitterIndex(k)),[0,1,2,3,4,5,6,7]);
+    const trap=new Trap(500,500,0);trap.update(.01,Game.p);assert.ok(trap.revealT>0);assert.equal(Game.ents.length,1);
+    for(let i=0;i<11;i++)trap.update(.01,Game.p);
     const shot=Game.ents.find(e=>e.type==='proj');assert.ok(shot);
     assert.ok(Math.abs(Math.sin(shot.ang-trap.displayAim))<.001);
     assert.ok(Math.abs(shot.x-(trap.x+Math.cos(shot.ang)*20))<.001);
@@ -467,12 +468,12 @@ test('beetle burrows respawn bounded stompable creatures; water rolls safely and
 });
 
 
-test('jets require proximity and sight, warn, fire, cool down; smoke grows above the scene',()=>{
+test('hidden jets trigger suddenly at close range, cool down, and smoke grows above the scene',()=>{
  const {Game,TombDangers,MapSys,World,calls,Scene}=setup();MapSys.t.fill(0);Game.ents=[Game.p];Game.p.x=900;Game.p.y=900;TombDangers.sources=[];
  const v={x:500,y:500,kind:'smoke',angle:0,state:'idle',timer:0,age:0,cooldown:0};TombDangers.vents=[v];
  TombDangers.update(5);assert.equal(v.state,'idle');assert.equal(TombDangers.clouds.length,0);
- Game.p.x=550;Game.p.y=500;TombDangers.update(.1);assert.equal(v.state,'warning');
- const sight=World.sight();TombDangers.update(.8);assert.equal(v.state,'active');assert.equal(TombDangers.clouds.length,1);
+ Game.p.x=550;Game.p.y=500;TombDangers.update(.1);assert.equal(v.state,'active');assert.equal(TombDangers.clouds.length,1);
+ const sight=World.sight();
  TombDangers.update(2);assert.ok(TombDangers.clouds[0].age>=2);assert.equal(World.sight(),sight);
  TombDangers.update(2);assert.equal(v.state,'cooldown');
  MapSys.t[10*60+10]=1;Game.p.x=500;Game.p.y=700;v.state='idle';TombDangers.update(.1);assert.equal(v.state,'idle');
@@ -512,7 +513,7 @@ test('all continuous burrows contain beetles and stomping plays one sound',()=>{
 
 test('coffin pushing retains a displaced lid and non-loot decor never blocks movement',()=>{
  const {Game,Expedition,MapSys}=setup();const c=Expedition.coffins[0];Game.p.x=c.x;Game.p.y=c.y+40;
- c.interact(.3,Game.p);assert.equal(Game.p.pushingCoffin,c);assert.ok(c.interactTimer>0);
+ c.interact(.3,Game.p);assert.equal(Game.p.pushingCoffin,c);assert.equal(Game.p.direction,3);assert.ok(c.interactTimer>0);
  c.interact(.31,Game.p);assert.equal(c.opened,1);assert.ok(Number.isFinite(c.lidDirX));
  c.update(.7);assert.equal(c.lidProgress,1);assert.equal(c.dead,0);
  const decor=Game.ents.find(e=>['burial_decor','bone_pile','tomb_remains'].includes(e.type));assert.ok(decor);MapSys.t.fill(0);assert.equal(MapSys.canOccupy(decor.x,decor.y,10),true);

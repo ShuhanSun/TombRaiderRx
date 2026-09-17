@@ -9,8 +9,8 @@ const Art = {
     ],
     load() {
         const load=src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src;});
-        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png'),load('assets/tomb-mechanisms.png'),load('assets/tomb-stone-realistic.png'),load('assets/tomb-expedition.png'),load('assets/tomb-coffin-details.png'),load('assets/raider-shovel-attack.png'),load('assets/entrenching-shovel.png'),load('assets/tomb-remains.png'),load('assets/raider-coffin-push.png'),load('assets/coffin-lid.png')]).then(([sprites,materials,walker,zombies,traps,mechanisms,stone,expedition,coffinDetails,shovelAttack,shovelItem,remains,coffinPush,coffinLid])=>{
-            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;this.mechanisms=mechanisms;this.stone=stone;this.expedition=expedition;this.coffinDetails=coffinDetails;this.shovelAttack=shovelAttack;this.shovelItem=shovelItem;this.remains=remains;this.coffinPush=coffinPush;this.coffinLid=coffinLid;
+        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png'),load('assets/tomb-mechanisms.png'),load('assets/tomb-stone-realistic.png'),load('assets/tomb-expedition.png'),load('assets/tomb-coffin-details.png'),load('assets/raider-shovel-attack.png'),load('assets/entrenching-shovel.png'),load('assets/tomb-remains.png'),load('assets/raider-coffin-push.png'),load('assets/coffin-lid.png'),load('assets/trap-emitters.png')]).then(([sprites,materials,walker,zombies,traps,mechanisms,stone,expedition,coffinDetails,shovelAttack,shovelItem,remains,coffinPush,coffinLid,trapEmitters])=>{
+            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;this.mechanisms=mechanisms;this.stone=stone;this.expedition=expedition;this.coffinDetails=coffinDetails;this.shovelAttack=shovelAttack;this.shovelItem=shovelItem;this.remains=remains;this.coffinPush=coffinPush;this.coffinLid=coffinLid;this.trapEmitters=trapEmitters;
             const xs=[0,313,626,940,1254],ys=[0,302,618,918,1254];
             for(let i=0;i<16;i++) {
                 const c=document.createElement('canvas');c.width=c.height=400;
@@ -26,16 +26,13 @@ const Art = {
         ctx.drawImage(this.coffinDetails,index%2*w,Math.floor(index/2)*h,w,h,x-size/2,y-size*.8,size,size);
     },
     shovelRaider(ctx,e,x,y,size){
-        if(!this.shovelAttack){this.raider(ctx,e,x,y,size);return;}
+        if(!this.shovelAttack||e.attackT<=0){this.raider(ctx,e,x,y,size*.88);return;}
         const xs=[0,330,650,997,1247],ys=[0,306,618,925,1261];
         const progress=e.attackT>0?1-e.attackT/.48:0;
         const pose=e.attackT>0?Math.min(3,Math.floor(progress*4)):0;
-        const direction=e.attackT>0?(Math.abs(Math.cos(e.attackAngle))>Math.abs(Math.sin(e.attackAngle))?(Math.cos(e.attackAngle)<0?1:2):(Math.sin(e.attackAngle)<0?3:0)):e.direction;
+        const direction=Math.abs(Math.cos(e.attackAngle))>Math.abs(Math.sin(e.attackAngle))?(Math.cos(e.attackAngle)<0?1:2):(Math.sin(e.attackAngle)<0?3:0);
         // Mirror the coherent right-facing row for left-facing strikes.
-        if(e.attackT<=0&&e.moving){
-            ctx.save();ctx.beginPath();ctx.rect(x-size/2,y-size*.36,size,size*.43);ctx.clip();this.raider(ctx,e,x,y,size*.9);ctx.restore();
-            ctx.save();ctx.beginPath();ctx.rect(x-size/2,y-size*.94,size,size*.69);ctx.clip();
-        }else ctx.save();
+        ctx.save();
         ctx.translate(x,y);if(direction===1)ctx.scale(-1,1);
         const row=direction===1?2:direction,sx=xs[pose]+4,sy=ys[row]+4,sw=xs[pose+1]-sx-4,sh=ys[row+1]-sy-4;
         ctx.drawImage(this.shovelAttack,sx,sy,sw,sh,-size/2,-size*.94,size,size);ctx.restore();
@@ -43,8 +40,9 @@ const Art = {
     pushRaider(ctx,e,x,y,size){
         if(!this.coffinPush){this.raider(ctx,e,x,y,size);return;}
         const c=e.pushingCoffin,progress=c?.opened?Math.min(1,c.lidProgress):Math.min(.72,(c?.interactTimer||0)/.6*.72);
+        const angle=Math.atan2((c?.y??y)-e.y,(c?.x??x)-e.x),direction=Math.abs(Math.cos(angle))>Math.abs(Math.sin(angle))?(Math.cos(angle)<0?1:2):(Math.sin(angle)<0?3:0);
         const pose=Math.min(3,Math.floor(progress*4)),sw=this.coffinPush.width/4,sh=this.coffinPush.height/4;
-        ctx.drawImage(this.coffinPush,pose*sw,e.direction*sh,sw,sh,x-size/2,y-size*.94,size,size);
+        ctx.drawImage(this.coffinPush,pose*sw,direction*sh,sw,sh,x-size/2,y-size*.94,size,size);
     },
     coffinLidSprite(ctx,e,size=92){
         if(!this.coffinLid)return;
@@ -60,6 +58,12 @@ const Art = {
         if(!this.expedition)return;
         const w=this.expedition.width/4,h=this.expedition.height/4;
         ctx.drawImage(this.expedition,index%4*w,Math.floor(index/4)*h,w,h,x-size/2,y-size*.8,size,size);
+    },
+    trapEmitterIndex(kind){return {ARROW:0,STONE:1,LOG:2,FIRE:3,fire:4,water:5,smoke:6,VENOM:7}[kind]??0;},
+    trapEmitter(ctx,kind,x,y,size=48){
+        if(!this.trapEmitters)return;
+        const index=this.trapEmitterIndex(kind),sw=this.trapEmitters.width/4,sh=this.trapEmitters.height/2;
+        ctx.drawImage(this.trapEmitters,index%4*sw,Math.floor(index/4)*sh,sw,sh,x-size/2,y-size/2,size,size);
     },
     stoneSurface(ctx,wall,x,y,dx=x*50,dy=y*50,dw=50,dh=50){
         if(!this.stone){ctx.drawImage(this.tiles[wall?12:0],dx,dy,dw,dh);return;}
@@ -318,16 +322,11 @@ const Scene = {
         }
         if(e.type==='trap') {
             if(e.vent)return;
+            if(!(e.revealT>0||e.windup>0||e.recoil>0))return;
             const kick=(e.recoil||0)/.28*7;
             ctx.save();ctx.translate(e.x,e.y);ctx.rotate(e.displayAim);ctx.translate(-kick,0);
             ctx.filter=Expedition.style.filter;
-            Art.expeditionSprite(ctx,Expedition.style.trap,0,0,42);
-            // Side-on barrel points right in the atlas; local +X is the exact firing axis.
-            ctx.drawImage(Art.traps,327,345,184,214,-12,-12,32,26);ctx.restore();
-            if(e.windup>0) {
-                ctx.save();ctx.strokeStyle='#ff876bad';ctx.lineWidth=2;ctx.setLineDash([7,5]);ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.x+Math.cos(e.displayAim)*250,e.y+Math.sin(e.displayAim)*250);ctx.stroke();ctx.restore();
-                Art.glow(ctx,e.x,e.y-10,35,'#ff5a3966');
-            }return;
+            Art.trapEmitter(ctx,e.pType,0,0,52);ctx.restore();return;
         }
         if(e.type==='proj') {
             const specs={ARROW:[0,42,42],STONE:[1,28,28],LOG:[2,44,28],FIRE:[3,42,42],VENOM:[4,30,30]};

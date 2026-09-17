@@ -89,9 +89,7 @@ const TombDangers={
   for(const v of this.vents){
    v.age+=dt;v.cooldown=Math.max(0,v.cooldown-dt);v.state=v.state||'idle';v.timer=v.timer||0;
    if(v.state==='idle'){
-    if(Math.hypot(Game.p.x-v.x,Game.p.y-v.y)<165&&MapSys.lineClear(v.x,v.y,Game.p.x,Game.p.y)){v.state='warning';v.timer=.75;}else continue;
-   }else if(v.state==='warning'){
-    v.timer-=dt;if(v.timer<=0){v.state='active';v.timer=3.5;if(v.kind==='smoke')this.addCloud(v.x,v.y);}
+    if(Math.hypot(Game.p.x-v.x,Game.p.y-v.y)<165&&MapSys.lineClear(v.x,v.y,Game.p.x,Game.p.y)){v.state='active';v.timer=3.5;if(v.kind==='smoke')this.addCloud(v.x,v.y);}else continue;
    }else if(v.state==='active'){
     v.timer-=dt;if(v.timer<=0){v.state='cooldown';v.timer=5;}
    }else if(v.state==='cooldown'){
@@ -117,10 +115,10 @@ const TombDangers={
  },
  drawJets(ctx){
   for(const v of this.vents){
+   if(v.state!=='active')continue;
    ctx.save();ctx.translate(v.x,v.y);ctx.rotate(v.angle);
-   ctx.drawImage(Art.traps,327,345,184,214,-24,-24,42,48);
+   ctx.filter=Expedition.style.filter;Art.trapEmitter(ctx,v.kind,0,0,52);ctx.filter='none';
    const colors={fire:['#ff4b1688','#ffce6877'],water:['#277ac0aa','#c0f6ffbb'],smoke:['#c0c8d588','#dde3eb44']},col=colors[v.kind];
-   if(v.state!=='active'){if(v.state==='warning'){ctx.fillStyle=col[1];ctx.fillRect(6,-7,8,14);}ctx.restore();continue;}
    if(v.kind==='smoke'){ctx.restore();continue;}
    if(v.length>0){
     const plume=ctx.createLinearGradient(0,0,v.length,0);plume.addColorStop(0,col[1]);plume.addColorStop(.45,col[0]);plume.addColorStop(1,'#ffffff00');

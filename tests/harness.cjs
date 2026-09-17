@@ -43,7 +43,7 @@ function setup(seed=1) {
     });
     vm.runInContext(source+'\nthis.api={Game,MapSys,Input,Player,Coffin,Zombie,Trap,Projectile,Effect,FloatText,AudioSys,CONFIG,TERRAIN,World,Art,Scene,Sound,THEMES,Passage,ExitGate,SPECIES,FLOOD_TYPES,Expedition,TombCreature,RELIC_VALUES,TombDangers};',context);
     const api=context.api;
-    api.Art.ready=true;api.Art.sprites={};api.Art.walker={};api.Art.zombies={};api.Art.traps={};api.Art.mechanisms={};api.Art.tiles=Array(16).fill({});
+    api.Art.ready=true;api.Art.sprites={};api.Art.walker={};api.Art.zombies={};api.Art.traps={};api.Art.trapEmitters={width:400,height:200};api.Art.mechanisms={};api.Art.tiles=Array(16).fill({});
     api.Game.resize();api.Game.restart();
     const tick=t=>{const pending=[...frames.values()];frames.clear();pending.forEach(fn=>fn(t));};
     return {...api,els,frames,timers,tick,calls,windowEvents,documentEvents,context};
