@@ -2,7 +2,7 @@
 
 探索十层中国古墓的网页游戏。每层寻找机关钥匙、解除封印，再拉动机械开关，限时进入主墓室巨棺中的盗洞。
 
-[开始游戏](https://shuhansun.github.io/TombRaider/) · [当前试玩版](https://tombraider-playtest.bookcool.chatgpt.site)
+ [当前试玩版](https://tombraider-playtest.bookcool.chatgpt.site)
 
 ## 操作
 
