@@ -67,14 +67,13 @@ const TombDangers={
  },
  drawClouds(ctx,left,right,top,bottom){
   for(const c of this.clouds){const radius=Math.min(360,c.age*34),fade=Math.min(1,c.life/3),density=Math.min(.25,c.age*.1)*fade;
-   for(let y=top;y<bottom;y++)for(let x=left;x<right;x++){
+   const reach=Math.ceil(radius/50)+2,cx=Math.floor(c.x/50),cy=Math.floor(c.y/50),cells=[];
+   for(let y=Math.max(top,cy-reach);y<Math.min(bottom,cy+reach+1);y++)for(let x=Math.max(left,cx-reach);x<Math.min(right,cx+reach+1);x++){
     const dist=c.dist[y*60+x];if(dist<0)continue;const amount=Math.max(0,Math.min(1,(radius-dist*50)/65));if(!amount)continue;
-    const px=x*50+25+Math.sin(c.age*.8+y)*7,py=y*50+25+Math.cos(c.age*.6+x)*7;
-    ctx.save();ctx.beginPath();
-    for(let yy=Math.max(0,y-1);yy<=Math.min(59,y+1);yy++)for(let xx=Math.max(0,x-1);xx<=Math.min(59,x+1);xx++)if(c.dist[yy*60+xx]>=0)ctx.rect(xx*50,yy*50,50,50);
-    ctx.clip();const puff=ctx.createRadialGradient(px,py,8,px,py,68);puff.addColorStop(0,c.color+'a8');puff.addColorStop(.65,c.color+'62');puff.addColorStop(1,c.color+'00');
-    ctx.globalAlpha=density*amount;ctx.fillStyle=puff;ctx.fillRect(px-68,py-68,136,136);ctx.restore();
+    cells.push({x,y,amount});
    }
+   if(!cells.length)continue;ctx.save();ctx.beginPath();for(const p of cells)ctx.rect(p.x*50,p.y*50,50,50);ctx.clip();
+   const puff=Art.smokePuff(c.color);for(const p of cells){const px=p.x*50+25+Math.sin(c.age*.8+p.y)*7,py=p.y*50+25+Math.cos(c.age*.6+p.x)*7;ctx.globalAlpha=density*p.amount;ctx.drawImage(puff,px-68,py-68,136,136);}ctx.restore();
   }
  },
  update(dt){

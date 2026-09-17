@@ -469,7 +469,8 @@ test('beetle burrows respawn bounded stompable creatures; water rolls safely and
 
 
 test('hidden jets trigger suddenly at close range, cool down, and smoke grows above the scene',()=>{
- const {Game,TombDangers,MapSys,World,calls,Scene}=setup();MapSys.t.fill(0);Game.ents=[Game.p];Game.p.x=900;Game.p.y=900;TombDangers.sources=[];
+ const {Game,TombDangers,MapSys,World,Art,calls,Scene}=setup();MapSys.t.fill(0);Game.ents=[Game.p];Game.p.x=900;Game.p.y=900;TombDangers.sources=[];
+ assert.equal(Art.smokePuff('#66736b'),Art.smokePuff('#66736b'));
  const v={x:500,y:500,kind:'smoke',angle:0,state:'idle',timer:0,age:0,cooldown:0};TombDangers.vents=[v];
  TombDangers.update(5);assert.equal(v.state,'idle');assert.equal(TombDangers.clouds.length,0);
  Game.p.x=550;Game.p.y=500;TombDangers.update(.1);assert.equal(v.state,'active');assert.equal(TombDangers.clouds.length,1);
