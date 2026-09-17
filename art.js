@@ -38,11 +38,19 @@ const Art = {
         ctx.drawImage(this.shovelAttack,sx,sy,sw,sh,-size/2,-size*.94,size,size);ctx.restore();
     },
     pushRaider(ctx,e,x,y,size){
-        if(!this.coffinPush){this.raider(ctx,e,x,y,size);return;}
         const c=e.pushingCoffin,progress=c?.opened?Math.min(1,c.lidProgress):Math.min(.72,(c?.interactTimer||0)/.6*.72);
-        const angle=Math.atan2((c?.y??y)-e.y,(c?.x??x)-e.x),direction=e.pushDirection??(Math.abs(Math.cos(angle))>Math.abs(Math.sin(angle))?(Math.cos(angle)<0?1:2):(Math.sin(angle)<0?3:0));
-        const pose=Math.min(3,Math.floor(progress*4)),sw=this.coffinPush.width/4,sh=this.coffinPush.height/4;
-        ctx.drawImage(this.coffinPush,pose*sw,direction*sh,sw,sh,x-size/2,y-size*.94,size,size);
+        const dx=(c?.x??e.x)-e.x,dy=(c?.y??e.y)-e.y;
+        // Resolve the live target, not a cached direction from before movement.
+        const direction=Math.hypot(dx,dy)<.01?(e.pushDirection??e.direction??0):Math.abs(dx)>Math.abs(dy)?(dx<0?1:2):(dy<0?3:0);
+        if(!this.coffinPush){this.raider(ctx,{...e,direction},x,y,size);return;}
+        // Inspected push atlas: DOWN, RIGHT, LEFT, UP (walk atlas swaps the side rows).
+        const row=[0,2,1,3][direction];
+        const pose=Math.min(3,Math.floor(progress*4));
+        // Generated atlas gutters are uneven; equal quarters clip hats and leak adjacent poses.
+        const xs=[0,307,625,950,1225],ys=[0,320,640,944,1284];
+        const sx=xs[pose]*this.coffinPush.width/1225,sy=ys[row]*this.coffinPush.height/1284;
+        const sw=(xs[pose+1]-xs[pose])*this.coffinPush.width/1225,sh=(ys[row+1]-ys[row])*this.coffinPush.height/1284;
+        ctx.drawImage(this.coffinPush,sx,sy,sw,sh,x-size/2,y-size*.94,size,size);
     },
     coffinLidSprite(ctx,e,size=92){
         if(!this.coffinLid)return;

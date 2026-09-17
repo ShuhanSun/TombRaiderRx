@@ -19,6 +19,14 @@ const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:
     Art.shovelItem=await loadImage('assets/entrenching-shovel.png');
     Art.remains=await loadImage('assets/tomb-remains.png');
     Art.coffinPush=await loadImage('assets/raider-coffin-push.png');
+    const pushSheet=createCanvas(640,640),pushCtx=pushSheet.getContext('2d');
+    pushCtx.fillStyle='#243234';pushCtx.fillRect(0,0,640,640);
+    for(const [row,dx,dy,label] of [[0,0,35,'DOWN'],[1,-35,0,'LEFT'],[2,35,0,'RIGHT'],[3,0,-35,'UP']])for(let pose=0;pose<4;pose++){
+        const x=80+pose*160,y=130+row*160;
+        Art.pushRaider(pushCtx,{x,y,pushDirection:0,pushingCoffin:{x:x+dx,y:y+dy,opened:true,lidProgress:pose/3}},x,y,115);
+        pushCtx.fillStyle='#e5d7b9';pushCtx.font='14px sans-serif';pushCtx.fillText(label+' '+pose,x-30,y+22);
+    }
+    fs.writeFileSync(path.join(output,'push-directions.png'),pushSheet.toBuffer('image/png'));
     Art.coffinLid=await loadImage('assets/coffin-lid.png');
     Art.trapEmitters=await loadImage('assets/trap-emitters.png');
     const atlas=await loadImage('assets/tomb-materials.png');

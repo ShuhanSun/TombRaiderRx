@@ -577,6 +577,21 @@ test('only the nearest coffin controls the push pose and the player always faces
  Game.p.x=350;Game.step(.1);assert.equal(Game.p.pushingCoffin,right);assert.equal(Game.p.pushDirection,1);
 });
 
+test('push renderer uses the visually correct atlas rows even when cached facing is stale',()=>{
+ const {Art,Game,calls}=setup();Art.coffinPush={width:1225,height:1284};
+ const c={x:300,y:300,opened:true,lidProgress:0};
+ for(const [x,y,row] of [[300,260,0],[340,300,2],[260,300,1],[300,340,3]]){
+  for(const progress of [0,.3,.6,1]){
+   c.lidProgress=progress;calls.length=0;
+   Art.pushRaider(Game.ctx,{x,y,pushingCoffin:c,pushDirection:0,direction:0},x,y,82);
+   const draw=calls.find(v=>v[0]==='drawImage');
+   assert.equal(draw[3],[0,320,640,944][row]);assert.equal(draw[2],[0,307,625,950][Math.min(3,Math.floor(progress*4))]);
+  }
+ }
+ calls.length=0;Art.pushRaider(Game.ctx,{x:300,y:300,pushingCoffin:c,pushDirection:1},300,300,82);
+ assert.equal(calls.find(v=>v[0]==='drawImage')[3],640);
+});
+
 test('coffins never block walking or forced movement',()=>{
  const {Game,Expedition,Input,MapSys}=setup();MapSys.t.fill(0);const c=Expedition.coffins[0];Game.ents=[Game.p,c];
  Game.p.x=c.x-45;Game.p.y=c.y;Input.x=1;Input.y=0;Input.active=true;
