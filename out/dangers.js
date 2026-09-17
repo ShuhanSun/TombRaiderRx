@@ -44,12 +44,25 @@ const TombDangers={
   this.clouds.push({x,y,color,dist,age:0,life:duration});if(this.clouds.length>12)this.clouds.shift();
  },
  coffinFX(c){
-  const effect=(Math.floor(c.x/50)+Math.floor(c.y/50)+Game.lvl)%4;
-  if(effect<2)this.addCloud(c.x,c.y,effect?'#111915':'#325d38',7);
-  else {this.stains.push({x:c.x,y:c.y,age:0,color:effect===2?'#640b17':'#3c6523'});}
+  this.stains.push({x:c.x,y:c.y,age:0,color:'#6f0915'});
+  for(let i=0;i<5;i++)this.bursts.push({x:c.x+(i-2)*6,y:c.y+8+i%2*4,radius:16+i*3,life:.28+i*.035,blood:true});
  },
  drawStains(ctx){
-  for(const s of this.stains){const r=Math.min(55,8+s.age*9);ctx.save();ctx.fillStyle=s.color+'cc';ctx.beginPath();ctx.ellipse(s.x,s.y+18,r,r*.4,Math.sin(s.x),0,Math.PI*2);ctx.fill();ctx.strokeStyle=s.color+'bb';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.bezierCurveTo(s.x-8,s.y+18,s.x+12,s.y+30,s.x+5,s.y+Math.min(65,s.age*12));ctx.stroke();ctx.restore();}
+  for(const s of this.stains){
+   const spread=1-Math.exp(-s.age*.38),r=9+47*spread;ctx.save();ctx.beginPath();
+   const tx=Math.floor(s.x/50),ty=Math.floor(s.y/50);
+   for(let y=ty-2;y<=ty+2;y++)for(let x=tx-2;x<=tx+2;x++)if(x>=0&&y>=0&&x<MapSys.w&&y<MapSys.h&&MapSys.t[y*MapSys.w+x]!==1)ctx.rect(x*50,y*50,50,50);
+   ctx.clip();
+   for(let i=0;i<7;i++){
+    const angle=i*2.4+s.x*.01,px=s.x+Math.cos(angle)*r*.6,py=s.y+19+Math.sin(angle)*r*.3+spread*14;
+    const pool=ctx.createRadialGradient(px,py,1,px,py,r*.65);pool.addColorStop(0,'#36040cee');pool.addColorStop(.68,'#810d1be8');pool.addColorStop(1,'#a51b2940');
+    ctx.fillStyle=pool;ctx.beginPath();ctx.ellipse(px,py,r*.65,r*.22,.06*Math.sin(angle),0,Math.PI*2);ctx.fill();
+   }
+   for(let i=0;i<3;i++){
+    ctx.strokeStyle=i===1?'#b51e2b':'#670714';ctx.lineWidth=3+i;ctx.beginPath();ctx.moveTo(s.x+(i-1)*9,s.y+5);ctx.bezierCurveTo(s.x+(i-1)*15,s.y+19,s.x+(i-1)*18,s.y+24,s.x+(i-1)*21,s.y+8+spread*54);ctx.stroke();
+   }
+   ctx.strokeStyle='#e261633d';ctx.lineWidth=.8;ctx.beginPath();ctx.ellipse(s.x-8,s.y+24,r*.45,r*.12,-.2,Math.PI,Math.PI*1.7);ctx.stroke();ctx.restore();
+  }
  },
  drawClouds(ctx,left,right,top,bottom){
   for(const c of this.clouds){const radius=Math.min(360,c.age*34),fade=Math.min(1,c.life/3),density=Math.min(.99,c.age*.38)*fade;
@@ -127,6 +140,6 @@ const TombDangers={
    }
    ctx.restore();
   }
-  for(const b of this.bursts){ctx.save();ctx.globalAlpha=b.life/.65;Art.glow(ctx,b.x,b.y,b.radius,'#ff6b2788');ctx.strokeStyle='#ffc369';ctx.lineWidth=8*b.life;ctx.beginPath();ctx.arc(b.x,b.y,b.radius*(1-b.life/.65),0,Math.PI*2);ctx.stroke();ctx.restore();}
+  for(const b of this.bursts){ctx.save();ctx.globalAlpha=Math.max(0,b.life/(b.blood?.42:.65));if(b.blood){ctx.fillStyle='#7b0817';ctx.beginPath();ctx.ellipse(b.x,b.y+(1-b.life/.42)*20,3+b.radius*.08,7,0,0,Math.PI*2);ctx.fill();}else{Art.glow(ctx,b.x,b.y,b.radius,'#ff6b2788');ctx.strokeStyle='#ffc369';ctx.lineWidth=8*b.life;ctx.beginPath();ctx.arc(b.x,b.y,b.radius*(1-b.life/.65),0,Math.PI*2);ctx.stroke();}ctx.restore();}
  }
 };

@@ -3,6 +3,27 @@ const vm=require('node:vm');
 const assert=require('node:assert/strict');
 const {setup}=require('./harness.cjs');
 
+test('coffin opening only releases red blood, never clouds or green liquid',()=>{
+ const {Game,TombDangers}=setup();
+ for(let i=0;i<12;i++)TombDangers.coffinFX({x:125+i*50,y:175});
+ assert.equal(TombDangers.clouds.length,0);
+ assert.equal(TombDangers.stains.length,12);
+ assert.ok(TombDangers.stains.every(s=>s.color==='#6f0915'));
+ assert.ok(TombDangers.bursts.every(b=>b.blood));
+ Game.load(2);assert.equal(TombDangers.stains.length,0);
+});
+
+test('room ambience is selective and decorative remains do not replace items or enemies',()=>{
+ const {Game,World}=setup();
+ for(let floor=1;floor<=10;floor++){
+  Game.load(floor);
+  const entry=World.rooms.find(r=>r.kind==='entry');assert.equal(entry.haze,false);assert.equal(entry.flicker,false);
+  assert.ok(World.rooms.some(r=>r.haze));assert.ok(World.rooms.some(r=>!r.haze));
+  assert.ok(Game.ents.some(e=>e.type==='tomb_remains'));
+  Game.render();
+ }
+});
+
 test('boot, language switches before and after play, and HiDPI sizing',()=>{
     const {Game,els}=setup();
     Game.toggleLang(); assert.equal(els['game-title'].innerText,'Tomb Raider');

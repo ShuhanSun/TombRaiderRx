@@ -559,10 +559,11 @@ class Player extends Entity {
     constructor(x,y){super(x,y,'player');this.hp=5;this.sight=CONFIG.BASE_SIGHT;this.inv=0;this.buffs={hoof:0,candle:0,jade:0};this.walkT=0;this.hasCompass=0;this.hasShovel=false;this.attackCooldown=0;this.attackT=0;this.attackAngle=0;this.stepPhase=0;this.direction=0;this.walkFrame=1;this.walkDistance=0;this.stepDistance=0;this.moving=false;this.inWater=MapSys.get(x,y)===TERRAIN.WATER;}
     attack(){
         if(!Game.running||Game.pause||!this.hasShovel||this.attackCooldown>0||this.rollTime>0)return false;
-        this.attackCooldown=.6;this.attackT=.28;
+        this.attackCooldown=.68;this.attackT=.48;
         const target=Game.ents.filter(e=>!e.dead&&e.type==='zombie'&&Math.hypot(e.x-this.x,e.y-this.y)<=78&&MapSys.lineClear(this.x,this.y,e.x,e.y)).sort((a,b)=>Math.hypot(a.x-this.x,a.y-this.y)-Math.hypot(b.x-this.x,b.y-this.y))[0];
         this.attackAngle=target?Math.atan2(target.y-this.y,target.x-this.x):[Math.PI/2,Math.PI,0,-Math.PI/2][this.direction];
         AudioSys.tone(220,'triangle',.1,.09,70);
+        const slash=new Effect(this.x+Math.cos(this.attackAngle)*42,this.y+Math.sin(this.attackAngle)*42,'slash');slash.angle=this.attackAngle;Game.spawn(slash);
         if(target&&TombDangers.hurt(target,1)){Game.spawn(new Effect(target.x,target.y,'dust'));AudioSys.playStomp();}
         return true;
     }
