@@ -3,7 +3,7 @@
  * Fixed-step simulation, exploration map, lifecycle-safe interactions.
  */
 
-const CONFIG = { TILE: 50, BASE_SIGHT: 300, ZOMBIE_SPD: 55, SPRINTER_SPD: 140, GREEN_SPD: 40 };
+const CONFIG = { TILE: 50, BASE_SIGHT: 300, ZOMBIE_SPD: 55, SPRINTER_SPD: 140, GREEN_SPD: 40, BREATH_MAX: 30 };
 const TERRAIN = { FLOOR: 0, WALL: 1, WATER: 2 };
 
 const LEVEL_NAMES_CN = ["汉阙长陵", "千纹机关廊", "青铜兽影厅", "巨鼎炼魂室", "石骨迷宫", "荧光棺河", "九字封印井", "暗影葬主殿", "帝王沉眠室", "永劫天陨塔"];
@@ -315,7 +315,7 @@ class Coffin extends Entity {
     interact(dt, p) {
         if(this.opened||this.hidden||this.rising||this.locked) return;
         if(Math.hypot(this.x-p.x, this.y-p.y) < 45) {
-            const angle=Math.atan2(this.y-p.y,this.x-p.x);p.direction=Math.abs(Math.cos(angle))>Math.abs(Math.sin(angle))?(Math.cos(angle)<0?1:2):(Math.sin(angle)<0?3:0);
+            const angle=Math.atan2(this.y-p.y,this.x-p.x);p.direction=Math.abs(Math.cos(angle))>Math.abs(Math.sin(angle))?(Math.cos(angle)<0?1:2):(Math.sin(angle)<0?3:0);p.pushDirection=p.direction;
             p.pushingCoffin=this;p.pushUntil=Game.elapsed+.12;
             this.interactTimer += dt;
             if(this.interactTimer > 0.6) {
@@ -329,7 +329,7 @@ class Coffin extends Entity {
         if(this.opened||this.hidden||this.rising||this.locked) return;
         const dx=this.x-(p?.x??this.x-1),dy=this.y-(p?.y??this.y),d=Math.hypot(dx,dy)||1;
         this.lidDirX=dx/d;this.lidDirY=dy/d;this.lidProgress=0;
-        if(p){const angle=Math.atan2(this.y-p.y,this.x-p.x);p.direction=Math.abs(Math.cos(angle))>Math.abs(Math.sin(angle))?(Math.cos(angle)<0?1:2):(Math.sin(angle)<0?3:0);p.pushingCoffin=this;p.pushUntil=Game.elapsed+.72;}
+        if(p){const angle=Math.atan2(this.y-p.y,this.x-p.x);p.direction=Math.abs(Math.cos(angle))>Math.abs(Math.sin(angle))?(Math.cos(angle)<0?1:2):(Math.sin(angle)<0?3:0);p.pushDirection=p.direction;p.pushingCoffin=this;p.pushUntil=Game.elapsed+.72;}
         this.opened = 1;TombDangers.coffinFX(this); this.shake = 0.5; this.revealTimer = 0.6; AudioSys.playOpen();
     }
     reveal() {
@@ -407,7 +407,7 @@ class Zombie extends Entity {
         this.zType = type; // 0: Blue, 1: Red (Sprinter), 2: Green (Spitter)
         this.species={...SPECIES[Game.lvl-1],windup:type===SPECIES[Game.lvl-1].type?SPECIES[Game.lvl-1].windup:type===2?.6:.38};this.zType=type;this.spd=this.species.speed;
         this.dir = Math.random()*6.28; this.changeDirT = 0;
-        this.attackCD=0;this.attackState='';this.attackClock=0;this.attackAim=0;this.hopPhase=Math.random();this.hopHeight=0;this.landT=0;this.moving=false;
+        this.attackCD=0;this.attackState='';this.attackClock=0;this.attackAim=0;this.hopPhase=Math.random();this.hopHeight=0;this.landT=0;this.moving=false;this.homeCoffin=null;this.homeX=x;this.homeY=y;this.stealthLostT=0;this.returningToCoffin=false;this.sink=0;
     }
     update(dt,p) {
         const dx=p.x-this.x,dy=p.y-this.y,d=Math.hypot(dx,dy),repel=p.buffs.hoof>0;
@@ -415,6 +415,7 @@ class Zombie extends Entity {
         this.landT=Math.max(0,this.landT-dt);this.moving=false;
         const concealed=p.holdingBreath;
         if((repel||concealed)&&this.attackState) {this.attackState='';this.attackClock=0;this.attackCD=.6;}
+        if(!concealed){this.stealthLostT=0;this.returningToCoffin=false;this.sink=0;}
         if(!concealed&&this.attackState) {
             this.hopHeight=0;this.attackClock-=dt;
             if(this.attackClock<=0) {
@@ -442,9 +443,12 @@ class Zombie extends Entity {
         }
         let vx=0,vy=0;
         if(concealed) {
-            this.changeDirT-=dt;
-            if(this.changeDirT<=0){this.changeDirT=1.2+Math.random()*1.8;const away=Math.atan2(-dy,-dx);this.dir=away+(Math.random()-.5)*Math.PI*1.4;}
-            vx=Math.cos(this.dir);vy=Math.sin(this.dir);
+            this.stealthLostT+=dt;
+            if(this.stealthLostT<.85){this.hopHeight=0;this.hopPhase=0;return;}
+            const hx=this.homeCoffin?.x??this.homeX,hy=this.homeCoffin?this.homeCoffin.y+18:this.homeY,hdx=hx-this.x,hdy=hy-this.y,homeDist=Math.hypot(hdx,hdy);
+            this.returningToCoffin=true;
+            if(homeDist<25){this.sink=Math.min(1,this.sink+dt/.8);this.hopHeight=0;this.moving=false;if(this.sink>=1)this.dead=1;return;}
+            vx=hdx/(homeDist||1);vy=hdy/(homeDist||1);
         }
         else if(repel&&d<350) {vx=-dx/(d||1);vy=-dy/(d||1);}
         else if(this.zType===1) {
@@ -460,7 +464,7 @@ class Zombie extends Entity {
         this.hopPhase=(this.hopPhase+dt/period)%1;
         const airborne=this.hopPhase<.68;
         this.hopHeight=airborne?Math.sin(this.hopPhase/.68*Math.PI)*(this.zType===1?17:13):0;
-        const speed=this.spd*(repel?1.5:concealed?.28:1)*(MapSys.get(this.x,this.y)===TERRAIN.WATER&&!this.species.aquatic?.45:1);
+        const speed=this.spd*(repel?1.5:concealed?.22:1)*(MapSys.get(this.x,this.y)===TERRAIN.WATER&&!this.species.aquatic?.45:1);
         const distance=airborne?speed*dt/.68:0,oldX=this.x,oldY=this.y;
         const nx=this.x+vx*distance,ny=this.y+vy*distance;
         if(MapSys.canOccupy(nx,this.y,9))this.x=nx;else if(this.zType===1)this.dir=Math.PI-this.dir;
@@ -565,7 +569,7 @@ class Projectile extends Entity {
 }
 
 class Player extends Entity {
-    constructor(x,y){super(x,y,'player');this.hp=5;this.sight=CONFIG.BASE_SIGHT;this.inv=0;this.buffs={hoof:0,candle:0,jade:0};this.walkT=0;this.hasCompass=0;this.hasShovel=false;this.attackCooldown=0;this.attackT=0;this.attackAngle=0;this.holdingBreath=false;this.breathRemaining=60;this.breathExhausted=false;this.stepPhase=0;this.direction=0;this.walkFrame=1;this.walkDistance=0;this.stepDistance=0;this.moving=false;this.inWater=MapSys.get(x,y)===TERRAIN.WATER;}
+    constructor(x,y){super(x,y,'player');this.hp=5;this.sight=CONFIG.BASE_SIGHT;this.inv=0;this.buffs={hoof:0,candle:0,jade:0};this.walkT=0;this.hasCompass=0;this.hasShovel=false;this.attackCooldown=0;this.attackT=0;this.attackAngle=0;this.holdingBreath=false;this.breathRemaining=CONFIG.BREATH_MAX;this.breathExhausted=false;this.stepPhase=0;this.direction=0;this.walkFrame=1;this.walkDistance=0;this.stepDistance=0;this.moving=false;this.inWater=MapSys.get(x,y)===TERRAIN.WATER;}
     nearestTarget(){return Game.ents.filter(e=>!e.dead&&e.type==='zombie'&&Math.hypot(e.x-this.x,e.y-this.y)<=78&&MapSys.lineClear(this.x,this.y,e.x,e.y)).sort((a,b)=>Math.hypot(a.x-this.x,a.y-this.y)-Math.hypot(b.x-this.x,b.y-this.y))[0];}
     attack(target=this.nearestTarget()){
         if(!Game.running||Game.pause||!this.hasShovel||this.holdingBreath||this.attackCooldown>0||this.rollTime>0||!target)return false;
@@ -585,7 +589,7 @@ class Player extends Entity {
     stopHoldingBreath(exhausted=false){
         const wasHolding=this.holdingBreath;
         this.holdingBreath=false;this.breathExhausted=exhausted;
-        if(!exhausted)this.breathRemaining=60;
+        if(!exhausted)this.breathRemaining=CONFIG.BREATH_MAX;
         document.getElementById('breath-btn').classList.remove('pressed');
         if(wasHolding)Game.msg(curLang==='CN'?(exhausted?'气息耗尽 · 守墓尸重新索敌':'恢复呼吸 · 守墓尸重新索敌'):(exhausted?'Breath exhausted · guardians can detect you':'Breathing resumed · guardians can detect you'),'#e7c58f');
         Game.refreshBuffs();
@@ -611,6 +615,7 @@ class Player extends Entity {
         const oldX=this.x, oldY=this.y;
         let s=160*ExitGate.speed();
         if(Input.sprint) s *= 1.5; // Sprint!
+        if(this.holdingBreath)s*=.38;
         if(MapSys.get(this.x,this.y)===TERRAIN.WATER) s*=0.5;
 
         if(Input.active){
@@ -634,6 +639,7 @@ this.moving=moved>.01;
             const stride=water?26:56;
             if(!enteredWater&&this.stepDistance>=stride) {this.stepDistance%=stride;AudioSys.playStep(water,Input.sprint);}
         } else {this.walkFrame=1;this.stepPhase=0;this.stepDistance=0;}
+        if(this.pushingCoffin&&this.pushUntil>Game.elapsed){const angle=Math.atan2(this.pushingCoffin.y-this.y,this.pushingCoffin.x-this.x);this.direction=Math.abs(Math.cos(angle))>Math.abs(Math.sin(angle))?(Math.cos(angle)<0?1:2):(Math.sin(angle)<0?3:0);this.pushDirection=this.direction;}
 
     }
     hit(){
@@ -726,7 +732,7 @@ const Game = {
         const cn=curLang==='CN';
         const labels={
             'guide-move':cn?'循光探路':'EXPLORE',
-            'guide-move-desc':cn?'拖动移动，按住疾行；危险时按住屏气，最多 60 秒。':'Drag to move, hold sprint, and hold your breath for up to 60 seconds near danger.',
+            'guide-move-desc':cn?'拖动移动，按住疾行；危险时可屏气潜行，最多 30 秒。':'Drag to move, hold sprint, or sneak while holding your breath for up to 30 seconds.',
             'guide-find':cn?'驻足开棺':'DISCOVER',
             'guide-find-desc':cn?'驻足开棺寻找钥匙与补给，留意通往主墓室的路线。':'Stay beside a coffin to open it. Find the bronze key on each floor.',
             'guide-exit':cn?'寻龙脱身':'ESCAPE',
@@ -840,8 +846,8 @@ const Game = {
         this.explored=new Uint8Array(MapSys.w*MapSys.h);
         this.p=new Player((s.x+s.w/2)*CONFIG.TILE, (s.y+s.h/2)*CONFIG.TILE);
         if(this.saved) { Object.assign(this.p,this.saved); }
-        this.tutorialDistance=0;this.tutorialActive=l===1;
-        document.getElementById('move-tutorial').style.display=l===1?'block':'none';
+        this.tutorialDistance=0;this.tutorialActive=l===1;this.tutorialDelay=l===1?3.2:0;
+        document.getElementById('move-tutorial').style.display='none';
         document.getElementById('tutorial-copy').textContent=curLang==='CN'?'按住空白处拖动 → 人物移动；松手停止。电脑使用 WASD / 方向键。试着走几步！':'Hold and drag the play area to move; release to stop. On desktop use WASD / arrows. Try a few steps!';
         this.p.inv=2; // Safe arrival on every floor.
         this.ents.push(this.p);
@@ -940,6 +946,7 @@ const Game = {
     },
     step: function(dt) {
         this.elapsed+=dt;
+        if(this.tutorialActive&&this.tutorialDelay>0){this.tutorialDelay=Math.max(0,this.tutorialDelay-dt);if(this.tutorialDelay===0)document.getElementById('move-tutorial').style.display='block';}
         this.shake=this.shake>0.1?this.shake*Math.pow(0.9,dt*60):0;
         this.ents=this.ents.filter(e=>!e.dead);
         // Player first; entities spawned during a step start updating on the next step.
@@ -949,8 +956,10 @@ const Game = {
             if(!this.running||this.pause) break;
             if(e===this.p||e.dead) continue;
             if(e.update) e.update(dt,this.p);
-            if(e.type==='coffin') e.interact(dt,this.p);
         }
+        const coffins=this.ents.filter(e=>e.type==='coffin'&&!e.dead),nearest=coffins.filter(e=>!e.opened&&!e.hidden&&!e.rising&&!e.locked&&Math.hypot(e.x-this.p.x,e.y-this.p.y)<45).sort((a,b)=>Math.hypot(a.x-this.p.x,a.y-this.p.y)-Math.hypot(b.x-this.p.x,b.y-this.p.y))[0];
+        for(const c of coffins)if(c!==nearest&&!c.opened)c.interactTimer=0;
+        nearest?.interact(dt,this.p);
         this.texts=this.texts.filter(t=>t.life>0);
         this.texts.forEach(t=>t.update(dt));
         if(!this.running) return;
@@ -964,12 +973,12 @@ const Game = {
         const breath=document.getElementById('breath-btn'),count=document.getElementById('breath-count'),status=document.getElementById('breath-status');
         count.textContent=String(Math.ceil(this.p.breathRemaining));breath.setAttribute('aria-pressed',String(this.p.holdingBreath));
         breath.setAttribute('aria-label',curLang==='CN'?`按住屏气，剩余 ${Math.ceil(this.p.breathRemaining)} 秒`:`Hold breath, ${Math.ceil(this.p.breathRemaining)} seconds remaining`);
-        const seconds=Math.ceil(this.p.breathRemaining),ratio=Math.max(0,this.p.breathRemaining/60);
+        const seconds=Math.ceil(this.p.breathRemaining),ratio=Math.max(0,this.p.breathRemaining/CONFIG.BREATH_MAX);
         status.classList.toggle('active',this.p.holdingBreath);status.classList.toggle('low',this.p.holdingBreath&&seconds<=10);status.classList.toggle('exhausted',this.p.breathExhausted);
         status.style.setProperty?.('--breath-angle',`${ratio*360}deg`);
         document.getElementById('breath-status-time').textContent=`${seconds}s`;
         document.getElementById('breath-status-title').textContent=curLang==='CN'?(this.p.breathExhausted?'气息耗尽':'屏气隐匿中'):(this.p.breathExhausted?'OUT OF BREATH':'HOLDING BREATH');
-        document.getElementById('breath-status-copy').textContent=curLang==='CN'?(this.p.breathExhausted?'松开按钮后可再次屏气':'僵尸无法发现或攻击你 · 松开恢复呼吸'):(this.p.breathExhausted?'Release to recover':'Guardians cannot detect or attack · release to breathe');
+        document.getElementById('breath-status-copy').textContent=curLang==='CN'?(this.p.breathExhausted?'松开按钮后可再次屏气':'缓慢潜行 · 僵尸将返回原棺 · 松开恢复呼吸'):(this.p.breathExhausted?'Release to recover':'Sneak slowly · guardians return to their coffins');
         let html='';
         if(this.p.buffs.hoof>0) html+=`<div class="buff buff-hoof">🐴 ${Math.ceil(this.p.buffs.hoof)}s</div>`;
         if(this.p.buffs.jade>0) html+=`<div class="buff buff-jade">🥋 ${curLang==='CN'?'护身 ×1':'Shield ×1'}</div>`;

@@ -309,10 +309,11 @@ button { touch-action: manipulation; -webkit-user-select:none; user-select:none;
 #pause-btn {background-position:0 100%;}
 #sound-btn {background-position:100% 100%;}
 #sound-btn.muted {opacity:.45;}
-#move-tutorial {display:none;position:absolute;left:50%;top:29%;transform:translateX(-50%);width:min(310px,78vw);padding:14px 20px;border:1px solid #bd9c5c;border-radius:14px;background:#15140fee;color:#ffe0a1;text-align:center;pointer-events:none;z-index:25;}
+#move-tutorial {display:none;position:absolute;right:max(24px,env(safe-area-inset-right));bottom:max(28px,env(safe-area-inset-bottom));width:min(290px,38vw);padding:12px 16px;border:1px solid #bd9c5c;border-radius:14px;background:#15140fee;color:#ffe0a1;text-align:center;pointer-events:none;z-index:25;box-shadow:0 8px 26px #000a;}
 #move-tutorial p {font-size:15px;line-height:1.6;margin:8px 0 0;}
 .drag-demo {height:40px;position:relative;width:110px;margin:auto;}
 .drag-demo i {position:absolute;left:5px;top:6px;width:24px;height:24px;border:3px solid #ffda8d;border-radius:50%;animation:drag-lesson 2.2s infinite;}
 .drag-demo b {position:absolute;right:10px;top:0;font-size:30px;}
 @keyframes drag-lesson {0%,15%{transform:translateX(0);opacity:.3}35%{opacity:1}75%{transform:translateX(65px);opacity:1}100%{transform:translateX(65px);opacity:0}}
+@media (pointer:coarse),(max-width:640px){#move-tutorial{right:max(18px,env(safe-area-inset-right));bottom:max(214px,calc(env(safe-area-inset-bottom) + 202px));width:min(245px,62vw);padding:10px 14px}#move-tutorial p{font-size:13px;margin-top:5px}.drag-demo{height:32px;transform:scale(.82)}}
 @media(prefers-reduced-motion:reduce){.drag-demo i{animation:none;}}

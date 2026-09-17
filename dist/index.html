@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>寻龙诀 · 十层古墓</title>
-    <link rel="stylesheet" href="styles.css?v=19">
+    <link rel="stylesheet" href="styles.css?v=20">
 
 </head>
 <body>
@@ -26,7 +26,7 @@
     <div id="buff-bar"></div>
     <div id="msg-box" role="status" aria-live="polite"></div>
     <div id="breath-status" role="status" aria-live="polite">
-        <div class="breath-status-ring"><strong id="breath-status-time">60s</strong></div>
+        <div class="breath-status-ring"><strong id="breath-status-time">30s</strong></div>
         <div><b id="breath-status-title">屏气隐匿中</b><span id="breath-status-copy">僵尸无法发现或攻击你 · 松开恢复呼吸</span></div>
     </div>
     <div id="level-title-box"><div id="level-title-text"></div><p id="level-note"></p></div>
@@ -34,7 +34,7 @@
     <div id="move-tutorial" role="status"><div class="drag-demo"><i></i><b>→</b></div><p id="tutorial-copy"></p></div>
     <!-- Controls -->
     <div id="joystick-zone"><div id="joystick-knob"></div></div>
-    <button id="breath-btn" aria-label="按住屏气"><span id="breath-count">60</span></button>
+    <button id="breath-btn" aria-label="按住屏气"><span id="breath-count">30</span></button>
     <button id="sprint-btn" aria-label="按住冲刺"></button>
 </div>
 
@@ -83,7 +83,7 @@
         </p>
     </div>
 
-    <div class="guide-grid"><div><span>01</span><strong id="guide-move">循光探路</strong><p id="guide-move-desc">拖动移动，按住疾行；危险时按住屏气，最多 60 秒。</p></div><div><span>02</span><strong id="guide-find">驻足开棺</strong><p id="guide-find-desc">靠近石棺停留片刻，寻找本层唯一的机关钥匙。</p></div><div><span>03</span><strong id="guide-exit">寻龙脱身</strong><p id="guide-exit-desc">取得钥匙并破印后，驻足机械开关拉闸，25秒内进入盗洞。</p></div></div>
+    <div class="guide-grid"><div><span>01</span><strong id="guide-move">循光探路</strong><p id="guide-move-desc">拖动移动，按住疾行；危险时可屏气潜行，最多 30 秒。</p></div><div><span>02</span><strong id="guide-find">驻足开棺</strong><p id="guide-find-desc">靠近石棺停留片刻，寻找本层唯一的机关钥匙。</p></div><div><span>03</span><strong id="guide-exit">寻龙脱身</strong><p id="guide-exit-desc">取得钥匙并破印后，驻足机械开关拉闸，25秒内进入盗洞。</p></div></div>
     <button class="btn start-cta" style="margin-top:30px" onclick="Game.init()" id="start-btn-text">点灯摸金</button>
 
     <div class="audio-check"><button id="sound-test-btn" class="btn secondary" onclick="Sound.test()">开启 / 试音</button><p id="audio-status" role="status"></p></div>
@@ -98,10 +98,10 @@
 <script src="audio.js?v=15"></script>
 <script src="escape.js?v=15"></script>
 <script src="dangers.js?v=17"></script>
-<script src="expedition.js?v=19"></script>
+<script src="expedition.js?v=20"></script>
 <script src="world.js?v=19"></script>
-<script src="art.js?v=19"></script>
+<script src="art.js?v=20"></script>
 <script src="transitions.js?v=15"></script>
-<script src="game.js?v=19"></script>
+<script src="game.js?v=20"></script>
 </body>
 </html>

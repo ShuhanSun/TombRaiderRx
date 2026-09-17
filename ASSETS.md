@@ -47,3 +47,5 @@ The same tool produced `assets/raider-coffin-push.png`, a four-direction four-st
 `assets/control-buttons.png`: generated with the built-in image tool. Prompt: a 2×2 sheet of aged bronze Chinese tomb game buttons, shovel attack, running figure, pause bars, speaker, ivory symbols, black background, no text. The current runtime uses its sprint, pause and sound controls; the former attack cell is retained but unused.
 
 `assets/breath-button.svg`: a code-native functional control icon added for the hold-breath mechanic. It uses the game's bronze coin treatment with a pale lung-and-breath symbol and contains no label text.
+
+`assets/raider-hold-breath.png`: built-in image generation, 4×4 character sheet matching the explorer. Rows show front, left, right and back directions; every frame uses a crouched, mouth-covered stealth pose with a low lantern. The runtime removes the neutral checkerboard color key and darkens the character while breath is held.

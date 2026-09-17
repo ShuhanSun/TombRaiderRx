@@ -12,6 +12,7 @@ const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:
     Art.stone=await loadImage('assets/tomb-stone-realistic.png');
     Art.sprites=await loadImage('assets/tomb-sprites.png');
     Art.walker=await loadImage('assets/raider-walk.png');Art.prepareWalker(()=>createCanvas(1,1));
+    Art.breathRaider=await loadImage('assets/raider-hold-breath.png');Art.prepareBreathRaider(()=>createCanvas(1,1));
     Art.zombies=await loadImage('assets/jiangshi-motion.png');Art.traps=await loadImage('assets/trap-motion.png');
     Art.mechanisms=await loadImage('assets/tomb-mechanisms.png');
     Art.shovelAttack=await loadImage('assets/raider-shovel-attack.png');
@@ -38,6 +39,9 @@ const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:
     const sheet=createCanvas(900,700),sc=sheet.getContext('2d');sc.fillStyle='#243234';sc.fillRect(0,0,900,700);
     for(let row=0;row<4;row++)for(let col=0;col<4;col++){Art.raider(sc,{direction:row,walkFrame:col,moving:true},65+col*95,100+row*145,105);Art.frame(sc,Art.zombies,row*4+col,480+col*105,100+row*145,105,105,true);}
     fs.writeFileSync(path.join(output,'motion.png'),sheet.toBuffer('image/png'));
+    const breathing=createCanvas(760,440),bc=breathing.getContext('2d');bc.fillStyle='#243234';bc.fillRect(0,0,760,440);
+    for(let row=0;row<4;row++)for(let col=0;col<4;col++){bc.save();bc.filter='brightness(.52) saturate(.42) contrast(.92)';Art.breathRaiderSprite(bc,{direction:row,walkFrame:col,moving:true},70+col*180,100+row*110,105);bc.restore();}
+    fs.writeFileSync(path.join(output,'breath-motion.png'),breathing.toBuffer('image/png'));
     const pc=createCanvas(640,320);els['passage-scene'].width=640;els['passage-scene'].height=320;els['passage-scene'].getContext=()=>pc.getContext('2d');
     for(const next of [1,3,5,6,8,9,10]){Passage.open(next);Passage.time=2;Passage.draw();fs.writeFileSync(path.join(output,'passage-'+next+'.png'),pc.toBuffer('image/png'));}
     Game.load(4);const hazard=World.hazards[0];Game.p.x=hazard.x;Game.p.y=hazard.y+80;Game.elapsed=4.7;Game.render();fs.writeFileSync(path.join(output,'corridor.png'),Game.cvs.toBuffer('image/png'));

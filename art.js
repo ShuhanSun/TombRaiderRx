@@ -9,8 +9,8 @@ const Art = {
     ],
     load() {
         const load=src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src;});
-        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png'),load('assets/tomb-mechanisms.png'),load('assets/tomb-stone-realistic.png'),load('assets/tomb-expedition.png'),load('assets/tomb-coffin-details.png'),load('assets/raider-shovel-attack.png'),load('assets/entrenching-shovel.png'),load('assets/tomb-remains.png'),load('assets/raider-coffin-push.png'),load('assets/coffin-lid.png'),load('assets/trap-emitters.png')]).then(([sprites,materials,walker,zombies,traps,mechanisms,stone,expedition,coffinDetails,shovelAttack,shovelItem,remains,coffinPush,coffinLid,trapEmitters])=>{
-            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;this.mechanisms=mechanisms;this.stone=stone;this.expedition=expedition;this.coffinDetails=coffinDetails;this.shovelAttack=shovelAttack;this.shovelItem=shovelItem;this.remains=remains;this.coffinPush=coffinPush;this.coffinLid=coffinLid;this.trapEmitters=trapEmitters;
+        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png'),load('assets/tomb-mechanisms.png'),load('assets/tomb-stone-realistic.png'),load('assets/tomb-expedition.png'),load('assets/tomb-coffin-details.png'),load('assets/raider-shovel-attack.png'),load('assets/entrenching-shovel.png'),load('assets/tomb-remains.png'),load('assets/raider-coffin-push.png'),load('assets/coffin-lid.png'),load('assets/trap-emitters.png'),load('assets/raider-hold-breath.png')]).then(([sprites,materials,walker,zombies,traps,mechanisms,stone,expedition,coffinDetails,shovelAttack,shovelItem,remains,coffinPush,coffinLid,trapEmitters,breathRaider])=>{
+            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;this.mechanisms=mechanisms;this.stone=stone;this.expedition=expedition;this.coffinDetails=coffinDetails;this.shovelAttack=shovelAttack;this.shovelItem=shovelItem;this.remains=remains;this.coffinPush=coffinPush;this.coffinLid=coffinLid;this.trapEmitters=trapEmitters;this.breathRaider=breathRaider;
             const xs=[0,313,626,940,1254],ys=[0,302,618,918,1254];
             for(let i=0;i<16;i++) {
                 const c=document.createElement('canvas');c.width=c.height=400;
@@ -18,7 +18,7 @@ const Art = {
                 c.getContext('2d').drawImage(materials,xs[x]+2,ys[y]+2,xs[x+1]-xs[x]-4,ys[y+1]-ys[y]-4,0,0,400,400);
                 this.tiles.push(c);
             }
-            this.prepareWalker();this.ready=true;
+            this.prepareWalker();this.prepareBreathRaider();this.ready=true;
         }).catch(()=>{this.failed=true;});
     },
     coffinDetail(ctx,index,x,y,size){
@@ -40,7 +40,7 @@ const Art = {
     pushRaider(ctx,e,x,y,size){
         if(!this.coffinPush){this.raider(ctx,e,x,y,size);return;}
         const c=e.pushingCoffin,progress=c?.opened?Math.min(1,c.lidProgress):Math.min(.72,(c?.interactTimer||0)/.6*.72);
-        const angle=Math.atan2((c?.y??y)-e.y,(c?.x??x)-e.x),direction=Math.abs(Math.cos(angle))>Math.abs(Math.sin(angle))?(Math.cos(angle)<0?1:2):(Math.sin(angle)<0?3:0);
+        const angle=Math.atan2((c?.y??y)-e.y,(c?.x??x)-e.x),direction=e.pushDirection??(Math.abs(Math.cos(angle))>Math.abs(Math.sin(angle))?(Math.cos(angle)<0?1:2):(Math.sin(angle)<0?3:0));
         const pose=Math.min(3,Math.floor(progress*4)),sw=this.coffinPush.width/4,sh=this.coffinPush.height/4;
         ctx.drawImage(this.coffinPush,pose*sw,direction*sh,sw,sh,x-size/2,y-size*.94,size,size);
     },
@@ -75,15 +75,21 @@ const Art = {
         ctx.drawImage(this.stone,(wall?half:0)+(flipX?cols-1-tx:tx)*half/cols,(flipY?rows-1-ty:ty)*this.stone.height/rows,half/cols,this.stone.height/rows,0,0,dw+.2,dh+.2);ctx.restore();
     },
     prepareWalker(canvasFactory=()=>document.createElement('canvas')) {
-        const c=canvasFactory();c.width=this.walker.width;c.height=this.walker.height;
-        const ctx=c.getContext('2d');ctx.drawImage(this.walker,0,0);
+        this.walker=this.keyedCharacter(this.walker,canvasFactory);
+    },
+    prepareBreathRaider(canvasFactory=()=>document.createElement('canvas')) {
+        this.breathRaider=this.keyedCharacter(this.breathRaider,canvasFactory);
+    },
+    keyedCharacter(atlas,canvasFactory=()=>document.createElement('canvas')) {
+        const c=canvasFactory();c.width=atlas.width;c.height=atlas.height;
+        const ctx=c.getContext('2d');ctx.drawImage(atlas,0,0);
         const frame=ctx.getImageData(0,0,c.width,c.height),d=frame.data;
         // This atlas uses neutral grey/white as a color key. Brown clothing is retained.
         for(let i=0;i<d.length;i+=4) {
             const lo=Math.min(d[i],d[i+1],d[i+2]),hi=Math.max(d[i],d[i+1],d[i+2]);
             if(lo>145&&hi-lo<19)d[i+3]=0;
         }
-        ctx.putImageData(frame,0,0);this.walker=c;
+        ctx.putImageData(frame,0,0);return c;
     },
     frame(ctx,atlas,index,x,y,w,h=w,feet=false) {
         if(!atlas)return;
@@ -106,6 +112,11 @@ const Art = {
         const mirror=front&&e.moving&&e.walkFrame>=2?-1:1;
         ctx.scale(mirror*(passing?.7:1),passing?.92:1);
         this.frame(ctx,this.walker,e.direction*4+(front?0:e.moving?e.walkFrame:3),0,y-split,size,size,true);ctx.restore();
+    },
+    breathRaiderSprite(ctx,e,x,y,size) {
+        if(!this.breathRaider){this.raider(ctx,e,x,y,size);return;}
+        const sw=this.breathRaider.width/4,sh=this.breathRaider.height/4,frame=e.moving?e.walkFrame%4:0;
+        ctx.drawImage(this.breathRaider,frame*sw,e.direction*sh,sw,sh,x-size/2,y-size*.88,size,size);
     },
 
     mechanism(ctx,index,x,y,size) {
@@ -308,12 +319,12 @@ const Scene = {
                 if(e.buffs.jade>0||e.buffs.hoof>0) {ctx.strokeStyle=e.buffs.jade>0?'#b8f0d2':'#d8b077';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(e.x,e.y,25,12,0,0,Math.PI*2);ctx.stroke();}
                 ctx.save();if(e.inv>0)ctx.globalAlpha=.6+.4*Math.sin(time*25)**2;
                 const bob=e.moving?-Math.abs(Math.sin(e.stepPhase))*1.8:0;
-                if(e.rollTime>0){ctx.translate(e.x,e.y-20);ctx.rotate((.65-e.rollTime)/.65*Math.PI*2);Art.raider(ctx,e,0,20,74);}else if(e.pushingCoffin)Art.pushRaider(ctx,e,e.x,e.y,82);else if(e.hasShovel)Art.shovelRaider(ctx,e,e.x,e.y+bob,84);else Art.raider(ctx,e,e.x,e.y+bob,74);ctx.restore();
+                if(e.holdingBreath){ctx.filter='brightness(.52) saturate(.42) contrast(.92)';Art.breathRaiderSprite(ctx,e,e.x,e.y+bob+5,82);}else if(e.rollTime>0){ctx.translate(e.x,e.y-20);ctx.rotate((.65-e.rollTime)/.65*Math.PI*2);Art.raider(ctx,e,0,20,74);}else if(e.pushingCoffin)Art.pushRaider(ctx,e,e.x,e.y,82);else if(e.hasShovel)Art.shovelRaider(ctx,e,e.x,e.y+bob,84);else Art.raider(ctx,e,e.x,e.y+bob,74);ctx.restore();
                 if(e.hasShovel&&e.attackT>0){const progress=1-e.attackT/.48;ctx.save();ctx.translate(e.x,e.y-18);ctx.rotate(e.attackAngle);ctx.globalAlpha=Math.sin(progress*Math.PI)*.8;for(let i=0;i<3;i++){ctx.strokeStyle=i===0?'#f5dfb8':'#aab6ac';ctx.lineWidth=5-i*1.4;ctx.beginPath();ctx.arc(0,0,47+i*5,-1.05+progress*.7,.25+progress*.7);ctx.stroke();}ctx.restore();}
             } else {
                 const pose=e.attackState==='windup'?2:e.attackState==='strike'?3:lift>2?1:0;
                 const lunge=e.attackState==='strike'?Math.sin((1-e.attackClock/.24)*Math.PI)*11:0;
-                ctx.save();ctx.translate(e.x+Math.cos(e.attackAim)*lunge,e.y-lift+Math.sin(e.attackAim)*lunge);
+                ctx.save();ctx.globalAlpha=1-(e.sink||0);ctx.translate(e.x+Math.cos(e.attackAim)*lunge,e.y-lift+Math.sin(e.attackAim)*lunge+(e.sink||0)*22);ctx.scale(1,1-(e.sink||0)*.25);
                 if(e.x>game.p.x)ctx.scale(-1,1);
                 if(e.landT>0)ctx.scale(1.06,.94);
                 ctx.filter=e.species.filter;Art.frame(ctx,Art.zombies,e.zType*4+pose,0,0,e.species.size,e.species.size,true);ctx.restore();

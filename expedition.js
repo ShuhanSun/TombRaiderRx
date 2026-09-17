@@ -54,9 +54,10 @@ const Expedition={
   }
   this.buildWalls();TombDangers.setup();
  },
- spawnEnemy(kind,x,y){
+ spawnEnemy(kind,x,y,homeCoffin=null){
   if(kind==='zombie'||kind==='crawler'){
    const z=new Zombie(x,y,kind==='crawler'?0:SPECIES[Game.lvl-1].type);
+   z.homeCoffin=homeCoffin||this.coffins?.slice().sort((a,b)=>Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y))[0]||null;z.homeX=z.homeCoffin?.x??x;z.homeY=z.homeCoffin?z.homeCoffin.y+18:y;
    if(kind==='crawler'){z.crawler=true;z.spd=44+Game.lvl*2;z.species={...z.species,name:'伏地爬尸',en:'Crawling corpse',windup:.65,hop:2,size:68};}
    Game.spawn(z);
   }else Game.spawn(new TombCreature(x,y,kind));
@@ -66,7 +67,7 @@ const Expedition={
   if(c.content==='key'){Game.p.hasKey=true;Game.msg(curLang==='CN'?'青铜机关钥匙 · 可开启盗洞机关':'Bronze key · exit crank unlocked','#eac879');Game.updateHUD();return true;}
   if(c.content!=='cache')return false;
   for(const p of [c.payload,...c.extra]){
-   if(p.enemy)this.spawnEnemy(p.enemy,c.x,c.y+35);
+   if(p.enemy)this.spawnEnemy(p.enemy,c.x,c.y+35,c);
    if(p.loot)p.loot.forEach((code,i)=>{const item=new GroundItem(c.x+(i?35:-35),c.y+30,code);Game.spawn(item);});
   }
   Game.addText(c.x,c.y,c.payload.enemy?(curLang==='CN'?'棺中有异动！':'Something stirs!'):(curLang==='CN'?'取出随葬供物':'Burial supplies'),'#d2b38b');return true;

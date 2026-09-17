@@ -128,22 +128,28 @@ test('breath button hides the player while held and resets on release',()=>{
     const event={pointerId:3,preventDefault(){prevented++;}};
     els['breath-btn'].handlers.pointerdown(event);
     assert.equal(Game.p.holdingBreath,true);assert.equal(Input.breathPointer,3);assert.equal(prevented,1);
-    Game.p.update(1);assert.equal(Game.p.breathRemaining,59);
+    Game.p.update(1);assert.equal(Game.p.breathRemaining,29);
     els['breath-btn'].handlers.pointerup(event);
-    assert.equal(Game.p.holdingBreath,false);assert.equal(Game.p.breathRemaining,60);assert.equal(Input.breathPointer,null);
+    assert.equal(Game.p.holdingBreath,false);assert.equal(Game.p.breathRemaining,30);assert.equal(Input.breathPointer,null);
 });
 
-test('one continuous breath hold ends after sixty seconds',()=>{
+test('one continuous breath hold ends after thirty seconds',()=>{
     const {Game}=setup();Game.p.startHoldingBreath();
-    for(let i=0;i<61;i++)Game.p.update(1);
+    for(let i=0;i<31;i++)Game.p.update(1);
     assert.equal(Game.p.holdingBreath,false);assert.equal(Game.p.breathRemaining,0);
 });
 
 test('breath HUD exposes active countdown, low-air warning and exhaustion',()=>{
     const {Game,els}=setup();Game.p.startHoldingBreath();Game.refreshBuffs();
-    assert.ok(els['breath-status'].classList.contains('active'));assert.equal(els['breath-status-time'].textContent,'60s');
+    assert.ok(els['breath-status'].classList.contains('active'));assert.equal(els['breath-status-time'].textContent,'30s');
     Game.p.breathRemaining=9.2;Game.refreshBuffs();assert.ok(els['breath-status'].classList.contains('low'));assert.equal(els['breath-status-time'].textContent,'10s');
     Game.p.update(10);assert.equal(Game.p.holdingBreath,false);assert.ok(els['breath-status'].classList.contains('exhausted'));
+});
+
+test('the player can move slowly while holding breath',()=>{
+    const {Game,Input,MapSys}=setup();MapSys.t.fill(0);Game.ents=[Game.p];Game.p.x=300;Game.p.y=300;Input.x=1;Input.y=0;Input.active=true;
+    Game.p.update(.5);const normal=Game.p.x-300;Game.p.x=300;Game.p.startHoldingBreath();Game.p.update(.5);const stealth=Game.p.x-300;
+    assert.ok(stealth>0);assert.ok(stealth<normal*.5);
 });
 
 test('ten-floor progression preserves equipment and requires a gate crank before exit',()=>{
@@ -540,12 +546,14 @@ test('shovel attacks nearby zombies automatically and respects stealth, cooldown
  Game.restart();assert.equal(Game.p.hasShovel,false);
 });
 
-test('zombies cancel attacks and wander slowly while the player holds breath',()=>{
+test('zombies freeze after losing the player, then return to and sink into their coffin',()=>{
  const {Game,MapSys,Zombie}=setup(17);MapSys.t.fill(0);Game.p.x=300;Game.p.y=300;
- const z=new Zombie(325,300,0);Game.ents=[Game.p,z];z.update(.01,Game.p);assert.equal(z.attackState,'windup');
- Game.p.startHoldingBreath();const start=Math.hypot(z.x-Game.p.x,z.y-Game.p.y);
- for(let i=0;i<180;i++)z.update(1/60,Game.p);
- assert.equal(z.attackState,'');assert.equal(Game.p.hp,5);assert.ok(Math.hypot(z.x-Game.p.x,z.y-Game.p.y)>start);
+ const z=new Zombie(325,300,0);z.homeCoffin={x:430,y:300};Game.ents=[Game.p,z];z.update(.01,Game.p);assert.equal(z.attackState,'windup');
+ Game.p.startHoldingBreath();const startX=z.x;
+ for(let i=0;i<40;i++)z.update(1/60,Game.p);
+ assert.equal(z.x,startX);assert.equal(z.attackState,'');assert.equal(Game.p.hp,5);
+ for(let i=0;i<800&&!z.dead;i++)z.update(1/60,Game.p);
+ assert.ok(z.x>startX);assert.equal(z.returningToCoffin,true);assert.equal(z.dead,1);
 });
 
 test('all continuous burrows contain beetles and stomping plays one sound',()=>{
@@ -561,6 +569,12 @@ test('coffin pushing retains a displaced lid and non-loot decor never blocks mov
  c.interact(.31,Game.p);assert.equal(c.opened,1);assert.ok(Number.isFinite(c.lidDirX));
  c.update(.7);assert.equal(c.lidProgress,1);assert.equal(c.dead,0);
  const decor=Game.ents.find(e=>['burial_decor','bone_pile','tomb_remains'].includes(e.type));assert.ok(decor);MapSys.t.fill(0);assert.equal(MapSys.canOccupy(decor.x,decor.y,10),true);
+});
+
+test('only the nearest coffin controls the push pose and the player always faces it',()=>{
+ const {Game,Coffin,MapSys}=setup();MapSys.t.fill(0);Game.p.x=300;Game.p.y=300;const left=new Coffin(265,300,'key'),right=new Coffin(325,300,'cache');Game.ents=[Game.p,left,right];
+ Game.step(.1);assert.equal(Game.p.pushingCoffin,right);assert.equal(Game.p.pushDirection,2);assert.equal(left.interactTimer,0);
+ Game.p.x=350;Game.step(.1);assert.equal(Game.p.pushingCoffin,right);assert.equal(Game.p.pushDirection,1);
 });
 
 test('coffins never block walking or forced movement',()=>{
@@ -600,9 +614,9 @@ test('rising coffin waits for player clearance and embedded player can walk out'
  assert.ok(Game.p.x>c.x+30);
 });
 test('movement lesson dismisses only after movement and reappears on restart',()=>{
- const {Game,Input,MapSys,els}=setup();assert.equal(els['move-tutorial'].style.display,'block');
+ const {Game,Input,MapSys,els}=setup();assert.equal(els['move-tutorial'].style.display,'none');for(let i=0;i<193;i++)Game.step(1/60);assert.equal(els['move-tutorial'].style.display,'block');
  MapSys.t.fill(0);Game.ents=[Game.p];Input.x=1;Input.y=0;Input.active=true;
  for(let i=0;i<45;i++)Game.p.update(1/60);
  assert.equal(els['move-tutorial'].style.display,'none');Game.load(2);assert.equal(els['move-tutorial'].style.display,'none');
- Game.restart();assert.equal(els['move-tutorial'].style.display,'block');
+ Game.restart();assert.equal(els['move-tutorial'].style.display,'none');for(let i=0;i<193;i++)Game.step(1/60);assert.equal(els['move-tutorial'].style.display,'block');
 });
