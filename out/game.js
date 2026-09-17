@@ -187,6 +187,11 @@ const AudioSys = {
             this.lastHurt = now;
         }
     },
+    playJadeBreak: function() {
+        this.tone(1180,'triangle',.08,.24,760);
+        setTimeout(()=>this.tone(690,'sine',.16,.18,310),45);
+        setTimeout(()=>this.tone(1450,'square',.045,.07,900),90);
+    },
     playUse: function() { this.tone(400, 'sine', 1.0, 0.2, 800); }
 };
 
@@ -308,20 +313,25 @@ class GroundItem extends Entity {
 }
 
 class Coffin extends Entity {
-    constructor(x,y,c){super(x,y,'coffin');this.content=c;this.opened=0;this.shake=0;this.lidOffset=0;this.interactTimer=0;this.revealTimer=0;}
+    constructor(x,y,c){super(x,y,'coffin');this.content=c;this.opened=0;this.shake=0;this.lidOffset=0;this.lidProgress=0;this.lidDirX=1;this.lidDirY=0;this.interactTimer=0;this.revealTimer=0;}
     interact(dt, p) {
         if(this.opened||this.hidden||this.rising||this.locked) return;
         if(Math.hypot(this.x-p.x, this.y-p.y) < 45) {
+            const angle=Math.atan2(this.y-p.y,this.x-p.x);p.direction=Math.abs(Math.cos(angle))>Math.abs(Math.sin(angle))?(Math.cos(angle)<0?1:2):(Math.sin(angle)<0?3:0);
+            p.pushingCoffin=this;p.pushUntil=Game.elapsed+.12;
             this.interactTimer += dt;
             if(this.interactTimer > 0.6) {
-                this.open();
+                this.open(p);
             }
         } else {
             this.interactTimer = 0;
         }
     }
-    open() {
+    open(p=Game.p) {
         if(this.opened||this.hidden||this.rising||this.locked) return;
+        const dx=this.x-(p?.x??this.x-1),dy=this.y-(p?.y??this.y),d=Math.hypot(dx,dy)||1;
+        this.lidDirX=dx/d;this.lidDirY=dy/d;this.lidProgress=0;
+        if(p){p.pushingCoffin=this;p.pushUntil=Game.elapsed+.72;}
         this.opened = 1;TombDangers.coffinFX(this); this.shake = 0.5; this.revealTimer = 0.6; AudioSys.playOpen();
     }
     reveal() {
@@ -358,9 +368,7 @@ class Coffin extends Entity {
             this.revealTimer=Math.max(0,this.revealTimer-dt);
             if(this.revealTimer===0) this.reveal();
         }
-        if(this.opened && this.lidOffset < 20) {
-            this.lidOffset += dt * 20;
-        }
+        if(this.opened)this.lidProgress=Math.min(1,this.lidProgress+dt/0.68);
     }
     draw(ctx) {
         if(this.shake>0){ctx.translate((Math.random()-.5)*4,0);}
@@ -583,6 +591,7 @@ class Player extends Entity {
             }
             this.moving=true;this.stepPhase+=dt*20;return;
         }
+        if(this.pushingCoffin&&this.pushUntil>Game.elapsed){this.moving=false;this.stepPhase=0;return;}
         const oldX=this.x, oldY=this.y;
         let s=160*ExitGate.speed();
         if(Input.sprint) s *= 1.5; // Sprint!
@@ -620,7 +629,7 @@ class Player extends Entity {
     }
     hit(){
         if(!Game.running || this.inv>0)return;
-        if(this.buffs.jade>0){this.buffs.jade=0;this.inv=1.5;Game.msg(curLang==='CN'?'玉衣碎裂 · 抵挡了一次伤害':'Jade suit shattered · one hit blocked','#a5d6a7');Game.refreshBuffs();return;}
+        if(this.buffs.jade>0){this.buffs.jade=0;this.inv=1.5;AudioSys.playJadeBreak();Game.msg(curLang==='CN'?'玉衣碎裂 · 抵挡了一次伤害':'Jade suit shattered · one hit blocked','#a5d6a7');Game.refreshBuffs();return;}
         this.hp--; this.inv=1.5; Game.shake=10; AudioSys.playHurt();
         Game.updateHUD(); Game.msg(LANG[curLang].msgs.hurt,"#f00");
         const held=[...(this.hasCompass?['compass']:[]),...['candle','hoof'].filter(k=>this.buffs[k]>0)];
@@ -959,6 +968,7 @@ const Game = {
         this.shake=this.shake>0.1?this.shake*Math.pow(0.9,dt*60):0;
         this.ents=this.ents.filter(e=>!e.dead);
         // Player first; entities spawned during a step start updating on the next step.
+        if(!(this.p.pushingCoffin&&this.p.pushUntil>this.elapsed))this.p.pushingCoffin=null;
         this.p.update(dt);
         for(const e of [...this.ents]) {
             if(!this.running||this.pause) break;

@@ -31,7 +31,7 @@ const TombDangers={
    let point;for(let yy=r.y;yy<r.y+r.h&&!point;yy++)for(let xx=r.x;xx<r.x+r.w&&!point;xx++){
     const p={x:xx*50+25,y:yy*50+25};if(!Game.ents.some(e=>['coffin','trap'].includes(e.type)&&Math.hypot(e.x-p.x,e.y-p.y)<60)&&Math.hypot(p.x-Game.exitPos.x,p.y-Game.exitPos.y)>90&&!Expedition.switches.some(s=>Math.hypot(s.x-p.x,s.y-p.y)<65))point=p;
    }
-   if(point)this.sources.push({...point,type:'burrow',kind:i?'snake':'beetle',timer:3+i,dead:0});
+   if(point)this.sources.push({...point,type:'burrow',kind:'beetle',timer:3+i,dead:0});
   }
  },
  inJet(v,p){const dx=p.x-v.x,dy=p.y-v.y,along=dx*Math.cos(v.angle)+dy*Math.sin(v.angle),across=-dx*Math.sin(v.angle)+dy*Math.cos(v.angle);return along>5&&along<v.length&&Math.abs(across)<16+along*.1&&MapSys.lineClear(v.x,v.y,p.x,p.y);},
@@ -54,24 +54,25 @@ const TombDangers={
    for(let y=ty-2;y<=ty+2;y++)for(let x=tx-2;x<=tx+2;x++)if(x>=0&&y>=0&&x<MapSys.w&&y<MapSys.h&&MapSys.t[y*MapSys.w+x]!==1)ctx.rect(x*50,y*50,50,50);
    ctx.clip();
    for(let i=0;i<7;i++){
-    const angle=i*2.4+s.x*.01,px=s.x+Math.cos(angle)*r*.6,py=s.y+19+Math.sin(angle)*r*.3+spread*14;
+    const angle=i*Math.PI*2/7+s.x*.01,px=s.x+Math.cos(angle)*r*.64,py=s.y+Math.sin(angle)*r*.52;
     const pool=ctx.createRadialGradient(px,py,1,px,py,r*.65);pool.addColorStop(0,'#36040cee');pool.addColorStop(.68,'#810d1be8');pool.addColorStop(1,'#a51b2940');
     ctx.fillStyle=pool;ctx.beginPath();ctx.ellipse(px,py,r*.65,r*.22,.06*Math.sin(angle),0,Math.PI*2);ctx.fill();
    }
-   for(let i=0;i<3;i++){
-    ctx.strokeStyle=i===1?'#b51e2b':'#670714';ctx.lineWidth=3+i;ctx.beginPath();ctx.moveTo(s.x+(i-1)*9,s.y+5);ctx.bezierCurveTo(s.x+(i-1)*15,s.y+19,s.x+(i-1)*18,s.y+24,s.x+(i-1)*21,s.y+8+spread*54);ctx.stroke();
+   for(let i=0;i<8;i++){
+    const angle=i*Math.PI/4+s.x*.013,len=spread*(34+(i%3)*8),sx=s.x+Math.cos(angle)*8,sy=s.y+Math.sin(angle)*6;
+    ctx.strokeStyle=i%3===1?'#b51e2b':'#670714';ctx.lineWidth=2.2+(i%3);ctx.beginPath();ctx.moveTo(sx,sy);ctx.bezierCurveTo(sx+Math.cos(angle+.25)*len*.4,sy+Math.sin(angle+.25)*len*.3,sx+Math.cos(angle-.2)*len*.72,sy+Math.sin(angle-.2)*len*.65,sx+Math.cos(angle)*len,sy+Math.sin(angle)*len*.84);ctx.stroke();
    }
    ctx.strokeStyle='#e261633d';ctx.lineWidth=.8;ctx.beginPath();ctx.ellipse(s.x-8,s.y+24,r*.45,r*.12,-.2,Math.PI,Math.PI*1.7);ctx.stroke();ctx.restore();
   }
  },
  drawClouds(ctx,left,right,top,bottom){
-  for(const c of this.clouds){const radius=Math.min(360,c.age*34),fade=Math.min(1,c.life/3),density=Math.min(.99,c.age*.38)*fade;
+  for(const c of this.clouds){const radius=Math.min(360,c.age*34),fade=Math.min(1,c.life/3),density=Math.min(.25,c.age*.1)*fade;
    for(let y=top;y<bottom;y++)for(let x=left;x<right;x++){
     const dist=c.dist[y*60+x];if(dist<0)continue;const amount=Math.max(0,Math.min(1,(radius-dist*50)/65));if(!amount)continue;
     const px=x*50+25+Math.sin(c.age*.8+y)*7,py=y*50+25+Math.cos(c.age*.6+x)*7;
     ctx.save();ctx.beginPath();
     for(let yy=Math.max(0,y-1);yy<=Math.min(59,y+1);yy++)for(let xx=Math.max(0,x-1);xx<=Math.min(59,x+1);xx++)if(c.dist[yy*60+xx]>=0)ctx.rect(xx*50,yy*50,50,50);
-    ctx.clip();const puff=ctx.createRadialGradient(px,py,8,px,py,68);puff.addColorStop(0,c.color+'ff');puff.addColorStop(.65,c.color+'ee');puff.addColorStop(1,c.color+'00');
+    ctx.clip();const puff=ctx.createRadialGradient(px,py,8,px,py,68);puff.addColorStop(0,c.color+'a8');puff.addColorStop(.65,c.color+'62');puff.addColorStop(1,c.color+'00');
     ctx.globalAlpha=density*amount;ctx.fillStyle=puff;ctx.fillRect(px-68,py-68,136,136);ctx.restore();
    }
   }
@@ -110,10 +111,7 @@ const TombDangers={
  render(ctx,e){
   if(e.type==='burrow'){
    ctx.save();ctx.fillStyle='#000';ctx.shadowColor='#050303';ctx.shadowBlur=10;ctx.beginPath();ctx.ellipse(e.x,e.y,20,12,0,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle='#766b51';ctx.lineWidth=4;ctx.stroke();ctx.restore();
-   if(Math.hypot(e.x-Game.p.x,e.y-Game.p.y)<150)Art.label(ctx,e.x,e.y-28,curLang==='CN'?(e.kind==='snake'?'蛇窟 · 移动踩杀':'尸鳖洞 · 移动踩杀'):'NEST · STOMP','#bca586');return true;
-  }
-  if(e.type==='vermin'&&e.kind==='snake'){
-   ctx.save();ctx.translate(e.x,e.y);ctx.rotate(Math.atan2(Game.p.y-e.y,Game.p.x-e.x));ctx.strokeStyle='#222c15';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(-17,Math.sin(Game.elapsed*8)*5);ctx.bezierCurveTo(-9,-10,2,9,12,0);ctx.stroke();ctx.strokeStyle='#999260';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#5c6033';ctx.beginPath();ctx.ellipse(13,0,5,4,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ebdba4';ctx.fillRect(14,-2,2,1);ctx.restore();return true;
+   if(Math.hypot(e.x-Game.p.x,e.y-Game.p.y)<150)Art.label(ctx,e.x,e.y-28,curLang==='CN'?'尸鳖洞 · 移动踩杀':'BEETLE NEST · STOMP','#bca586');return true;
   }
   return false;
  },

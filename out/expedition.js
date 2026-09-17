@@ -141,7 +141,7 @@ class TombCreature{
   if(this.windup>0){this.windup=Math.max(0,this.windup-dt);if(!this.windup){if(d<34&&MapSys.lineClear(this.x,this.y,p.x,p.y))p.hit();this.cooldown=1.8;}return;}
   if(d<28&&!this.cooldown){this.windup=.55;return;}
   if(d>220||d<25)return;
-  const speed={worm:24,beetle:49,spider:66,bat:88,snake:58}[this.kind],angle=Math.atan2(p.y-this.y,p.x-this.x)+(this.kind==='spider'?Math.sin(Game.elapsed*3)*.5:0);
+  const speed={worm:24,beetle:49,spider:66,bat:88}[this.kind]||42,angle=Math.atan2(p.y-this.y,p.x-this.x)+(this.kind==='spider'?Math.sin(Game.elapsed*3)*.5:0);
   const x=this.x+Math.cos(angle)*speed*dt,y=this.y+Math.sin(angle)*speed*dt;
   if(MapSys.canOccupy(x,this.y,7))this.x=x;if(MapSys.canOccupy(this.x,y,7))this.y=y;
  }
