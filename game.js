@@ -20,7 +20,7 @@ const LEVELS_DATA = [
     { delay: 1.0, type: 'ARROW', col: '#212121' }, { delay: 2.0, type: 'MIX', col: '#b71c1c' }
 ];
 
-const WALL_COLORS = ['#4e342e', '#3e2723', '#263238', '#1b1b1b', '#37474f', '#212121', '#1a237e', '#b71c1c', '#004d40', '#000000'];
+const WALL_COLORS = ['#6b3527','#4f5758','#356f66','#6e261d','#858278','#205d68','#3f315f','#231c43','#7b1e22','#1d2557'];
 
 const SPECIAL_ITEMS = ['item_candle', 'item_wine', 'item_hoof', 'item_jade', 'item_compass'];
 const PROJ_TYPES = {
@@ -852,10 +852,11 @@ const Game = {
         this.p.inv=2; // Safe arrival on every floor.
         this.ents.push(this.p);
 
-        const trapCount = Math.min(6,1+Math.floor(l/2));
+        const trapCount = THEMES[l-1].trapCount;
+        const dangerRooms=rms.filter((r,i)=>i>0&&!['sanctuary','entry'].includes(r.kind));
         let trapsPlaced = 0;
         while(trapsPlaced < trapCount) {
-             const r=rms[1+(trapsPlaced*3+l)%(rms.length-1)];
+             const r=dangerRooms[(trapsPlaced*3+l)%dangerRooms.length];
              const tx = (r.x + 1.5 + (trapsPlaced*2+l)%(r.w-2)) * CONFIG.TILE;
              const ty = (r.y+.5) * CONFIG.TILE;
              this.ents.push(new Trap(tx, ty, l-1));

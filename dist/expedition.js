@@ -1,15 +1,15 @@
 // Fixed per-floor contents, reusable local keys and optional shifting shortcuts.
 const TOMB_STYLES=[
- {name:'汉阙长陵',wall:12,floor:0,decor:0,filter:'sepia(.5)',trap:1},
- {name:'木构机弩廊',wall:13,floor:1,decor:1,filter:'sepia(.7) brightness(.85)',trap:1},
- {name:'青铜兽面殿',wall:14,floor:2,decor:2,filter:'sepia(.5) hue-rotate(35deg)',trap:2},
- {name:'焦石炼魂炉',wall:15,floor:3,decor:3,filter:'brightness(.65) sepia(.4)',trap:3},
- {name:'白骨石椁窟',wall:13,floor:4,decor:4,filter:'grayscale(1) brightness(1.25)',trap:4},
- {name:'水蚀棺河殿',wall:13,floor:5,decor:5,filter:'hue-rotate(125deg) saturate(.6)',trap:5},
- {name:'朱砂封印宫',wall:15,floor:6,decor:6,filter:'sepia(.5) hue-rotate(290deg)',trap:6},
- {name:'古根葬林',wall:12,floor:7,decor:7,filter:'sepia(.7) hue-rotate(40deg)',trap:7},
- {name:'鎏金帝陵',wall:14,floor:8,decor:8,filter:'sepia(.8) saturate(1.3)',trap:8},
- {name:'天陨玄宫',wall:15,floor:9,decor:9,filter:'hue-rotate(220deg) brightness(.8)',trap:9}
+ {name:'汉阙长陵',wall:12,floor:0,decor:0,filter:'sepia(.58) saturate(.9)',trap:1},
+ {name:'千纹机关廊',wall:13,floor:1,decor:1,filter:'grayscale(.55) sepia(.18) brightness(.82)',trap:1},
+ {name:'青铜兽影厅',wall:14,floor:2,decor:2,filter:'sepia(.45) hue-rotate(52deg) saturate(.8)',trap:2},
+ {name:'巨鼎炼魂室',wall:15,floor:3,decor:3,filter:'brightness(.6) sepia(.55) saturate(1.35)',trap:3},
+ {name:'石骨迷宫',wall:13,floor:4,decor:4,filter:'grayscale(.92) brightness(1.18) contrast(.9)',trap:4},
+ {name:'荧光棺河',wall:13,floor:5,decor:5,filter:'hue-rotate(132deg) saturate(.72) brightness(.82)',trap:5},
+ {name:'九字封印井',wall:15,floor:6,decor:6,filter:'sepia(.28) hue-rotate(242deg) saturate(1.15)',trap:6},
+ {name:'暗影葬主殿',wall:12,floor:7,decor:7,filter:'hue-rotate(235deg) brightness(.5) saturate(.8)',trap:7},
+ {name:'帝王沉眠室',wall:14,floor:8,decor:8,filter:'sepia(.9) saturate(1.42) contrast(1.05)',trap:8},
+ {name:'永劫天陨塔',wall:15,floor:9,decor:9,filter:'hue-rotate(205deg) brightness(.66) saturate(1.3)',trap:9}
 ];
 const Expedition={
  walls:[],switches:[],style:TOMB_STYLES[0],
@@ -26,7 +26,7 @@ const Expedition={
   const keySpot=spots.find(p=>p.room!==Game.exitRoom)||spots[0];spots=spots.filter(p=>p!==keySpot);
   const key=new Coffin(keySpot.x,keySpot.y,'key');Game.spawn(key);this.keyCoffin=key;
   // First find is a compass in a coffin; only one emergency wine sits in the open.
-  this.zombieBudget=3+Math.floor(Game.lvl/2);this.verminBudget=1+Math.floor(Game.lvl/3);this.itemBudget=5+Game.lvl;
+  this.zombieBudget=2*(3+Math.floor(Game.lvl/2));this.verminBudget=2*(1+Math.floor(Game.lvl/3));this.itemBudget=5+Game.lvl;
   const payloads=[{loot:['item_compass','item_candle']}];
   for(let i=1;i<this.zombieBudget;i++)payloads.push({enemy:i%3===1?'crawler':'zombie'});
   for(let i=0;i<this.verminBudget;i++)payloads.push({enemy:['worm','beetle','spider','bat'][(i+Game.lvl-1)%4]});

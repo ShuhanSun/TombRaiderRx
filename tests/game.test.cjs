@@ -168,9 +168,9 @@ test('ten-floor progression preserves equipment and requires a gate crank before
     Game.restart();assert.equal(Game.p.hp,5);assert.equal(Game.p.hasCompass,0);
 });
 
-test('seals block the exit until all required altars are activated',()=>{
+test('doubled seals block the exit until all required altars are activated',()=>{
     const {Game,World,Passage,ExitGate}=setup();
-    Game.load(7);Game.ents.find(e=>e.content==='key').reveal();assert.equal(World.remaining(),2);assert.equal(World.canExit(),false);
+    Game.load(7);Game.ents.find(e=>e.content==='key').reveal();assert.equal(World.remaining(),4);assert.equal(World.canExit(),false);
     Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y;Game.step(1/60);assert.equal(Game.pause,false);
     Game.showExitModal();Game.confirmNextLevel();assert.equal(Game.lvl,7);Game.pause=false;
     for(const altar of World.altars.filter(a=>a.kind==='seal')) {
@@ -529,9 +529,9 @@ test('duplicate equipment is always picked up without stacking jade protection',
  assert.equal(Game.p.buffs.jade,1);assert.equal(Game.p.hp,5);
 });
 
-test('traps are dispersed after coffin placement',()=>{
- const {Game,TombDangers}=setup(63);
- for(let lvl=1;lvl<=10;lvl++){Game.load(lvl);const traps=Game.ents.filter(e=>e.type==='trap');for(let i=0;i<traps.length;i++)for(let j=i+1;j<traps.length;j++)assert.ok(Math.hypot(traps[i].x-traps[j].x,traps[i].y-traps[j].y)>=175);assert.equal(TombDangers.vents.length,3);}
+test('doubled traps and six hidden emitters are dispersed after coffin placement',()=>{
+ const {Game,TombDangers,THEMES}=setup(63);
+ for(let lvl=1;lvl<=10;lvl++){Game.load(lvl);const traps=Game.ents.filter(e=>e.type==='trap');assert.equal(traps.filter(t=>!t.vent).length,THEMES[lvl-1].trapCount);for(let i=0;i<traps.length;i++)for(let j=i+1;j<traps.length;j++)assert.ok(Math.hypot(traps[i].x-traps[j].x,traps[i].y-traps[j].y)>=175);assert.equal(TombDangers.vents.length,6);}
 });
 
 test('shovel attacks nearby zombies automatically and respects stealth, cooldown and walls',()=>{
@@ -617,6 +617,19 @@ test('saved maps and item positions repeat exactly and grow on every floor',()=>
   signatures.add(JSON.stringify(a.FLOOR_PLANS[l-1].coffinSlots));
  }
  assert.equal(signatures.size,10);
+});
+test('all ten redesigns have unique topology, palette and roughly doubled difficulty',()=>{
+ const {FLOOR_PLANS,THEMES}=setup();
+ assert.equal(new Set(FLOOR_PLANS.map(p=>p.layout)).size,10);
+ assert.equal(new Set(FLOOR_PLANS.map(p=>JSON.stringify(p.links))).size,10);
+ assert.equal(new Set(THEMES.map(t=>t.wallTint)).size,10);
+ assert.equal(new Set(THEMES.map(t=>t.floorTint)).size,10);
+ assert.equal(new Set(THEMES.map(t=>t.background)).size,10);
+ for(let i=0;i<10;i++){
+  assert.ok(FLOOR_PLANS[i].rooms.length>=9+i);
+  assert.ok(THEMES[i].trapCount>=Math.min(12,2+2*Math.floor((i+1)/2)));
+  assert.ok(THEMES[i].hazardCount>=Math.min(26,8+2*i));
+ }
 });
 test('rising coffin waits for player clearance and embedded player can walk out',()=>{
  const {Game,Expedition,Input,MapSys}=setup();Game.load(6);const c=Expedition.hidden[0];

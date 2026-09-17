@@ -160,7 +160,7 @@ const Scene = {
         const ctx=game.ctx,w=game.width,h=game.height,p=game.p,time=game.elapsed;
         ctx.setTransform(game.dpr,0,0,game.dpr,0,0);
         const cx=p.x-w/2+(Math.random()-.5)*game.shake,cy=p.y-h/2+(Math.random()-.5)*game.shake;
-        ctx.fillStyle='#060b0d';ctx.fillRect(0,0,w,h);ctx.save();ctx.translate(-cx,-cy);
+        ctx.fillStyle=World.theme.background||'#060b0d';ctx.fillRect(0,0,w,h);ctx.save();ctx.translate(-cx,-cy);
         const left=Math.max(0,Math.floor(cx/50)),right=Math.min(MapSys.w,Math.ceil((cx+w)/50));
         const top=Math.max(0,Math.floor(cy/50)),bottom=Math.min(MapSys.h,Math.ceil((cy+h)/50));
         for(let y=top;y<bottom;y++)for(let x=left;x<right;x++) {
@@ -171,6 +171,7 @@ const Scene = {
             if(type===0&&room?.kind==='supply'&&World.theme.tile!==8)tile=1;
             ctx.save();ctx.filter=Expedition.style.filter;Art.stoneSurface(ctx,type===1,x,y);
             ctx.globalAlpha=type===1?.42:.2;ctx.drawImage(Art.tiles[type===1?Expedition.style.wall:Expedition.style.floor],x%8*50,y%8*50,50,50,x*50,y*50,50,50);ctx.restore();
+            ctx.fillStyle=(type===1?World.theme.wallTint:World.theme.floorTint)+'38';ctx.fillRect(x*50,y*50,50,50);
             if(type!==1){ctx.fillStyle=World.theme.tint+'16';ctx.fillRect(x*50,y*50,50,50);}
             ctx.fillStyle=type===1?'#020709cc':'#111c2520';ctx.fillRect(x*50,y*50,50,50);
             if(type===2) {
@@ -285,7 +286,7 @@ const Scene = {
             }
             if(seed===9){ctx.save();ctx.translate(px,py);ctx.rotate(x+y);ctx.strokeStyle='#c3b89a';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-8,-2);ctx.lineTo(9,3);ctx.moveTo(-5,7);ctx.lineTo(6,-7);ctx.stroke();ctx.fillStyle='#a89e87';ctx.beginPath();ctx.ellipse(11,-5,5,6,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#161b16';ctx.fillRect(8,-7,2,2);ctx.fillRect(12,-7,2,2);ctx.restore();}
             const room=World.rooms[World.roomTiles[y*MapSys.w+x]];
-            if(room&&x===room.x+1&&y===room.y+1){ctx.save();ctx.globalAlpha=.4;ctx.translate(px,py);ctx.strokeStyle='#9b8660';ctx.lineWidth=2;ctx.strokeRect(-18,-18,36,36);ctx.font='24px serif';ctx.textAlign='center';ctx.fillStyle='#9e8355';ctx.fillText(room.kind==='exit'?'奠':'鎮',0,9);ctx.restore();}
+            if(room&&x===room.x+1&&y===room.y+1){ctx.save();ctx.globalAlpha=.48;ctx.translate(px,py);ctx.strokeStyle=World.theme.tint;ctx.lineWidth=2;ctx.strokeRect(-18,-18,36,36);ctx.font='24px serif';ctx.textAlign='center';ctx.fillStyle=World.theme.tint;ctx.fillText(room.kind==='exit'?'奠':World.theme.motif,0,9);ctx.restore();}
         }
     },
     entity(ctx,e,game) {

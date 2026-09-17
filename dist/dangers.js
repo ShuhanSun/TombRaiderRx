@@ -15,19 +15,19 @@ const TombDangers={
  setup(){
   this.sources=[];this.vents=[];this.bursts=[];this.clouds=[];this.stains=[];
   const options=Expedition.coffins.filter(c=>!c.hidden&&!c.locked&&!c.sealed);
-  for(const c of options.slice(-Math.min(3,1+Math.floor(Game.lvl/4))))c.explosive=true;
+  for(const c of options.slice(-Math.min(6,2+Math.floor(Game.lvl/2))))c.explosive=true;
   const anchors=Game.ents.filter(e=>e.type==='coffin'&&!e.hidden&&!e.sealed);
   const picked=[];
   const anchor=()=>{const choices=anchors.filter(c=>!picked.includes(c));choices.sort((a,b)=>{
    const score=c=>picked.length?Math.min(...picked.map(p=>Math.hypot(c.x-p.x,c.y-p.y))):c.royal?10000:0;return score(b)-score(a);
   });const c=choices[0]||Game.exitPos;picked.push(c);return c;};
   for(const t of Game.ents.filter(e=>e.type==='trap')){const c=anchor();t.x=c.x;t.y=c.y;World.mountTrap(t);}
-  for(const kind of ['fire','water','smoke']){
+  for(const kind of ['fire','water','smoke','fire','water','smoke']){
    const c=anchor(),t=new Trap(c.x,c.y,Game.lvl-1);World.mountTrap(t);t.vent=true;Game.spawn(t);
    this.vents.push({x:t.x,y:t.y,type:'jet',kind,angle:t.aim,length:0,cooldown:0,age:0,state:'idle',timer:0,revealed:false});
   }
   const rooms=World.rooms.filter(r=>!['entry','sealed','sanctuary'].includes(r.kind));
-  for(let i=0;i<2;i++){const r=rooms[(i+Game.lvl)%rooms.length];
+  for(let i=0;i<4;i++){const r=rooms[(i*3+Game.lvl)%rooms.length];
    let point;for(let yy=r.y;yy<r.y+r.h&&!point;yy++)for(let xx=r.x;xx<r.x+r.w&&!point;xx++){
     const p={x:xx*50+25,y:yy*50+25};if(!Game.ents.some(e=>['coffin','trap'].includes(e.type)&&Math.hypot(e.x-p.x,e.y-p.y)<60)&&Math.hypot(p.x-Game.exitPos.x,p.y-Game.exitPos.y)>90&&!Expedition.switches.some(s=>Math.hypot(s.x-p.x,s.y-p.y)<65))point=p;
    }
