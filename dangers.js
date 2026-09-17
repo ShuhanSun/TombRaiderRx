@@ -47,8 +47,9 @@ const TombDangers={
   this.stains.push({x:c.x,y:c.y,age:0,color:'#6f0915'});
   for(let i=0;i<5;i++)this.bursts.push({x:c.x+(i-2)*6,y:c.y+8+i%2*4,radius:16+i*3,life:.28+i*.035,blood:true});
  },
- drawStains(ctx){
+ drawStains(ctx,left=0,right=MapSys.w,top=0,bottom=MapSys.h){
   for(const s of this.stains){
+   if(s.x<left*50-100||s.x>right*50+100||s.y<top*50-100||s.y>bottom*50+100)continue;
    const spread=1-Math.exp(-s.age*.38),r=9+47*spread;ctx.save();ctx.beginPath();
    const tx=Math.floor(s.x/50),ty=Math.floor(s.y/50);
    for(let y=ty-2;y<=ty+2;y++)for(let x=tx-2;x<=tx+2;x++)if(x>=0&&y>=0&&x<MapSys.w&&y<MapSys.h&&MapSys.t[y*MapSys.w+x]!==1)ctx.rect(x*50,y*50,50,50);
@@ -112,9 +113,10 @@ const TombDangers={
   }
   return false;
  },
- drawJets(ctx){
+ drawJets(ctx,left=0,right=MapSys.w,top=0,bottom=MapSys.h){
   for(const v of this.vents){
    if(!v.revealed&&v.state!=='active')continue;
+   if(v.x<left*50-250||v.x>right*50+250||v.y<top*50-250||v.y>bottom*50+250)continue;
    ctx.save();ctx.translate(v.x,v.y);ctx.rotate(v.angle);
    ctx.filter=Expedition.style.filter;Art.trapEmitter(ctx,v.kind,0,0,52);ctx.filter='none';
    if(v.state!=='active'){ctx.restore();continue;}

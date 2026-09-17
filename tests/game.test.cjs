@@ -658,3 +658,43 @@ test('movement lesson dismisses only after movement and reappears on restart',()
  assert.equal(els['move-tutorial'].style.display,'none');Game.load(2);assert.equal(els['move-tutorial'].style.display,'none');
  Game.restart();assert.equal(els['move-tutorial'].style.display,'none');for(let i=0;i<193;i++)Game.step(1/60);assert.equal(els['move-tutorial'].style.display,'block');
 });
+
+test('terrain cache reuses rasterization and invalidates on floor, scale and moving walls',()=>{
+ const {Game,Scene,MapSys,Expedition}=setup();
+ let paints=0;const paint=Scene.paintTerrain;
+ Scene.paintTerrain=function(...args){paints++;return paint.apply(this,args);};
+ Scene.drawTerrain(Game.ctx,0,8,0,8,Game);const first=paints;
+ assert.ok(first>0);Scene.drawTerrain(Game.ctx,0,8,0,8,Game);assert.equal(paints,first);
+ Game.dpr=1;Scene.drawTerrain(Game.ctx,0,8,0,8,Game);assert.ok(paints>first);
+ Game.load(2);assert.equal(Scene.terrainCache.size,0);
+ const wall=Expedition.walls[0];assert.ok(wall);
+ Scene.drawTerrain(Game.ctx,0,8,0,8,Game);assert.ok(Scene.terrainCache.size>0);
+ Game.p.x=wall.x;Game.p.y=wall.y;Expedition.update(1);
+ assert.equal(MapSys.t[wall.at],0);assert.equal(Scene.terrainCache.size,0);
+});
+
+test('terrain cache stays bounded while exploring the largest map',()=>{
+ const {Game,Scene,MapSys}=setup();Game.load(10);
+ for(let y=0;y<MapSys.h;y+=4)for(let x=0;x<MapSys.w;x+=4){
+  Scene.drawTerrain(Game.ctx,x,Math.min(x+4,MapSys.w),y,Math.min(y+4,MapSys.h),Game);
+ }
+ const bytes=[...Scene.terrainCache.values()].reduce((sum,c)=>sum+c.width*c.height*8,0);
+ assert.ok(bytes<=32*1024*1024);
+});
+
+test('unchanged inventory does not rewrite normalized DOM markup',()=>{
+ const {Game,els}=setup();let writes=0,html='';
+ Object.defineProperty(els['item-bar'],'innerHTML',{get:()=>html.replace('alt=""','alt'),set:value=>{writes++;html=value;}});
+ Game.p.hasShovel=true;Game.refreshBuffs();const first=writes;
+ Game.refreshBuffs();Game.refreshBuffs();assert.equal(writes,first);
+ Game.p.hasShovel=false;Game.refreshBuffs();assert.equal(writes,first+1);
+});
+
+test('offscreen stains and jets do not submit draw calls',()=>{
+ const {Game,TombDangers,calls}=setup();
+ TombDangers.stains=[{x:1500,y:1500,age:2}];
+ TombDangers.vents=[{x:1500,y:1500,kind:'fire',state:'active',angle:0,length:200}];
+ TombDangers.bursts=[];calls.length=0;
+ TombDangers.drawStains(Game.ctx,0,4,0,4);TombDangers.drawJets(Game.ctx,0,4,0,4);
+ assert.equal(calls.length,0);
+});

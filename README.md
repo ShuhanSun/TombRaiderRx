@@ -20,8 +20,8 @@
 
 运行 `python3 -m http.server 8000`，浏览器打开 `http://localhost:8000`。游戏无需构建，发布时保留根目录 HTML、CSS、全部 JS 和 assets 文件夹。
 
-Node.js 22 以上运行 `node --test tests/game.test.cjs`。61 项测试覆盖地图、物品、陷阱、密室、自动攻击、屏气与控制等逻辑。测试使用浏览器接口替身，不能代替手机实机触控与音频验收。
+Node.js 22 以上运行 `node --test tests/game.test.cjs`。68 项测试覆盖地图、物品、陷阱、密室、自动攻击、屏气与控制等逻辑。测试使用浏览器接口替身，不能代替手机实机触控与音频验收。
 
-可选渲染检查：安装 `@napi-rs/canvas` 后执行 `node scripts/render-check.cjs`，截图输出到 tmp/render-check。美术及音频来源见 ASSETS.md。现行机制位于 expedition.js 与 dangers.js。
+可选渲染检查：安装 `@napi-rs/canvas` 后执行 `node scripts/render-check.cjs`，截图输出到 tmp/render-check。性能优化与浏览器测量见 PERFORMANCE.md。美术及音频来源见 ASSETS.md。现行机制位于 expedition.js 与 dangers.js。
 
 Created by Shuhan Sun. See LICENSE.

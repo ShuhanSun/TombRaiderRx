@@ -156,6 +156,55 @@ const Art = {
 };
 
 const Scene = {
+    terrainCache:new Map(),
+    invalidateTerrain(){this.terrainCache.clear();},
+    drawTerrain(ctx,left,right,top,bottom,game,layer='base'){
+        // Small, lazily rasterized chunks bound both first-use work and retained memory.
+        const scale=Math.min(game.dpr,2),size=4,pixels=size*50;
+        if(this.terrainMap!==MapSys.t||this.terrainScale!==scale||this.terrainStyle!==Expedition.style||this.terrainStone!==Art.stone){
+            this.invalidateTerrain();this.terrainMap=MapSys.t;this.terrainScale=scale;
+            this.terrainStyle=Expedition.style;this.terrainStone=Art.stone;
+        }
+        for(let cy=Math.floor(top/size);cy<Math.ceil(bottom/size);cy++)for(let cx=Math.floor(left/size);cx<Math.ceil(right/size);cx++){
+            const key=cy*Math.ceil(MapSys.w/size)+cx;
+            let canvas=this.terrainCache.get(key);
+            if(!canvas){
+                canvas=this.canvasFactory?this.canvasFactory():document.createElement('canvas');
+                canvas.width=canvas.height=Math.ceil(pixels*scale);
+                const tileCtx=canvas.getContext('2d');
+                tileCtx.setTransform(scale,0,0,scale,-cx*pixels*scale,-cy*pixels*scale);
+                this.paintTerrain(tileCtx,cx*size,Math.min(MapSys.w,(cx+1)*size),cy*size,Math.min(MapSys.h,(cy+1)*size));
+                canvas.masonry=this.canvasFactory?this.canvasFactory():document.createElement('canvas');
+                canvas.masonry.width=canvas.masonry.height=canvas.width;
+                const wallCtx=canvas.masonry.getContext('2d');
+                wallCtx.setTransform(scale,0,0,scale,-cx*pixels*scale,-cy*pixels*scale);
+                wallCtx.save();wallCtx.filter=Expedition.style.filter;
+                this.masonry(wallCtx,cx*size,Math.min(MapSys.w,(cx+1)*size),cy*size,Math.min(MapSys.h,(cy+1)*size));wallCtx.restore();
+            }
+            // Refresh insertion order for least-recently-used eviction.
+            this.terrainCache.delete(key);this.terrainCache.set(key,canvas);
+            ctx.drawImage(layer==='base'?canvas:canvas.masonry,cx*pixels,cy*pixels,pixels,pixels);
+        }
+        const visible=Math.ceil((right-left)/size+1)*Math.ceil((bottom-top)/size+1);
+        const limit=Math.max(visible,Math.floor(32*1024*1024/(Math.ceil(pixels*scale)**2*8)));
+        while(this.terrainCache.size>limit)this.terrainCache.delete(this.terrainCache.keys().next().value);
+        if(layer!=='base')return;
+        // Water remains animated above the static stone layer.
+        for(let y=top;y<bottom;y++)for(let x=left;x<right;x++)if(MapSys.t[y*MapSys.w+x]===2){
+            ctx.fillStyle=`rgba(122,214,207,${.05+.035*Math.sin(game.elapsed*2+x*.9+y)})`;ctx.fillRect(x*50,y*50,50,50);
+        }
+    },
+    paintTerrain(ctx,left,right,top,bottom){
+        for(let y=top;y<bottom;y++)for(let x=left;x<right;x++){
+            const type=MapSys.t[y*MapSys.w+x];
+            ctx.save();ctx.filter=Expedition.style.filter;Art.stoneSurface(ctx,type===1,x,y);
+            ctx.globalAlpha=type===1?.42:.2;ctx.drawImage(Art.tiles[type===1?Expedition.style.wall:Expedition.style.floor],x%8*50,y%8*50,50,50,x*50,y*50,50,50);ctx.restore();
+            ctx.fillStyle=(type===1?World.theme.wallTint:World.theme.floorTint)+'38';ctx.fillRect(x*50,y*50,50,50);
+            if(type!==1){ctx.fillStyle=World.theme.tint+'16';ctx.fillRect(x*50,y*50,50,50);}
+            ctx.fillStyle=type===1?'#020709cc':'#111c2520';ctx.fillRect(x*50,y*50,50,50);
+        }
+    },
+
     draw(game) {
         const ctx=game.ctx,w=game.width,h=game.height,p=game.p,time=game.elapsed;
         ctx.setTransform(game.dpr,0,0,game.dpr,0,0);
@@ -163,27 +212,13 @@ const Scene = {
         ctx.fillStyle=World.theme.background||'#060b0d';ctx.fillRect(0,0,w,h);ctx.save();ctx.translate(-cx,-cy);
         const left=Math.max(0,Math.floor(cx/50)),right=Math.min(MapSys.w,Math.ceil((cx+w)/50));
         const top=Math.max(0,Math.floor(cy/50)),bottom=Math.min(MapSys.h,Math.ceil((cy+h)/50));
-        for(let y=top;y<bottom;y++)for(let x=left;x<right;x++) {
-            const type=MapSys.t[y*MapSys.w+x],room=World.rooms[World.roomTiles[y*MapSys.w+x]];
-            let tile=type===1?World.theme.wall:type===2?10:World.theme.tile;
-            if(type===0&&room?.kind==='sanctuary')tile=11;
-            if(type===0&&room?.kind==='seal')tile=6;
-            if(type===0&&room?.kind==='supply'&&World.theme.tile!==8)tile=1;
-            ctx.save();ctx.filter=Expedition.style.filter;Art.stoneSurface(ctx,type===1,x,y);
-            ctx.globalAlpha=type===1?.42:.2;ctx.drawImage(Art.tiles[type===1?Expedition.style.wall:Expedition.style.floor],x%8*50,y%8*50,50,50,x*50,y*50,50,50);ctx.restore();
-            ctx.fillStyle=(type===1?World.theme.wallTint:World.theme.floorTint)+'38';ctx.fillRect(x*50,y*50,50,50);
-            if(type!==1){ctx.fillStyle=World.theme.tint+'16';ctx.fillRect(x*50,y*50,50,50);}
-            ctx.fillStyle=type===1?'#020709cc':'#111c2520';ctx.fillRect(x*50,y*50,50,50);
-            if(type===2) {
-                ctx.fillStyle=`rgba(122,214,207,${.05+.035*Math.sin(time*2+x*.9+y)})`;ctx.fillRect(x*50,y*50,50,50);
-            }
-        }
+        this.drawTerrain(ctx,left,right,top,bottom,game);
         const main=game.ents.find(e=>e.royal);
         if(main){ctx.save();ctx.fillStyle='#060c1399';ctx.fillRect(main.x-58,main.y-25,116,50);ctx.fillStyle=World.theme.tint+'55';ctx.fillRect(main.x-54,main.y-32,108,43);ctx.strokeStyle='#b4a28566';ctx.lineWidth=2;ctx.strokeRect(main.x-52,main.y-30,104,40);ctx.restore();}
-        TombDangers.drawStains(ctx);
+        TombDangers.drawStains(ctx,left,right,top,bottom);
         this.roomAtmosphere(ctx,time,'under',left,right,top,bottom);
         ExitGate.draw(ctx,left,right,top,bottom);
-        ctx.save();ctx.filter=Expedition.style.filter;this.masonry(ctx,left,right,top,bottom);ctx.restore();
+        this.drawTerrain(ctx,left,right,top,bottom,game,'masonry');
         for(const wall of Expedition.walls)Expedition.render(ctx,wall);
         this.tombTraces(ctx,left,right,top,bottom);
         for(const hazard of World.hazards) {
@@ -205,7 +240,7 @@ const Scene = {
         // Ground remains must never cover an actor's body when their sort anchors overlap.
         for(const e of objects.filter(e=>['tomb_remains','bone_pile'].includes(e.type)))this.entity(ctx,e,game);
         for(const e of objects.filter(e=>!['tomb_remains','bone_pile'].includes(e.type)))this.entity(ctx,e,game);
-        TombDangers.drawJets(ctx);
+        TombDangers.drawJets(ctx,left,right,top,bottom);
         this.roomAtmosphere(ctx,time,'over',left,right,top,bottom);
         for(const t of game.texts) {ctx.save();ctx.translate(t.x,t.y);t.draw(ctx);ctx.restore();}
         ctx.restore();

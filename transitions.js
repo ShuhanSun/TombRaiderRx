@@ -30,7 +30,7 @@ const Passage={
             document.getElementById('passage-progress-fill').style.width=Math.min(100,this.travel/duration*100)+'%';
             if(this.travel>=duration){this.reset();Game.finishNextLevel();return;}
         }
-        this.draw();
+        if(!this.reduced||this.departing)this.draw();
     },
     draw(){
         const c=document.getElementById('passage-scene'),ctx=c.getContext('2d'),w=c.width,h=c.height,t=this.reduced?0:this.time,theme=this.theme;

@@ -5,7 +5,8 @@ const path=require('node:path');
 const output=process.argv[2]||'tmp/render-check';fs.mkdirSync(output,{recursive:true});
 const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:[process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES]}));
 (async()=>{
-    const {Game,Art,World,Passage,els,ExitGate,Expedition,TombDangers}=setup(2026);
+    const {Game,Art,World,Passage,els,ExitGate,Expedition,TombDangers,Scene}=setup(2026);
+    Scene.canvasFactory=()=>createCanvas(1,1);
     Art.smokeCanvasFactory=()=>createCanvas(136,136);
     Art.coffinDetails=await loadImage('assets/tomb-coffin-details.png');
     Art.expedition=await loadImage('assets/tomb-expedition.png');

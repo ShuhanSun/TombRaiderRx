@@ -105,7 +105,7 @@ const Expedition={
    const solid=w.height>.65;
    if((MapSys.t[w.at]===1)!==solid){MapSys.t[w.at]=solid?1:0;changed=true;}
   }
-  if(changed)ExitGate.rebuildDistance();
+  if(changed){Scene.invalidateTerrain();ExitGate.rebuildDistance();}
  },
  render(ctx,e){
   const cn=curLang==='CN';

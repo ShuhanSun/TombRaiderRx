@@ -570,7 +570,16 @@ class Projectile extends Entity {
 
 class Player extends Entity {
     constructor(x,y){super(x,y,'player');this.hp=5;this.sight=CONFIG.BASE_SIGHT;this.inv=0;this.buffs={hoof:0,candle:0,jade:0};this.walkT=0;this.hasCompass=0;this.hasShovel=false;this.attackCooldown=0;this.attackT=0;this.attackAngle=0;this.holdingBreath=false;this.breathRemaining=CONFIG.BREATH_MAX;this.breathExhausted=false;this.stepPhase=0;this.direction=0;this.walkFrame=1;this.walkDistance=0;this.stepDistance=0;this.moving=false;this.inWater=MapSys.get(x,y)===TERRAIN.WATER;}
-    nearestTarget(){return Game.ents.filter(e=>!e.dead&&e.type==='zombie'&&Math.hypot(e.x-this.x,e.y-this.y)<=78&&MapSys.lineClear(this.x,this.y,e.x,e.y)).sort((a,b)=>Math.hypot(a.x-this.x,a.y-this.y)-Math.hypot(b.x-this.x,b.y-this.y))[0];}
+    nearestTarget(){
+        let nearest,best=78*78;
+        for(const e of Game.ents){
+            if(e.dead||e.type!=='zombie')continue;
+            const distance=(e.x-this.x)**2+(e.y-this.y)**2;
+            if(distance>best||(nearest&&distance===best)||!MapSys.lineClear(this.x,this.y,e.x,e.y))continue;
+            nearest=e;best=distance;
+        }
+        return nearest;
+    }
     attack(target=this.nearestTarget()){
         if(!Game.running||Game.pause||!this.hasShovel||this.holdingBreath||this.attackCooldown>0||this.rollTime>0||!target)return false;
         this.attackCooldown=.68;this.attackT=.48;
@@ -840,6 +849,7 @@ const Game = {
     load: function(l){
         this.lvl=l; this.ents=[]; this.texts=[]; this.exit=1; this.mainCoffinPos = null; this.shake=0; this.pause=false; Input.reset();
         this.hudTimer=0; this.lastTime=null; this.accumulator=0;
+        this.buffHTML=null;this.itemHTML=null;Scene.invalidateTerrain();
         document.getElementById('item-bar').innerHTML = '';
 
         const rms=MapSys.gen(l), s=rms[0], e=rms[rms.length-1];
@@ -985,11 +995,11 @@ const Game = {
         if(this.p.buffs.jade>0) html+=`<div class="buff buff-jade">🥋 ${curLang==='CN'?'护身 ×1':'Shield ×1'}</div>`;
         if(this.p.hasCompass) html+=`<div class="buff buff-compass">🧭 ${curLang==='CN'?'寻龙':'Compass'}</div>`;
         const bar=document.getElementById('buff-bar');
-        if(bar.innerHTML!==html) bar.innerHTML=html;
+        if(this.buffHTML!==html){bar.innerHTML=html;this.buffHTML=html;}
         const itemBar=document.getElementById('item-bar');
         const lamp=this.p.buffs.candle>0?`<div class="item-slot ${this.p.buffs.candle<5?'lamp-low':''}">🪔 ${curLang==='CN'?'灯油':'Oil'} ${Math.ceil(this.p.buffs.candle)}s</div>`:'';
         const shovel=this.p.hasShovel?`<div class="item-slot shovel-slot"><img src="assets/entrenching-shovel.png" alt="">${curLang==='CN'?'兵工铲':'Shovel'}</div>`:'';
-        if(itemBar.innerHTML!==lamp+shovel) itemBar.innerHTML=lamp+shovel;
+        if(this.itemHTML!==lamp+shovel){itemBar.innerHTML=lamp+shovel;this.itemHTML=lamp+shovel;}
     },
     refreshExploration: function() {
         const px=Math.floor(this.p.x/CONFIG.TILE), py=Math.floor(this.p.y/CONFIG.TILE);
