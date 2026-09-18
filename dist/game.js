@@ -1006,7 +1006,7 @@ const Game = {
         const radius=Math.max(2,Math.floor(World.sight()/CONFIG.TILE*0.65));
         for(let y=Math.max(0,py-radius);y<=Math.min(MapSys.h-1,py+radius);y++) {
             for(let x=Math.max(0,px-radius);x<=Math.min(MapSys.w-1,px+radius);x++) {
-                if(Math.hypot(x-px,y-py)<=radius&&!Expedition.hiddenRoomAt(x*50+25,y*50+25)) this.explored[y*MapSys.w+x]=1;
+                if(Math.hypot(x-px,y-py)<=radius&&!Expedition.hiddenRoomAt(x*50+25,y*50+25)&&!World.roomHiddenAt(x*50+25,y*50+25)) this.explored[y*MapSys.w+x]=1;
             }
         }
     },
@@ -1016,7 +1016,7 @@ const Game = {
         if(!this.p.hasCompass){ctx.clearRect(0,0,canvas.width,canvas.height);return;}
         ctx.fillStyle='#09110f'; ctx.fillRect(0,0,canvas.width,canvas.height);
         for(let i=0;i<this.explored.length;i++) {
-            if(!this.explored[i]||Expedition.hiddenRoomAt(i%MapSys.w*50+25,Math.floor(i/MapSys.w)*50+25)) continue;
+            if(!this.explored[i]||Expedition.hiddenRoomAt(i%MapSys.w*50+25,Math.floor(i/MapSys.w)*50+25)||World.roomHiddenAt(i%MapSys.w*50+25,Math.floor(i/MapSys.w)*50+25)) continue;
             ctx.fillStyle=MapSys.t[i]===TERRAIN.WALL?'#25332d':MapSys.t[i]===TERRAIN.WATER?'#327b83':'#7b8066';
             ctx.fillRect((i%MapSys.w)*scale,Math.floor(i/MapSys.w)*scale,scale,scale);
         }
