@@ -257,6 +257,7 @@ const Scene = {
             }
         }
         TombDangers.drawClouds(ctx,left,right,top,bottom);
+        World.drawRoomLighting(ctx,time);
         Expedition.drawHiddenRooms(ctx);
         ctx.restore();
     },
@@ -369,11 +370,17 @@ const Scene = {
             } else {
                 const pose=e.attackState==='windup'?2:e.attackState==='strike'?3:lift>2?1:0;
                 const lunge=e.attackState==='strike'?Math.sin((1-e.attackClock/.24)*Math.PI)*11:0;
+                if(e.bloodCorpse){
+                    const pulse=.72+.2*Math.sin(time*6);
+                    Art.glow(ctx,e.x,e.y-18,82,`rgba(186,18,30,${.22*pulse})`);
+                    ctx.save();ctx.strokeStyle=`rgba(239,55,58,${.35*pulse})`;ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(e.x,e.y+2,27+pulse*4,10+pulse*2,0,0,Math.PI*2);ctx.stroke();
+                    for(let i=0;i<4;i++){ctx.fillStyle='#d92931';ctx.globalAlpha=.25+.15*pulse;ctx.beginPath();ctx.arc(e.x+Math.sin(time*1.8+i*2.1)*(25+i*3),e.y-20-((time*15+i*17)%42),2+i%2,0,Math.PI*2);ctx.fill();}ctx.restore();
+                }
                 ctx.save();ctx.globalAlpha=1-(e.sink||0);ctx.translate(e.x+Math.cos(e.attackAim)*lunge,e.y-lift+Math.sin(e.attackAim)*lunge+(e.sink||0)*22);ctx.scale(1,1-(e.sink||0)*.25);
                 if(e.x>game.p.x)ctx.scale(-1,1);
                 if(e.landT>0)ctx.scale(1.06,.94);
                 ctx.filter=e.species.filter;Art.frame(ctx,Art.zombies,e.zType*4+pose,0,0,e.species.size,e.species.size,true);ctx.restore();
-                if(distance<180)Art.label(ctx,e.x,e.y-e.species.size-4,cn?e.species.name:e.species.en,'#d9bd99');
+                if(distance<180)Art.label(ctx,e.x,e.y-e.species.size-4,cn?e.species.name:e.species.en,e.bloodCorpse?'#ff8174':'#d9bd99');
                 if(e.attackState==='windup')Art.label(ctx,e.x,e.y-77,cn?'!':'!','#ffae83');
             }
             return;

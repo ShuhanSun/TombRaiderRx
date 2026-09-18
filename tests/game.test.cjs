@@ -414,7 +414,7 @@ test('fixed hidden contents, reachable single key, no duplicate coffin rewards',
   assert.ok(!Expedition.keyCoffin.hidden);assert.ok(MapSys.canOccupy(Expedition.keyCoffin.x,Expedition.keyCoffin.y,10));
   const coffins=Game.ents.filter(e=>e.type==='coffin');for(const c of coffins)c.reveal();
   assert.equal(Game.ents.filter(e=>e.type==='zombie').length,Expedition.zombieBudget+1);
-  assert.equal(Game.ents.filter(e=>e.type==='vermin').length,Expedition.verminBudget);
+  assert.equal(Game.ents.filter(e=>e.type==='vermin').length,Expedition.verminBudget+Expedition.royalBeetleCount);
   assert.equal(Game.ents.filter(e=>e.type==='ground_item').length,Expedition.itemBudget);
   const count=Game.ents.length;for(const c of coffins)c.reveal();assert.equal(Game.ents.length,count);
   assert.equal(Game.p.hasKey,true);
@@ -612,10 +612,19 @@ test('coffins never block walking or forced movement',()=>{
  assert.ok(Game.p.x>c.x+30);
 });
 
-test('royal coffin releases a regular floor zombie and no boss',()=>{
- const {Game}=setup();const royal=Game.ents.find(e=>e.royal),before=Game.ents.filter(e=>e.type==='zombie').length;
- royal.reveal();const zombies=Game.ents.filter(e=>e.type==='zombie');assert.equal(zombies.length,before+1);
- assert.equal(zombies.at(-1).species.name,'沙埋枯尸');assert.ok(!Game.ents.some(e=>e.type==='boss'));
+test('royal coffin releases a powerful red blood corpse and corpse beetle swarm',()=>{
+ const {Game,Expedition}=setup();const royal=Game.ents.find(e=>e.royal),beforeZ=Game.ents.filter(e=>e.type==='zombie').length,beforeB=Game.ents.filter(e=>e.type==='vermin').length;
+ royal.reveal();const zombies=Game.ents.filter(e=>e.type==='zombie');assert.equal(zombies.length,beforeZ+1);
+ const blood=zombies.at(-1);assert.equal(blood.species.name,'赤血厉尸');assert.equal(blood.zType,1);assert.equal(blood.bloodCorpse,true);assert.ok(blood.hp>=6&&blood.spd>=128);
+ assert.equal(Game.ents.filter(e=>e.type==='vermin'&&e.kind==='beetle').length,beforeB+Expedition.royalBeetleCount);assert.ok(!Game.ents.some(e=>e.type==='boss'));
+});
+
+test('main and side chambers stay black until entry then light wall lamps gradually',()=>{
+ const {Game,World,calls}=setup();const room=World.rooms.find(r=>r.kind==='main'||r.kind==='exit'||r.kind==='ear_left');assert.ok(room?.darkBeforeEntry);assert.equal(room.entered,false);
+ const x=(room.x+.5)*50,y=(room.y+.5)*50;assert.equal(World.roomHiddenAt(x,y),room);
+ calls.length=0;World.drawRoomLighting(Game.ctx,1);assert.ok(calls.some(c=>c[0]==='fillRect'&&c[1]===room.x*50&&c[2]===room.y*50));
+ Game.p.x=x;Game.p.y=y;World.updateRoom();assert.equal(room.entered,true);assert.equal(room.lightProgress,0);World.update(.7);assert.ok(room.lightProgress>0&&room.lightProgress<1);
+ calls.length=0;World.drawRoomLighting(Game.ctx,2);assert.ok(calls.some(c=>c[0]==='ellipse'));World.update(4);assert.equal(room.lightProgress,1);assert.equal(World.roomHiddenAt(x,y),undefined);
 });
 
 test('large pots take two shovel hits and use bounded item, insect and empty outcomes',()=>{

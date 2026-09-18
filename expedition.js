@@ -62,8 +62,23 @@ const Expedition={
    Game.spawn(z);
   }else Game.spawn(new TombCreature(x,y,kind));
  },
+ spawnBloodCorpse(c){
+  const base=SPECIES[Game.lvl-1],z=new Zombie(c.x,c.y+25,1);
+  z.species={...base,name:'赤血厉尸',en:'Blood corpse',type:1,
+   speed:Math.max(128,base.speed*1.32),sense:Math.max(285,base.sense+70),
+   hop:Math.min(.45,base.hop*.7),windup:Math.min(.32,base.windup*.62),size:Math.max(94,base.size+14),
+   filter:'saturate(1.9) hue-rotate(334deg) contrast(1.22) brightness(.82)'};
+  z.zType=1;z.spd=z.species.speed;z.hp=5+Game.lvl;z.bloodCorpse=true;
+  z.homeCoffin=c;z.homeX=c.x;z.homeY=c.y+18;Game.spawn(z);
+  this.royalBeetleCount=3+Math.floor(Game.lvl/4);
+  for(let i=0;i<this.royalBeetleCount;i++){
+   const angle=Math.PI*.2+i*Math.PI*2/this.royalBeetleCount,bug=new TombCreature(c.x+Math.cos(angle)*32,c.y+35+Math.sin(angle)*22,'beetle');
+   bug.stompable=true;Game.spawn(bug);
+  }
+  Game.msg(curLang==='CN'?'赤血厉尸破棺而出 · 尸鳖群涌出！':'A blood corpse erupts · corpse beetles swarm!','#dc4b48');
+ },
  reveal(c){
-  if(c.royal){this.spawnEnemy('zombie',c.x,c.y+25,c);return true;}
+  if(c.royal){this.spawnBloodCorpse(c);return true;}
   if(c.explosive){c.fuse=1.4;Game.msg(curLang==='CN'?'棺内火药嘶响！退后！':'Explosive coffin! Back away!','#ff986d');}
   if(c.content==='key'){Game.p.hasKey=true;Game.msg(curLang==='CN'?'青铜机关钥匙 · 可开启盗洞机关':'Bronze key · exit crank unlocked','#eac879');Game.updateHUD();return true;}
   if(c.content!=='cache')return false;

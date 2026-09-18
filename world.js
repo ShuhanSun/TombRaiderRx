@@ -56,6 +56,12 @@ const World = {
             const r=rooms.filter(r=>r.kind==='seal')[i]||rooms[1+i%Math.max(1,rooms.length-2)];r.kind='seal';
             this.addAltar(r,'seal',i);
         }
+        const darkKinds=new Set(['burial','supply','sanctuary','trap','seal','exit','ear_left','ear_right','main']);
+        rooms.forEach(r=>{
+            r.darkBeforeEntry=darkKinds.has(r.kind);
+            r.entered=!r.darkBeforeEntry;r.lightProgress=r.entered?1:0;
+            if(r.darkBeforeEntry)r.flicker=false;
+        });
         // Keep sanctuaries and arrival rooms free of spawned enemies and traps.
         Game.ents=Game.ents.filter(e=>!(['zombie','trap'].includes(e.type)&&rooms.some(r=>['sanctuary','entry'].includes(r.kind)&&this.inside(r,e.x,e.y))));
         Game.ents.forEach(e=>{
@@ -133,8 +139,10 @@ const World = {
     },
     sight() {return Math.max(70,((this.baseSight||300)+(Game.p.buffs.candle>0?170*Math.min(1,Game.p.buffs.candle/2):0))*(ExitGate.levelAt(Game.p.x,Game.p.y)>.25?(ExitGate.flood.fog||1):1));},
     phase(h) {return (Game.elapsed+h.offset)%6;},
+    roomHiddenAt(x,y) {return this.rooms.find(r=>r.darkBeforeEntry&&!r.entered&&this.inside(r,x,y));},
     updateRoom() {
         const r=this.rooms.find(r=>this.inside(r,Game.p.x,Game.p.y));
+        if(r?.darkBeforeEntry&&!r.entered){r.entered=true;r.lightProgress=0;}
         if(r===this.room)return;
         this.room=r;
         const label=document.getElementById('room-name'),hint=document.getElementById('room-hint');
@@ -144,6 +152,7 @@ const World = {
     },
     update(dt) {
         Expedition.update(dt);ExitGate.update(dt);this.updateRoom();
+        for(const r of this.rooms)if(r.entered&&r.lightProgress<1)r.lightProgress=Math.min(1,r.lightProgress+dt/2.8);
         for(const a of this.altars) {
             if(a.done)continue;
             if(Math.hypot(a.x-Game.p.x,a.y-Game.p.y)<48) {
@@ -164,6 +173,30 @@ const World = {
                 if(Math.abs(h.x-Game.p.x)<21&&Math.abs(h.y-Game.p.y)<21)Game.p.hit();
                 for(const e of TombDangers.enemies())if(Math.abs(h.x-e.x)<24&&Math.abs(h.y-e.y)<24)TombDangers.hurt(e,1);
             }
+        }
+    },
+    drawRoomLighting(ctx,time) {
+        for(const r of this.rooms){
+            if(!r.darkBeforeEntry)continue;
+            const x=r.x*50,y=r.y*50,w=r.w*50,h=r.h*50,p=r.entered?r.lightProgress:0;
+            ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
+            ctx.fillStyle=`rgba(0,0,0,${r.entered?.93-p*.52:1})`;ctx.fillRect(x,y,w,h);
+            if(p>0){
+                const count=Math.max(2,Math.min(6,Math.floor(r.w/3)));
+                for(let i=0;i<count;i++){
+                    const local=Math.max(0,Math.min(1,(p-i*.075)*1.9));if(!local)continue;
+                    const lx=x+w*(i+1)/(count+1),ly=y+22;
+                    const flicker=.72+.16*Math.sin(time*8+i*2.7+r.x)+.09*Math.sin(time*17+i+r.y);
+                    const glow=ctx.createRadialGradient(lx,ly,4,lx,ly,Math.min(175,95+w*.1));
+                    glow.addColorStop(0,`rgba(255,185,75,${.43*local*flicker})`);
+                    glow.addColorStop(.42,`rgba(173,86,28,${.2*local*flicker})`);glow.addColorStop(1,'rgba(25,7,2,0)');
+                    ctx.fillStyle=glow;ctx.fillRect(lx-180,ly-135,360,270);
+                    ctx.globalAlpha=local;ctx.fillStyle='#6e4930';ctx.fillRect(lx-7,ly+5,14,4);
+                    ctx.fillStyle=`rgba(255,${145+Math.round(flicker*40)},54,${.72+.2*flicker})`;
+                    ctx.beginPath();ctx.ellipse(lx,ly,3.8,8+flicker*2,Math.sin(time*5+i)*.12,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+                }
+            }
+            ctx.restore();
         }
     }
 };
