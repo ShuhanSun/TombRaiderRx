@@ -1,8 +1,8 @@
 const TombDangers={
  sources:[],vents:[],bursts:[],clouds:[],stains:[],
- enemies(){return Game.ents.filter(e=>!e.dead&&['zombie','vermin','boss'].includes(e.type));},
+ enemies(){return Game.ents.filter(e=>!e.dead&&['zombie','vermin'].includes(e.type));},
  hurt(e,amount=1){
-  if(e.type==='boss')return e.damage(amount);
+  if(e.type==='pot')return e.damage(amount);
   if(e.dead||Game.elapsed<(e.hurtUntil||0))return false;
   e.hp=(e.hp??(e.type==='zombie'?(e.crawler?2:3):1))-amount;e.hurtUntil=Game.elapsed+.45;
   Game.addText(e.x,e.y,'−'+amount,'#e89975');

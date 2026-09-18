@@ -11,7 +11,7 @@ const THEMES = [
     {name:'永劫天陨塔',en:'Tower of the Fallen Star',tile:9,wall:15,tint:'#8ea6ff',wallTint:'#1d2557',floorTint:'#323a74',background:'#02030a',motif:'星',sight:270,water:0.2,hazard:'fire',seals:6,zombies:[0,1,2],trap:'MIX',trapCount:12,hazardCount:26,note:'星黑断塔以破碎螺旋连接六道封印，越接近核心，混合机关、尸群与水火地形越密集。',enNote:'A star-black broken spiral links six seals. Mixed traps, guardians and flooded fire lanes converge at the core.'}
 ];
 const ROOM_TYPES = {
-    sealed:{cn:'封闭陪葬室',en:'Sealed chamber',hint:'室内藏有珍贵供物，靠近机关石壁即可打开唯一入口。',enHint:'Precious supplies inside. Approach the moving wall to open the only entrance.'},
+    sealed:{cn:'封闭陪葬室',en:'Sealed chamber',hint:'室内藏有珍贵供物，紧贴隐藏石壁，等待入口缓慢打开。',enHint:'Precious supplies inside. Approach the moving wall to open the only entrance.'},
     entry:{cn:'落脚处',en:'Arrival',hint:'灯火尚安，整顿行装再向前。',enHint:'A quiet place to begin.'},
     burial:{cn:'陪葬室',en:'Burial chamber',hint:'石棺之中，可能是供物，也可能是守墓人。',enHint:'Coffins may hold offerings—or guardians.'},
     supply:{cn:'供奉室',en:'Offering chamber',hint:'这里留有补给；靠近即可拾取供物，已有装备也可拾取。',enHint:'Supplies await. All items can be picked up.'},
@@ -127,7 +127,6 @@ const World = {
     canExit() {return ExitGate.ready()&&ExitGate.remaining>0;},
     target() {
         if(!Game.p.hasKey)return Expedition.keyCoffin;
-        if(!BossFight.cleared)return BossFight.boss||Game.mainCoffinPos;
         if(!Game.exit)return Game.mainCoffinPos;
         const seals=this.altars.filter(a=>a.kind==='seal'&&!a.done).sort((a,b)=>Math.hypot(a.x-Game.p.x,a.y-Game.p.y)-Math.hypot(b.x-Game.p.x,b.y-Game.p.y));
         return seals[0]||(ExitGate.remaining>0?Game.exitPos:ExitGate.switch);
@@ -144,7 +143,7 @@ const World = {
         hint.textContent=type?(cn?type.hint:type.enHint):(cn?'沿石壁前行，留意通向其他墓室的岔口。':'Follow the stone passage and watch for branching rooms.');
     },
     update(dt) {
-        Expedition.update(dt);BossFight.update(dt);ExitGate.update(dt);this.updateRoom();
+        Expedition.update(dt);ExitGate.update(dt);this.updateRoom();
         for(const a of this.altars) {
             if(a.done)continue;
             if(Math.hypot(a.x-Game.p.x,a.y-Game.p.y)<48) {

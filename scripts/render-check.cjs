@@ -5,8 +5,7 @@ const path=require('node:path');
 const output=process.argv[2]||'tmp/render-check';fs.mkdirSync(output,{recursive:true});
 const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:[process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES]}));
 (async()=>{
-    const {Game,Art,World,Passage,els,ExitGate,Expedition,TombDangers,Scene,BossFight}=setup(2026);
-    Art.bossSprites=await Promise.all(Array.from({length:10},(_,i)=>loadImage(`assets/boss-${i+1}.webp`)));
+    const {Game,Art,World,Passage,els,ExitGate,Expedition,TombDangers,Scene}=setup(2026);
     Scene.canvasFactory=()=>createCanvas(1,1);
     Art.smokeCanvasFactory=()=>createCanvas(136,136);
     Art.coffinDetails=await loadImage('assets/tomb-coffin-details.png');
@@ -58,7 +57,7 @@ const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:
     const emitters=createCanvas(860,230),ec=emitters.getContext('2d');ec.fillStyle='#252d2d';ec.fillRect(0,0,860,230);
     ['ARROW','STONE','LOG','FIRE','fire','water','smoke','VENOM'].forEach((kind,i)=>Art.trapEmitter(ec,kind,55+i*107,115,92));
     fs.writeFileSync(path.join(output,'trap-emitters.png'),emitters.toBuffer('image/png'));
-    for(const lvl of [1,2,3,4,5,6,7,8,9,10]){Game.load(lvl);Game.p.hasKey=true;World.altars.forEach(a=>a.done=true);Game.p.x=ExitGate.switch.x;Game.p.y=ExitGate.switch.y+65;Game.render();fs.writeFileSync(path.join(output,'crank-'+lvl+'.png'),Game.cvs.toBuffer('image/png'));BossFight.cleared=true;ExitGate.open();ExitGate.radius=5;Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y+100;Game.render();fs.writeFileSync(path.join(output,'flood-'+lvl+'.png'),Game.cvs.toBuffer('image/png'));}
+    for(const lvl of [1,2,3,4,5,6,7,8,9,10]){Game.load(lvl);Game.p.hasKey=true;World.altars.forEach(a=>a.done=true);Game.p.x=ExitGate.switch.x;Game.p.y=ExitGate.switch.y+65;Game.render();fs.writeFileSync(path.join(output,'crank-'+lvl+'.png'),Game.cvs.toBuffer('image/png'));ExitGate.open();ExitGate.radius=5;Game.p.x=Game.exitPos.x;Game.p.y=Game.exitPos.y+100;Game.render();fs.writeFileSync(path.join(output,'flood-'+lvl+'.png'),Game.cvs.toBuffer('image/png'));}
     for(const lvl of [1,3,6,9,10]){Game.load(lvl);const royal=Game.ents.find(e=>e.royal);Game.p.x=royal.x;Game.p.y=royal.y+110;Game.render();fs.writeFileSync(path.join(output,'royal-'+lvl+'.png'),Game.cvs.toBuffer('image/png'));}
     Game.load(8);for(const c of Expedition.coffins.filter(c=>c.payload.enemy))c.reveal();const crawler=Game.ents.find(e=>e.crawler);Game.p.x=crawler.x+35;Game.p.y=crawler.y+80;Game.render();fs.writeFileSync(path.join(output,'crawler.png'),Game.cvs.toBuffer('image/png'));
     Game.load(4);for(const v of TombDangers.vents){v.age=3;v.state='active';v.timer=3;v.length=150;if(v.kind==='smoke'){TombDangers.addCloud(v.x,v.y);TombDangers.clouds[0].age=6;}Game.p.x=v.x+Math.cos(v.angle)*90;Game.p.y=v.y+Math.sin(v.angle)*90;Game.elapsed=3;Game.render();fs.writeFileSync(path.join(output,'jet-'+v.kind+'.png'),Game.cvs.toBuffer('image/png'));}
@@ -78,5 +77,4 @@ const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:
     for(let i=0;i<4;i++){opening.interact(.16,Game.p);opening.update(.16);Game.elapsed+=.16;Game.render();fs.writeFileSync(path.join(output,'coffin-push-'+i+'.png'),Game.cvs.toBuffer('image/png'));}
     opening.open(Game.p);for(let i=0;i<4;i++){opening.update(.17);Game.elapsed+=.17;Game.render();fs.writeFileSync(path.join(output,'coffin-lid-'+i+'.png'),Game.cvs.toBuffer('image/png'));}
     console.log('Rendered floors 1, 4 and 7 at 390×844 using real Canvas and atlas PNGs.');
-    for(let level=1;level<=10;level++){Game.load(level);const c=Game.ents.find(e=>e.royal);c.reveal();BossFight.boss.rise=0;BossFight.boss.windup=.8;Game.p.x=c.x;Game.p.y=c.y+90;Game.width=390;Game.height=844;Game.dpr=1;const canvas=createCanvas(390,844);Game.ctx=canvas.getContext('2d');Scene.draw(Game);fs.writeFileSync(path.join(output,`boss-${level}.png`),canvas.toBuffer('image/png'));}
 })();

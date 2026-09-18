@@ -2,6 +2,10 @@
 // Coordinates are tiles; generated coffinSlots are derived only from these saved room plans.
 const room = (x,y,w,h,kind,layoutRole) => ({x,y,w,h,kind,...(layoutRole?{layoutRole}:{})});
 const savedPlan = (size,layout,rooms,links) => {
+    // Preserve each authored topology and Han symmetry: double center spacing,
+    // enlarge room dimensions by about 50%, leaving substantially longer passages.
+    size*=2;
+    rooms=rooms.map(r=>{const w=2*Math.ceil(r.w*.75),h=2*Math.ceil(r.h*.75);return {...r,x:r.x*2+r.w-w/2,y:r.y*2+r.h-h/2,w,h};});
     const coffinSlots=[];
     const seen=new Set();
     const add=(x,y)=>{

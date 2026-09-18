@@ -14,7 +14,6 @@ const TOMB_STYLES=[
 const Expedition={
  walls:[],switches:[],style:TOMB_STYLES[0],
  setup(){
-  BossFight.reset();
   this.style=TOMB_STYLES[Game.lvl-1];this.walls=[];this.switches=[];Game.p.hasKey=false;
   Game.ents=Game.ents.filter(e=>!['coffin','ground_item','zombie','vermin'].includes(e.type));
   const rooms=World.rooms.filter(r=>!['entry','sanctuary'].includes(r.kind));
@@ -53,7 +52,7 @@ const Expedition={
    if(r===Game.exitRoom||(roomIndex+Game.lvl)%3===0)Game.spawn({type:'tomb_remains',variant:(roomIndex+Game.lvl)%4,x:(r.x+r.w*.52)*50,y:(r.y+r.h*.68)*50,size:62+Math.min(20,Game.lvl*2),dead:0});
    if(Game.lvl>=7&&r===Game.exitRoom)Game.spawn({type:'tomb_remains',variant:2,x:(r.x+r.w*.28)*50,y:(r.y+r.h*.38)*50,size:88,dead:0});
   }
-  this.buildWalls();TombDangers.setup();
+  this.buildWalls();this.placePots();TombDangers.setup();
  },
  spawnEnemy(kind,x,y,homeCoffin=null){
   if(kind==='zombie'||kind==='crawler'){
@@ -64,7 +63,7 @@ const Expedition={
   }else Game.spawn(new TombCreature(x,y,kind));
  },
  reveal(c){
-  if(c.royal){BossFight.summon(c);return true;}
+  if(c.royal){this.spawnEnemy('zombie',c.x,c.y+25,c);return true;}
   if(c.explosive){c.fuse=1.4;Game.msg(curLang==='CN'?'棺内火药嘶响！退后！':'Explosive coffin! Back away!','#ff986d');}
   if(c.content==='key'){Game.p.hasKey=true;Game.msg(curLang==='CN'?'青铜机关钥匙 · 可开启盗洞机关':'Bronze key · exit crank unlocked','#eac879');Game.updateHUD();return true;}
   if(c.content!=='cache')return false;
@@ -84,7 +83,7 @@ const Expedition={
    if(!side)continue;
    const outside={x:(x+side.ox)*50+25,y:(y+side.oy)*50+25};
    if(Game.ents.some(e=>e.type==='coffin'&&Math.hypot(e.x-outside.x,e.y-outside.y)<65)||this.switches.some(e=>Math.hypot(e.x-outside.x,e.y-outside.y)<80))continue;
-   const room={x:x+1,y:y+1,w:3,h:3,kind:'sealed'};const id=World.rooms.length;World.rooms.push(room);this.sealedRooms.push(room);
+   const room={x:x+1,y:y+1,w:3,h:3,kind:'sealed',opened:false};const id=World.rooms.length;World.rooms.push(room);this.sealedRooms.push(room);
    for(let yy=y+1;yy<y+4;yy++)for(let xx=x+1;xx<x+4;xx++){MapSys.t[yy*MapSys.w+xx]=0;World.roomTiles[yy*MapSys.w+xx]=id;}
    const dx=x+side.dx,dy=y+side.dy;
    const wall={at:dy*MapSys.w+dx,x:dx*50+25,y:dy*50+25,type:'moving_wall',mode:this.walls.length?'slide':'lift',height:1,target:1,manual:true,room,dead:0};this.walls.push(wall);
@@ -100,24 +99,38 @@ const Expedition={
   for(const c of this.hidden)if(c.hidden&&!c.rising&&Math.hypot(c.x-Game.p.x,c.y-Game.p.y)<100){c.rising=true;c.liftTarget=1;AudioSys.playOpen();}
   for(const c of this.hidden)if(c.rising){c.elevation=Math.max(0,Math.min(1,c.elevation+(c.liftTarget?1:-1)*dt*.65));if(c.elevation===c.liftTarget && (c.liftTarget===0||Math.hypot(c.x-Game.p.x,c.y-Game.p.y)>=34)){c.hidden=c.elevation===0;c.rising=false;}}
   for(const w of this.walls){
-   w.target=Math.hypot(Game.p.x-w.x,Game.p.y-w.y)<90?0:1;
-   const occupied=Game.ents.some(e=>['player','zombie','vermin','boss'].includes(e.type)&&Math.abs(e.x-w.x)<39&&Math.abs(e.y-w.y)<39);
-   if(w.target&&occupied)continue;
-   w.height=Math.max(0,Math.min(1,w.height+(w.target?1:-1)*dt*.55));
-   const solid=w.height>.65;
+   const dx=Math.max(0,Math.abs(Game.p.x-w.x)-25),dy=Math.max(0,Math.abs(Game.p.y-w.y)-25);
+   if(Math.hypot(dx,dy)<=12&&!w.triggered){w.triggered=true;Scene.invalidateTerrain();}
+   w.target=w.triggered?0:1;
+   if(!w.triggered)continue;
+   w.height=Math.max(0,w.height-dt*.25);
+   const solid=w.height>.08;
+   if(!solid)w.room.opened=true;
    if((MapSys.t[w.at]===1)!==solid){MapSys.t[w.at]=solid?1:0;changed=true;}
   }
   if(changed){Scene.invalidateTerrain();ExitGate.rebuildDistance();}
  },
+ visualWallAt(at){return this.walls?.some(w=>w.at===at&&w.triggered);},
+ hiddenRoomAt(x,y){return this.sealedRooms?.find(r=>!r.opened&&World.inside(r,x,y));},
+ drawHiddenRooms(ctx){ctx.save();ctx.fillStyle='#000';for(const r of this.sealedRooms||[])if(!r.opened)ctx.fillRect(r.x*50,r.y*50,r.w*50,r.h*50);ctx.restore();},
+ placePots(){
+  Game.ents=Game.ents.map(e=>e.type==='burial_decor'&&[4,5].includes(e.sprite)?new TombPot(e.x,e.y,e.sprite,e.size):e);
+  for(const r of World.rooms.filter(r=>!['entry','sanctuary','sealed'].includes(r.kind))){
+   for(const side of [0,1]){const x=(r.x+(side?r.w-1.5:1.5))*50,y=(r.y+r.h/2)*50;
+    if(MapSys.canOccupy(x,y,12)&&!Game.ents.some(e=>Math.hypot(e.x-x,e.y-y)<65))Game.spawn(new TombPot(x,y,(Game.lvl+side)%2?4:5,78));
+   }
+  }
+ },
  render(ctx,e){
   const cn=curLang==='CN';
   if(TombDangers.render(ctx,e))return true;
+  if(e.type==='pot'){e.draw(ctx);return true;}
   if(e.type==='burial_decor'){Art.expeditionSprite(ctx,e.sprite,e.x,e.y,e.size);return true;}
   if(e.type==='moving_wall'){
+   if(!e.triggered)return true;
    ctx.save();ctx.fillStyle='#04090baa';ctx.fillRect(e.x-25,e.y-25,50,50);
    if(e.height>.03){const shift=e.mode==='slide'?(1-e.height)*40:0;ctx.globalAlpha=e.height;Art.stoneSurface(ctx,true,Math.floor(e.x/50),Math.floor(e.y/50),e.x-25+shift,e.y-25-(e.mode==='lift'?e.height*18:0),50,50);}
-   if(Math.hypot(Game.p.x-e.x,Game.p.y-e.y)<145)Art.label(ctx,e.x,e.y-50,cn?'机关石壁 · 靠近开启':'APPROACH TO OPEN','#d9c296');
-   ctx.globalAlpha=1;ctx.strokeStyle=e.target?'#c59861':'#7eaba1';ctx.lineWidth=2;ctx.strokeRect(e.x-24,e.y-24,48,48);if(e.warning&&Math.hypot(Game.p.x-e.x,Game.p.y-e.y)<180)Art.label(ctx,e.x,e.y-46,cn?'石壁将动':'WALL SHIFT','#e9ae76');ctx.restore();return true;
+   ctx.restore();return true;
   }
   if(e.type==='vermin'||e.crawler){
    const sprite=e.crawler?10:{worm:11,beetle:12,spider:13,bat:14}[e.kind];
@@ -128,6 +141,20 @@ const Expedition={
   return false;
  }
 };
+class TombPot{
+ constructor(x,y,sprite=4,size=78){Object.assign(this,{x,y,sprite,size,type:'pot',hp:2,dead:0,hitTimer:0});}
+ damage(amount=1){
+  if(this.dead||this.hitTimer>0)return false;this.hp-=amount;this.hitTimer=.3;AudioSys.playStomp();
+  if(this.hp>0)return true;
+  this.dead=1;Game.spawn(new Effect(this.x,this.y,'dust'));
+  const roll=Math.random();
+  if(roll<.12){const code=['item_wine','item_candle','item_hoof'][Math.floor(Math.random()*3)];Game.spawn(new GroundItem(this.x,this.y,code));}
+  else if(roll<.54){for(let i=0;i<1+Math.floor(Math.random()*3);i++){const bug=new TombCreature(this.x,this.y,i%2?'spider':'beetle');bug.stompable=true;Game.spawn(bug);}}
+  return true;
+ }
+ update(dt){this.hitTimer=Math.max(0,this.hitTimer-dt);}
+ draw(ctx){ctx.save();if(this.hitTimer>0)ctx.filter='brightness(1.35)';Art.expeditionSprite(ctx,this.sprite,this.x+Math.sin(this.hitTimer*70)*this.hitTimer*7,this.y,this.size);if(this.hp===1){ctx.strokeStyle='#17110ddd';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(this.x-5,this.y-this.size*.58);ctx.lineTo(this.x+3,this.y-this.size*.36);ctx.lineTo(this.x-6,this.y-this.size*.18);ctx.stroke();}ctx.restore();}
+}
 class TombCreature{
  constructor(x,y,kind){Object.assign(this,{x,y,kind,type:'vermin',dead:0,cooldown:1,windup:0});}
  update(dt,p){

@@ -573,12 +573,12 @@ class Player extends Entity {
     nearestTarget(){
         let nearest,best=78*78;
         for(const e of Game.ents){
-            if(e.dead||!['zombie','boss'].includes(e.type))continue;
+            if(e.dead||e.type!=='zombie')continue;
             const distance=(e.x-this.x)**2+(e.y-this.y)**2;
             if(distance>best||(nearest&&distance===best)||!MapSys.lineClear(this.x,this.y,e.x,e.y))continue;
             nearest=e;best=distance;
         }
-        return nearest;
+        return nearest||Game.ents.filter(e=>e.type==='pot'&&!e.dead&&Math.hypot(e.x-this.x,e.y-this.y)<=78&&MapSys.lineClear(this.x,this.y,e.x,e.y)).sort((a,b)=>Math.hypot(a.x-this.x,a.y-this.y)-Math.hypot(b.x-this.x,b.y-this.y))[0];
     }
     attack(target=this.nearestTarget()){
         if(!Game.running||Game.pause||!this.hasShovel||this.holdingBreath||this.attackCooldown>0||this.rollTime>0||!target)return false;
@@ -745,7 +745,7 @@ const Game = {
             'guide-find':cn?'驻足开棺':'DISCOVER',
             'guide-find-desc':cn?'驻足开棺寻找钥匙与补给，留意通往主墓室的路线。':'Stay beside a coffin to open it. Find the bronze key on each floor.',
             'guide-exit':cn?'寻龙脱身':'ESCAPE',
-            'guide-exit-desc':cn?'寻钥匙，开主棺击败墓主；解印拉闸后，25秒内回主墓室。':'Find the key, open the royal coffin and defeat its boss. Break seals and crank the gate, then escape within 25 seconds.',
+            'guide-exit-desc':cn?'寻钥匙、解印、拉闸；25秒内回主墓室。持铲靠近可打碎大罐。':'Find the key, break seals and crank the gate. Escape within 25 seconds. Approach jars with a shovel to smash them.',
             'pause-title':cn?'灯火未熄':'The flame awaits',
             'pause-desc':cn?'歇息片刻，古墓中的时间已暂停。':'Take a breath. The tomb is paused.',
             'resume-btn':cn?'继续探索':'Resume exploration',
@@ -918,7 +918,7 @@ const Game = {
 
         const cn=curLang==='CN';
         const objective=!this.p.hasKey?(cn?'① 驻足开棺 · 寻找机关钥匙':'① Open coffins · find the bronze key'):World.remaining()?(cn?`② 破除剩余 ${World.remaining()} 道封印`:`② Break ${World.remaining()} remaining seals`):ExitGate.remaining>0?(cn?`③ 返回主墓室 · 盗洞 ${Math.ceil(ExitGate.remaining)}秒`:`③ Return to the tomb · ${Math.ceil(ExitGate.remaining)}s`):(cn?'③ 找到机械开关 · 驻足拉闸开启盗洞':'③ Find the crank · stand beside it to open the exit');
-        document.getElementById('objective').textContent=this.p.hasKey&&!BossFight.cleared?(cn?'② 开启主棺 · 击败本层墓主':'② Open the royal coffin · defeat its guardian'):objective;
+        document.getElementById('objective').textContent=objective;
         document.getElementById('exit-confirm-btn').textContent=this.lvl===10?(cn?'逃出生天':'Escape the tomb'):LANG[curLang].exitModal.yes;
     },
     over: function(){
@@ -1006,7 +1006,7 @@ const Game = {
         const radius=Math.max(2,Math.floor(World.sight()/CONFIG.TILE*0.65));
         for(let y=Math.max(0,py-radius);y<=Math.min(MapSys.h-1,py+radius);y++) {
             for(let x=Math.max(0,px-radius);x<=Math.min(MapSys.w-1,px+radius);x++) {
-                if(Math.hypot(x-px,y-py)<=radius) this.explored[y*MapSys.w+x]=1;
+                if(Math.hypot(x-px,y-py)<=radius&&!Expedition.hiddenRoomAt(x*50+25,y*50+25)) this.explored[y*MapSys.w+x]=1;
             }
         }
     },
@@ -1016,7 +1016,7 @@ const Game = {
         if(!this.p.hasCompass){ctx.clearRect(0,0,canvas.width,canvas.height);return;}
         ctx.fillStyle='#09110f'; ctx.fillRect(0,0,canvas.width,canvas.height);
         for(let i=0;i<this.explored.length;i++) {
-            if(!this.explored[i]) continue;
+            if(!this.explored[i]||Expedition.hiddenRoomAt(i%MapSys.w*50+25,Math.floor(i/MapSys.w)*50+25)) continue;
             ctx.fillStyle=MapSys.t[i]===TERRAIN.WALL?'#25332d':MapSys.t[i]===TERRAIN.WATER?'#327b83':'#7b8066';
             ctx.fillRect((i%MapSys.w)*scale,Math.floor(i/MapSys.w)*scale,scale,scale);
         }
