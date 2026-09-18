@@ -41,7 +41,7 @@ function setup(seed=1) {
         requestAnimationFrame:fn=>{frames.set(++next,fn);return next;},cancelAnimationFrame:id=>frames.delete(id),
         setTimeout:fn=>{timers.set(++next,fn);return next;},clearTimeout:id=>timers.delete(id)
     });
-    vm.runInContext(source+'\nthis.api={Game,MapSys,Input,Player,Coffin,Zombie,Trap,Projectile,Effect,FloatText,AudioSys,CONFIG,TERRAIN,World,Art,Scene,Sound,THEMES,Passage,ExitGate,SPECIES,FLOOD_TYPES,Expedition,TombCreature,FLOOR_PLANS,TombDangers,TombPot};',context);
+    vm.runInContext(source+'\nthis.api={Game,MapSys,Input,Player,Coffin,Zombie,Trap,Projectile,Effect,FloatText,GroundItem,RelicItem,RELICS,AudioSys,CONFIG,TERRAIN,World,Art,Scene,Sound,THEMES,Passage,ExitGate,SPECIES,FLOOD_TYPES,Expedition,TombCreature,FLOOR_PLANS,TombDangers,TombPot};',context);
     const api=context.api;
     api.Art.ready=true;api.Art.sprites={};api.Art.walker={};api.Art.zombies={};api.Art.traps={};api.Art.trapEmitters={width:400,height:200};api.Art.mechanisms={};api.Art.tiles=Array(16).fill({});
     api.Game.resize();api.Game.restart();

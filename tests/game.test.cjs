@@ -437,9 +437,11 @@ test('moving walls change collision and never close on an actor',()=>{
  Game.p.x+=100;Expedition.update(2);assert.equal(MapSys.t[wall.at],0);
 });
 
-test('relic and monetary UI is removed',()=>{
- const {Game,els}=setup();assert.equal(els['relic-strip'],undefined);assert.equal(els['artifact-bar'],undefined);
- assert.ok(!/冥器|¥|CNY/.test(Game.runSummary()));assert.equal(Game.getArtifact,undefined);
+test('antique relics are collected, priced in ten-thousand yuan and reported after a floor',()=>{
+ const {Game,RelicItem,RELICS,Passage,els}=setup();assert.ok(els['relic-strip']);
+ const relic=new RelicItem(Game.p.x,Game.p.y,1);Game.ents.push(relic);relic.update(.01,Game.p);
+ assert.equal(relic.dead,1);assert.equal(Game.relics.length,1);assert.equal(Game.relicTotal(),RELICS[1].price);assert.match(els['relic-strip'].innerHTML,/万元/);
+ Passage.open(1);assert.ok(els['passage-relics'].innerHTML.includes(RELICS[1].name));assert.match(Game.runSummary(),/冥器 1 件/);
 });
 
 test('creatures telegraph attacks, respect warding and use finite coffin spawns',()=>{
@@ -589,10 +591,10 @@ test('only the nearest coffin controls the push pose and the player always faces
 
 test('push renderer uses the visually correct atlas rows even when cached facing is stale',()=>{
  const {Art,Game,calls}=setup();Art.coffinPush={width:1225,height:1284};
- const c={x:300,y:300,opened:true,lidProgress:0};
+ const c={x:300,y:300,opened:true,pushProgress:0};
  for(const [x,y,row] of [[300,260,0],[340,300,2],[260,300,1],[300,340,3]]){
   for(const progress of [0,.3,.6,1]){
-   c.lidProgress=progress;calls.length=0;
+   c.pushProgress=progress;calls.length=0;
    Art.pushRaider(Game.ctx,{x,y,pushingCoffin:c,pushDirection:0,direction:0},x,y,82);
    const draw=calls.find(v=>v[0]==='drawImage');
    assert.equal(draw[3],[0,320,640,944][row]);assert.equal(draw[2],[0,307,625,950][Math.min(3,Math.floor(progress*4))]);
@@ -600,6 +602,12 @@ test('push renderer uses the visually correct atlas rows even when cached facing
  }
  calls.length=0;Art.pushRaider(Game.ctx,{x:300,y:300,pushingCoffin:c,pushDirection:1},300,300,82);
  assert.equal(calls.find(v=>v[0]==='drawImage')[3],640);
+});
+
+test('one coffin interaction plays one push cycle and opens only once',()=>{
+ const {Game,Coffin}=setup();const c=new Coffin(Game.p.x,Game.p.y-35,'cache');Game.ents=[Game.p,c];let reveals=0;c.reveal=()=>reveals++;
+ for(let i=0;i<45;i++)Game.step(1/60);assert.equal(c.opened,1);assert.equal(c.pushProgress,1);assert.ok(Game.p.pushUntil<=.7);
+ for(let i=0;i<90;i++)Game.step(1/60);assert.equal(reveals,1);assert.equal(Game.p.pushingCoffin,null);
 });
 
 test('coffins never block walking or forced movement',()=>{
@@ -613,18 +621,22 @@ test('coffins never block walking or forced movement',()=>{
 });
 
 test('royal coffin releases a powerful red blood corpse and corpse beetle swarm',()=>{
- const {Game,Expedition}=setup();const royal=Game.ents.find(e=>e.royal),beforeZ=Game.ents.filter(e=>e.type==='zombie').length,beforeB=Game.ents.filter(e=>e.type==='vermin').length;
+ const {Game,Expedition}=setup();const royal=Game.ents.find(e=>e.royal),beforeZ=Game.ents.filter(e=>e.type==='zombie').length,beforeB=Game.ents.filter(e=>e.type==='vermin').length,beforeR=Game.ents.filter(e=>e.type==='relic_item').length;
  royal.reveal();const zombies=Game.ents.filter(e=>e.type==='zombie');assert.equal(zombies.length,beforeZ+1);
- const blood=zombies.at(-1);assert.equal(blood.species.name,'赤血厉尸');assert.equal(blood.zType,1);assert.equal(blood.bloodCorpse,true);assert.ok(blood.hp>=6&&blood.spd>=128);
+ const blood=zombies.at(-1);assert.equal(blood.species.name,'赤血厉尸');assert.equal(blood.zType,1);assert.equal(blood.bloodCorpse,true);assert.ok(blood.hp>=14&&blood.maxHp===blood.hp&&blood.spd>=128);
  assert.equal(Game.ents.filter(e=>e.type==='vermin'&&e.kind==='beetle').length,beforeB+Expedition.royalBeetleCount);assert.ok(!Game.ents.some(e=>e.type==='boss'));
+ assert.equal(Game.ents.filter(e=>e.type==='relic_item').length,beforeR+1);
 });
 
 test('main and side chambers stay black until entry then light wall lamps gradually',()=>{
- const {Game,World,calls}=setup();const room=World.rooms.find(r=>r.kind==='main'||r.kind==='exit'||r.kind==='ear_left');assert.ok(room?.darkBeforeEntry);assert.equal(room.entered,false);
+ const {Game,World,Art,calls}=setup();const room=World.rooms.find(r=>r.kind==='main'||r.kind==='exit'||r.kind==='ear_left');assert.ok(room?.darkBeforeEntry);assert.equal(room.entered,false);
+ assert.ok(World.rooms.slice(1).every(r=>r.darkBeforeEntry&&!r.entered));assert.equal(World.rooms[0].entered,true);
  const x=(room.x+.5)*50,y=(room.y+.5)*50;assert.equal(World.roomHiddenAt(x,y),room);
- calls.length=0;World.drawRoomLighting(Game.ctx,1);assert.ok(calls.some(c=>c[0]==='fillRect'&&c[1]===room.x*50&&c[2]===room.y*50));
+ calls.length=0;World.drawRoomLighting(Game.ctx,1);assert.equal(room.lightProgress,0);
  Game.p.x=x;Game.p.y=y;World.updateRoom();assert.equal(room.entered,true);assert.equal(room.lightProgress,0);World.update(.7);assert.ok(room.lightProgress>0&&room.lightProgress<1);
- calls.length=0;World.drawRoomLighting(Game.ctx,2);assert.ok(calls.some(c=>c[0]==='ellipse'));World.update(4);assert.equal(room.lightProgress,1);assert.equal(World.roomHiddenAt(x,y),undefined);
+ Art.wallCandleImage={};calls.length=0;World.drawRoomLighting(Game.ctx,2);assert.ok(calls.some(c=>c[0]==='drawImage'));World.update(5);assert.equal(room.lightProgress,1);assert.equal(World.roomHiddenAt(x,y),undefined);
+ room.lightProgress=.1;calls.length=0;World.drawRoomLighting(Game.ctx,2);const early=calls.filter(c=>c[0]==='drawImage').length;
+ room.lightProgress=.85;calls.length=0;World.drawRoomLighting(Game.ctx,2);assert.ok(calls.filter(c=>c[0]==='drawImage').length>early);
 });
 
 test('large pots take two shovel hits and use bounded item, insect and empty outcomes',()=>{
@@ -642,7 +654,7 @@ test('large pots take two shovel hits and use bounded item, insect and empty out
 test('sealed chambers stay black and undiscovered until a flush hidden wall slowly opens',()=>{
  const {Game,Expedition,MapSys,Scene,calls}=setup();const wall=Expedition.walls[0],room=wall.room;assert.ok(wall&&!wall.triggered&&!room.opened);
  Game.p.x=wall.x;Game.p.y=wall.y+60;Expedition.update(5);assert.equal(wall.height,1);assert.equal(MapSys.t[wall.at],1);
- calls.length=0;Expedition.drawHiddenRooms(Game.ctx);assert.ok(calls.some(c=>c[0]==='fillRect'&&c[1]===room.x*50&&c[2]===room.y*50));
+ calls.length=0;Expedition.drawHiddenRooms(Game.ctx);assert.ok(calls.some(c=>c[0]==='roundRect'&&c[1]===room.x*50+5&&c[2]===room.y*50+5));
  const at=(room.y+1)*MapSys.w+room.x+1;Game.explored[at]=0;Game.p.x=(room.x+1)*50+25;Game.p.y=(room.y+1)*50+25;Game.refreshExploration();assert.equal(Game.explored[at],0);
  Game.p.x=wall.x;Game.p.y=wall.y+35;Expedition.update(2);assert.ok(wall.height>.45&&wall.height<.55);assert.equal(room.opened,false);Expedition.update(2.1);assert.equal(MapSys.t[wall.at],0);assert.equal(room.opened,true);
  calls.length=0;Expedition.render(Game.ctx,wall);assert.ok(!calls.some(c=>c[0]==='fillText'||c[0]==='strokeRect'));

@@ -9,8 +9,9 @@ const Art = {
     ],
     load() {
         const load=src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src;});
-        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png'),load('assets/tomb-mechanisms.png'),load('assets/tomb-stone-realistic.png'),load('assets/tomb-expedition.png'),load('assets/tomb-coffin-details.png'),load('assets/raider-shovel-attack.png'),load('assets/entrenching-shovel.png'),load('assets/tomb-remains.png'),load('assets/raider-coffin-push.png'),load('assets/coffin-lid.png'),load('assets/trap-emitters.png'),load('assets/raider-hold-breath.png')]).then(([sprites,materials,walker,zombies,traps,mechanisms,stone,expedition,coffinDetails,shovelAttack,shovelItem,remains,coffinPush,coffinLid,trapEmitters,breathRaider])=>{
-            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;this.mechanisms=mechanisms;this.stone=stone;this.expedition=expedition;this.coffinDetails=coffinDetails;this.shovelAttack=shovelAttack;this.shovelItem=shovelItem;this.remains=remains;this.coffinPush=coffinPush;this.coffinLid=coffinLid;this.trapEmitters=trapEmitters;this.breathRaider=breathRaider;
+        const relicPaths=['relic-jade-bi','relic-boshan-incense','relic-bronze-mirror','relic-gold-belt-hook','relic-lacquer-box','relic-jade-cicada','relic-gilt-jue','relic-jade-plaque'].map(n=>`assets/${n}.webp`);
+        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png'),load('assets/tomb-mechanisms.png'),load('assets/tomb-stone-realistic.png'),load('assets/tomb-expedition.png'),load('assets/tomb-coffin-details.png'),load('assets/raider-shovel-attack.png'),load('assets/entrenching-shovel.png'),load('assets/tomb-remains.png'),load('assets/raider-coffin-push.png'),load('assets/coffin-lid.png'),load('assets/trap-emitters.png'),load('assets/raider-hold-breath.png'),load('assets/crawling-zombie-motion.webp'),load('assets/bat-flight-motion.webp'),load('assets/tomb-wall-candle.webp'),Promise.all(relicPaths.map(load))]).then(([sprites,materials,walker,zombies,traps,mechanisms,stone,expedition,coffinDetails,shovelAttack,shovelItem,remains,coffinPush,coffinLid,trapEmitters,breathRaider,crawlerMotion,batMotion,wallCandle,relics])=>{
+            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;this.mechanisms=mechanisms;this.stone=stone;this.expedition=expedition;this.coffinDetails=coffinDetails;this.shovelAttack=shovelAttack;this.shovelItem=shovelItem;this.remains=remains;this.coffinPush=coffinPush;this.coffinLid=coffinLid;this.trapEmitters=trapEmitters;this.breathRaider=breathRaider;this.crawlerMotion=crawlerMotion;this.batMotion=batMotion;this.wallCandleImage=wallCandle;this.relics=relics;
             const xs=[0,313,626,940,1254],ys=[0,302,618,918,1254];
             for(let i=0;i<16;i++) {
                 const c=document.createElement('canvas');c.width=c.height=400;
@@ -38,7 +39,7 @@ const Art = {
         ctx.drawImage(this.shovelAttack,sx,sy,sw,sh,-size/2,-size*.94,size,size);ctx.restore();
     },
     pushRaider(ctx,e,x,y,size){
-        const c=e.pushingCoffin,progress=c?.opened?Math.min(1,c.lidProgress):Math.min(.72,(c?.interactTimer||0)/.6*.72);
+        const c=e.pushingCoffin,progress=Math.min(.999,c?.pushProgress??Math.min(1,(c?.interactTimer||0)/.6));
         const dx=(c?.x??e.x)-e.x,dy=(c?.y??e.y)-e.y;
         // Resolve the live target, not a cached direction from before movement.
         const direction=Math.hypot(dx,dy)<.01?(e.pushDirection??e.direction??0):Math.abs(dx)>Math.abs(dy)?(dx<0?1:2):(dy<0?3:0);
@@ -51,6 +52,12 @@ const Art = {
         const sx=xs[pose]*this.coffinPush.width/1225,sy=ys[row]*this.coffinPush.height/1284;
         const sw=(xs[pose+1]-xs[pose])*this.coffinPush.width/1225,sh=(ys[row+1]-ys[row])*this.coffinPush.height/1284;
         ctx.drawImage(this.coffinPush,sx,sy,sw,sh,x-size/2,y-size*.94,size,size);
+    },
+    motionFrame(ctx,atlas,index,x,y,size){const sw=atlas.width/4,sh=atlas.height;ctx.drawImage(atlas,(index%4)*sw,0,sw,sh,x-size/2,y-size*.72,size,size*.72);},
+    relic(ctx,index,x,y,size=54){const image=this.relics?.[index];if(image)ctx.drawImage(image,x-size/2,y-size/2,size,size);},
+    wallCandle(ctx,x,y,size=38,side='top'){
+        if(!this.wallCandleImage)return;const lean=side==='left'?-.08:side==='right'?.08:0;
+        ctx.save();ctx.translate(x,y);ctx.rotate(lean);ctx.drawImage(this.wallCandleImage,-size*.42,-size*.62,size*.84,size);ctx.restore();
     },
     coffinLidSprite(ctx,e,size=92){
         if(!this.coffinLid)return;
@@ -197,11 +204,12 @@ const Scene = {
     paintTerrain(ctx,left,right,top,bottom){
         for(let y=top;y<bottom;y++)for(let x=left;x<right;x++){
             const at=y*MapSys.w+x,type=MapSys.t[at]===1&&Expedition.visualWallAt(at)?0:MapSys.t[at];
-            ctx.save();ctx.filter=Expedition.style.filter;Art.stoneSurface(ctx,type===1,x,y);
-            ctx.globalAlpha=type===1?.42:.2;ctx.drawImage(Art.tiles[type===1?Expedition.style.wall:Expedition.style.floor],x%8*50,y%8*50,50,50,x*50,y*50,50,50);ctx.restore();
-            ctx.fillStyle=(type===1?World.theme.wallTint:World.theme.floorTint)+'38';ctx.fillRect(x*50,y*50,50,50);
+            const bleed=0,dx=x*50-bleed,dy=y*50-bleed,dsize=50+bleed*2;
+            ctx.save();ctx.filter=Expedition.style.filter;Art.stoneSurface(ctx,type===1,x,y,dx,dy,dsize,dsize);
+            ctx.globalAlpha=type===1?0:.2;ctx.drawImage(Art.tiles[type===1?Expedition.style.wall:Expedition.style.floor],x%8*50,y%8*50,50,50,dx,dy,dsize,dsize);ctx.restore();
+            ctx.fillStyle=(type===1?World.theme.wallTint:World.theme.floorTint)+'38';ctx.fillRect(dx,dy,dsize,dsize);
             if(type!==1){ctx.fillStyle=World.theme.tint+'16';ctx.fillRect(x*50,y*50,50,50);}
-            ctx.fillStyle=type===1?'#020709cc':'#111c2520';ctx.fillRect(x*50,y*50,50,50);
+            ctx.fillStyle=type===1?'#02070988':'#111c2520';ctx.fillRect(x*50,y*50,50,50);
         }
     },
 
@@ -244,8 +252,7 @@ const Scene = {
         this.roomAtmosphere(ctx,time,'over',left,right,top,bottom);
         for(const t of game.texts) {ctx.save();ctx.translate(t.x,t.y);t.draw(ctx);ctx.restore();}
         ctx.restore();
-        const sight=World.sight(),shade=ctx.createRadialGradient(w/2,h/2,60,w/2,h/2,sight);
-        shade.addColorStop(0,'#00000000');shade.addColorStop(.65,'#030a0d40');shade.addColorStop(1,'#020608ec');ctx.fillStyle=shade;ctx.fillRect(0,0,w,h);
+        this.drawDarkness(ctx,w,h,cx,cy,time,left,right,top,bottom,game);
         // Keep the nearby actors readable through the torch falloff.
         ctx.save();ctx.translate(-cx,-cy);
         if(p.hasCompass) {
@@ -258,6 +265,7 @@ const Scene = {
         }
         TombDangers.drawClouds(ctx,left,right,top,bottom);
         World.drawRoomLighting(ctx,time);
+        this.emissiveLights(ctx,time,left,right,top,bottom,game);
         Expedition.drawHiddenRooms(ctx);
         ctx.restore();
     },
@@ -285,32 +293,67 @@ const Scene = {
     },
     masonry(ctx,left,right,top,bottom){
         const open=(x,y)=>x>=0&&y>=0&&x<MapSys.w&&y<MapSys.h&&MapSys.t[y*MapSys.w+x]!==1;
-        for(let y=top-1;y<bottom+1;y++)for(let x=left-1;x<right+1;x++){
-            if(x<0||y<0||x>=MapSys.w||y>=MapSys.h||MapSys.t[y*MapSys.w+x]!==1||Expedition.visualWallAt(y*MapSys.w+x))continue;
-            const px=x*50,py=y*50,front=open(x,y+1),back=open(x,y-1),west=open(x-1,y),east=open(x+1,y);
-            if(!front&&!back&&!west&&!east)continue;
-            ctx.save();
-            // Textured wall crown sits above a taller, shaded vertical face.
-            Art.stoneSurface(ctx,true,x,y,px,py,50,50);
-            const crown=ctx.createLinearGradient(px,py,px+50,py+50);crown.addColorStop(0,'#bac1aa22');crown.addColorStop(1,'#080e1455');ctx.fillStyle=crown;ctx.fillRect(px,py,50,50);
-            if(front){
-                Art.stoneSurface(ctx,true,x,y+3,px,py+12,50,38);
-                const shade=ctx.createLinearGradient(0,py+12,0,py+50);shade.addColorStop(0,'#d0c8ac66');shade.addColorStop(.12,'#07101933');shade.addColorStop(1,'#030b13e0');
-                ctx.fillStyle=shade;ctx.beginPath();ctx.moveTo(px,py+13);
-                for(let k=0;k<=5;k++)ctx.lineTo(px+k*10,py+12+Math.sin(x*9+k*4)*2.5);
-                ctx.lineTo(px+50,py+50);ctx.lineTo(px,py+50);ctx.fill();
-                const shadow=ctx.createLinearGradient(0,py+50,0,py+69);shadow.addColorStop(0,'#000000a0');shadow.addColorStop(1,'#00000000');ctx.fillStyle=shadow;ctx.fillRect(px,py+50,50,19);
-            }
-            for(const side of [west?-1:0,east?1:0])if(side){const bx=side<0?px:px+38;const edge=ctx.createLinearGradient(bx,0,bx+12,0);edge.addColorStop(0,side<0?'#d3cab355':'#09101811');edge.addColorStop(1,side<0?'#1b252822':'#020812dd');ctx.fillStyle=edge;ctx.fillRect(bx,py,12,50);}
-            if(back){ctx.fillStyle='#a8a18a66';ctx.fillRect(px,py,50,3);}
-            // Chipped masonry and rubble soften the boundary, without hiding the route.
-            for(let k=0;k<4;k++){const jitter=Math.sin(x*71+y*37+k*13),xx=px+k*13+3;
-                ctx.fillStyle=k%2?'#66675b':'#171f1b';
-                if(front){ctx.beginPath();ctx.moveTo(xx,py+47);ctx.lineTo(xx+6,py+49);ctx.lineTo(xx+3,py+53+jitter*2);ctx.closePath();ctx.fill();}
-            }
-            if(front&&(x+y)%5===0){ctx.fillStyle='#bba574';ctx.fillRect(px+18,py+29,9,17);ctx.strokeStyle='#692c21';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(px+22,py+31);ctx.lineTo(px+20,py+36);ctx.lineTo(px+25,py+39);ctx.lineTo(px+21,py+44);ctx.stroke();}
-            ctx.restore();
+        const edges=[],fronts=[];
+        for(let y=Math.max(0,top-2);y<Math.min(MapSys.h,bottom+2);y++)for(let x=Math.max(0,left-2);x<Math.min(MapSys.w,right+2);x++){
+            if(MapSys.t[y*MapSys.w+x]!==1||Expedition.visualWallAt(y*MapSys.w+x))continue;
+            const px=x*50,py=y*50-12;
+            if(open(x,y+1)){edges.push([[px,py+50],[px+50,py+50]]);fronts.push({x:px,y:py+50});}
+            if(open(x,y-1))edges.push([[px+50,py],[px,py]]);
+            if(open(x-1,y))edges.push([[px,py],[px,py+50]]);
+            if(open(x+1,y))edges.push([[px+50,py+50],[px+50,py]]);
         }
+        // Merge adjoining faces into one slab: no per-tile rounded ends or shadow seams.
+        fronts.sort((a,b)=>a.y-b.y||a.x-b.x);
+        for(let i=0;i<fronts.length;){const start=fronts[i++];let end=start.x+50;while(i<fronts.length&&fronts[i].y===start.y&&fronts[i].x===end){end+=50;i++;}
+            const y=start.y,face=ctx.createLinearGradient(0,y,0,y+39);face.addColorStop(0,'#a49c8177');face.addColorStop(.12,'#303736ee');face.addColorStop(1,'#101717');
+            ctx.save();ctx.fillStyle=face;ctx.beginPath();ctx.roundRect(start.x-1,y,end-start.x+2,39,10);ctx.fill();
+            const shadow=ctx.createLinearGradient(0,y+33,0,y+72);shadow.addColorStop(0,'#000000c0');shadow.addColorStop(1,'#00000000');ctx.fillStyle=shadow;ctx.fillRect(start.x-7,y+33,end-start.x+14,39);ctx.restore();
+        }
+        const key=p=>p.join(','),remaining=new Map(edges.map(e=>[key(e[0]),e]));
+        ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();
+        while(remaining.size){const first=remaining.values().next().value,path=[first[0],first[1]];remaining.delete(key(first[0]));let next;
+            while((next=remaining.get(key(path[path.length-1])))){remaining.delete(key(next[0]));path.push(next[1]);}
+            const closed=key(path[0])===key(path[path.length-1]);if(closed)path.pop();
+            const point=(from,to,d)=>{const length=Math.hypot(to[0]-from[0],to[1]-from[1]);return [from[0]+(to[0]-from[0])*d/length,from[1]+(to[1]-from[1])*d/length];};
+            if(closed){const start=point(path[0],path[path.length-1],10);ctx.moveTo(...start);}else ctx.moveTo(...path[0]);
+            for(let i=closed?0:1;i<(closed?path.length:path.length-1);i++){
+                const prev=path[(i+path.length-1)%path.length],p=path[i],after=path[(i+1)%path.length],before=point(p,prev,10),out=point(p,after,10);
+                ctx.lineTo(...before);ctx.quadraticCurveTo(...p,...out);
+            }
+            if(closed)ctx.closePath();else ctx.lineTo(...path[path.length-1]);
+        }
+        ctx.strokeStyle='#070d0fde';ctx.lineWidth=13;ctx.shadowColor='#000';ctx.shadowBlur=12;ctx.shadowOffsetY=8;ctx.stroke();ctx.shadowBlur=0;ctx.shadowOffsetY=0;ctx.strokeStyle='#b5ad9066';ctx.lineWidth=3;ctx.stroke();ctx.restore();
+    },
+    drawDarkness(ctx,w,h,cx,cy,time,left,right,top,bottom,game){
+        const pad=24;
+        const mask=this.lightMask||(this.lightMask=this.canvasFactory?this.canvasFactory():document.createElement('canvas'));
+        if(mask.width!==w+pad*2||mask.height!==h+pad*2){mask.width=w+pad*2;mask.height=h+pad*2;}
+        const m=mask.getContext('2d');m.clearRect(0,0,mask.width,mask.height);m.fillStyle='rgba(3,6,9,.96)';m.fillRect(0,0,mask.width,mask.height);
+        m.save();m.globalCompositeOperation='destination-out';
+        const illuminate=(x,y,r,color,strength=1)=>{
+            if(x+r<cx||x-r>cx+w||y+r<cy||y-r>cy+h||Expedition.hiddenRoomAt(x,y))return;
+            m.save();m.beginPath();
+            // Rays stop at stone so a lamp cannot illuminate the next room through a wall.
+            for(let i=0;i<=64;i++){
+                const a=i/64*Math.PI*2,dx=Math.cos(a),dy=Math.sin(a);let d=8;
+                for(;d<r;d+=9){const tx=Math.floor((x+dx*d)/50),ty=Math.floor((y+dy*d)/50);if(tx<0||ty<0||tx>=MapSys.w||ty>=MapSys.h||MapSys.t[ty*MapSys.w+tx]===1)break;}
+                const px=x-cx+pad+dx*Math.min(r,d+16),py=y-cy+pad+dy*Math.min(r,d+16);if(i===0)m.moveTo(px,py);else m.lineTo(px,py);
+            }
+            m.closePath();m.clip();const g=m.createRadialGradient(x-cx+pad,y-cy+pad,0,x-cx+pad,y-cy+pad,r);g.addColorStop(0,`rgba(0,0,0,${strength})`);g.addColorStop(.28,`rgba(0,0,0,${strength*.82})`);g.addColorStop(.7,`rgba(0,0,0,${strength*.28})`);g.addColorStop(1,'rgba(0,0,0,0)');m.fillStyle=g;m.fillRect(x-cx+pad-r,y-cy+pad-r,r*2,r*2);m.restore();
+        };
+        illuminate(game.p.x,game.p.y,World.sight(),'#ffd090',.96);
+        World.drawRoomLighting(m,time,illuminate);this.emissiveLights(m,time,left,right,top,bottom,game,illuminate);
+        m.restore();ctx.save();ctx.filter='blur(7px)';ctx.drawImage(mask,-pad,-pad);ctx.restore();
+    },
+    emissiveLights(ctx,time,left,right,top,bottom,game,illuminate=null){
+        const light=(x,y,r,color,alpha=1)=>{if(x<(left-3)*50||x>(right+3)*50||y<(top-3)*50||y>(bottom+3)*50||Expedition.hiddenRoomAt(x,y))return;if(illuminate){illuminate(x,y,r,color,Math.min(.85,alpha*.8));return;}ctx.save();ctx.globalCompositeOperation='screen';ctx.globalAlpha=alpha;Art.glow(ctx,x,y,r,color);ctx.restore();};
+        const pulse=.86+.12*Math.sin(time*7.4);
+        for(const p of World.props)if(p.glow)light(p.x,p.y-15,125,'#ec9d3d66',pulse);
+        for(const h of World.hazards)if(h.kind==='fire'){const phase=World.phase(h);if(phase>3.2)light(h.x,h.y,phase>4.5?125:78,'#ff6b2488',pulse);}
+        for(const v of TombDangers.vents)if(v.kind==='fire'&&v.revealed){light(v.x,v.y,105,'#ff73269a',pulse);if(v.state==='active')light(v.x+Math.cos(v.angle)*v.length*.38,v.y+Math.sin(v.angle)*v.length*.38,155,'#ff913a86',pulse);}
+        for(const e of game.ents)if(e.type==='burial_decor'&&e.sprite===3)light(e.x,e.y-12,135,'#ee8d3670',pulse);
+        for(const e of game.ents)if((e.type==='proj'&&e.pType==='FIRE')||e.fuse>0)light(e.x,e.y,e.fuse>0?110:64,'#ff762f88',pulse);
+        if(ExitGate.flood?.name==='岩浆'&&ExitGate.radius>0)for(let y=top;y<bottom;y+=2)for(let x=left;x<right;x+=2){const px=x*50+25,py=y*50+25,l=ExitGate.levelAt(px,py);if(l>.18)light(px,py,78,'#ff541c70',Math.min(1,l)*pulse);}
     },
     tombTraces(ctx,left,right,top,bottom){
         for(let y=top;y<bottom;y++)for(let x=left;x<right;x++){
@@ -380,6 +423,7 @@ const Scene = {
                 if(e.x>game.p.x)ctx.scale(-1,1);
                 if(e.landT>0)ctx.scale(1.06,.94);
                 ctx.filter=e.species.filter;Art.frame(ctx,Art.zombies,e.zType*4+pose,0,0,e.species.size,e.species.size,true);ctx.restore();
+                if(e.bloodCorpse&&distance<230)Art.progress(ctx,e.x,e.y-e.species.size+8,e.hp/e.maxHp,'#d52c35');
                 if(distance<180)Art.label(ctx,e.x,e.y-e.species.size-4,cn?e.species.name:e.species.en,e.bloodCorpse?'#ff8174':'#d9bd99');
                 if(e.attackState==='windup')Art.label(ctx,e.x,e.y-77,cn?'!':'!','#ffae83');
             }
@@ -398,6 +442,10 @@ const Scene = {
             const idx={item_candle:8,item_wine:9,item_hoof:10,item_jade:11,item_compass:12}[e.code];
             Art.glow(ctx,e.x,e.y-5,32,'#ddb65930');if(e.code==='item_shovel')Art.shovel(ctx,e.x,e.y,1);else Art.sprite(ctx,idx,e.x,e.y+Math.sin(time*3)*2,38);
             if(distance<95)Art.label(ctx,e.x,e.y-38,LANG[curLang].items[e.code.replace('item_','')].n);return;
+        }
+        if(e.type==='relic_item'){
+            const r=RELICS[e.relicIndex],bob=Math.sin(time*3+e.phase)*3;Art.glow(ctx,e.x,e.y+bob,46,'#eac66955');Art.relic(ctx,e.relicIndex,e.x,e.y+bob,58);
+            if(distance<110)Art.label(ctx,e.x,e.y-45+bob,cn?`${r.name} · ${r.price} 万元`:`${r.en} · ${r.price}0K CNY`,'#f4d98d');return;
         }
         if(e.type==='trap') {
             if(e.vent)return;

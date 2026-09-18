@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>寻龙诀 · 十层古墓</title>
-    <link rel="stylesheet" href="styles.css?v=20">
+    <link rel="stylesheet" href="styles.css?v=21">
 
 </head>
 <body>
@@ -23,6 +23,7 @@
     <div id="map-panel" style="display:none"><canvas id="minimap" width="180" height="180" aria-label="已探索区域地图"></canvas><div id="map-caption">探索地图 · 金点为目标</div></div>
     <div id="control-hint" class="hud"></div>
     <div id="item-bar"></div>
+    <div id="relic-strip"></div>
     <div id="buff-bar"></div>
     <div id="msg-box" role="status" aria-live="polite"></div>
     <div id="breath-status" role="status" aria-live="polite">
@@ -45,7 +46,7 @@
         <div id="passage-kicker" class="eyebrow">盗洞深处</div>
         <canvas id="passage-scene" width="640" height="320" aria-hidden="true"></canvas>
         <div class="passage-copy"><div id="passage-floor"></div><h2 id="exit-title">下一重墓</h2>
-        <p id="passage-description"></p><p id="passage-detail"></p>
+        <p id="passage-description"></p><p id="passage-detail"></p><section id="passage-relics" class="relic-report" aria-label="古董冥器统计"></section>
         <div class="passage-progress"><span id="passage-progress-fill"></span></div>
         <button id="exit-confirm-btn" class="btn" onclick="Game.confirmNextLevel()">进入下一层</button>
         <p id="passage-status" role="status" aria-live="polite">整顿行装，继续深入</p></div>
@@ -67,6 +68,7 @@
     <h2 id="win-title">摸金校尉 凯旋</h2>
     <div style="font-size:80px; margin-bottom:20px">🏆</div>
     <p style="color:#ffd700; font-size:20px; margin-bottom:30px" id="win-desc">穿越十层，逃出生天！</p>
+    <section id="win-relics" class="relic-report" aria-label="全部古董冥器"></section>
     <button class="btn" onclick="Game.restart()" id="win-btn">再来一局</button>
 </div>
 
@@ -98,10 +100,10 @@
 <script src="audio.js?v=15"></script>
 <script src="escape.js?v=15"></script>
 <script src="dangers.js?v=17"></script>
-<script src="expedition.js?v=20"></script>
-<script src="world.js?v=19"></script>
-<script src="art.js?v=21"></script>
-<script src="transitions.js?v=15"></script>
-<script src="game.js?v=28"></script>
+<script src="expedition.js?v=22"></script>
+<script src="world.js?v=20"></script>
+<script src="art.js?v=23"></script>
+<script src="transitions.js?v=16"></script>
+<script src="game.js?v=29"></script>
 </body>
 </html>

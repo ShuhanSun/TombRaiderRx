@@ -68,7 +68,7 @@ const Expedition={
    speed:Math.max(128,base.speed*1.32),sense:Math.max(285,base.sense+70),
    hop:Math.min(.45,base.hop*.7),windup:Math.min(.32,base.windup*.62),size:Math.max(94,base.size+14),
    filter:'saturate(1.9) hue-rotate(334deg) contrast(1.22) brightness(.82)'};
-  z.zType=1;z.spd=z.species.speed;z.hp=5+Game.lvl;z.bloodCorpse=true;
+  z.zType=1;z.spd=z.species.speed;z.hp=12+Game.lvl*2;z.maxHp=z.hp;z.bloodCorpse=true;
   z.homeCoffin=c;z.homeX=c.x;z.homeY=c.y+18;Game.spawn(z);
   this.royalBeetleCount=3+Math.floor(Game.lvl/4);
   for(let i=0;i<this.royalBeetleCount;i++){
@@ -87,6 +87,13 @@ const Expedition={
    if(p.loot)p.loot.forEach((code,i)=>{const item=new GroundItem(c.x+(i?35:-35),c.y+30,code);Game.spawn(item);});
   }
   Game.addText(c.x,c.y,c.payload.enemy?(curLang==='CN'?'棺中有异动！':'Something stirs!'):(curLang==='CN'?'取出随葬供物':'Burial supplies'),'#d2b38b');return true;
+ },
+ maybeDropRelic(c){
+  if(c.relicRolled)return;c.relicRolled=true;
+  if(!c.royal&&Math.random()>.3)return;
+  const unlocked=Math.min(RELICS.length,3+Math.ceil((Game.lvl-1)/2)),index=Math.floor(Math.random()*unlocked);
+  Game.spawn(new RelicItem(c.x+(Math.random()-.5)*42,c.y+42,index));
+  Game.addText(c.x,c.y-18,curLang==='CN'?'棺中有古董冥器！':'An antique relic!','#f4d47f');
  },
  buildWalls(){
   this.sealedRooms=[];
@@ -127,7 +134,7 @@ const Expedition={
  },
  visualWallAt(at){return this.walls?.some(w=>w.at===at&&w.triggered);},
  hiddenRoomAt(x,y){return this.sealedRooms?.find(r=>!r.opened&&World.inside(r,x,y));},
- drawHiddenRooms(ctx){ctx.save();ctx.fillStyle='#000';for(const r of this.sealedRooms||[])if(!r.opened)ctx.fillRect(r.x*50,r.y*50,r.w*50,r.h*50);ctx.restore();},
+ drawHiddenRooms(ctx){ctx.save();ctx.filter='blur(13px)';ctx.fillStyle='rgba(3,6,8,.94)';for(const r of this.sealedRooms||[])if(!r.opened){const x=r.x*50+5,y=r.y*50+5,w=r.w*50-10,h=r.h*50-10;ctx.beginPath();ctx.roundRect?.(x,y,w,h,24);if(!ctx.roundRect)ctx.rect(x,y,w,h);ctx.fill();}ctx.restore();},
  placePots(){
   Game.ents=Game.ents.map(e=>e.type==='burial_decor'&&[4,5].includes(e.sprite)?new TombPot(e.x,e.y,e.sprite,e.size):e);
   for(const r of World.rooms.filter(r=>!['entry','sanctuary','sealed'].includes(r.kind))){
@@ -148,9 +155,13 @@ const Expedition={
    ctx.restore();return true;
   }
   if(e.type==='vermin'||e.crawler){
-   const sprite=e.crawler?10:{worm:11,beetle:12,spider:13,bat:14}[e.kind];
-   const t=Game.elapsed*(e.crawler?5:e.kind==='bat'?15:9),size=e.crawler?65:e.kind==='bat'?49:e.kind==='spider'?36:29;
-   ctx.save();ctx.translate(e.x,e.y+(e.kind==='bat'?-14:0));ctx.rotate(Math.atan2(Game.p.y-e.y,Game.p.x-e.x)-Math.PI/2);ctx.scale(1+Math.sin(t)*.08,1-Math.sin(t)*.035);Art.expeditionSprite(ctx,sprite,0,0,size);ctx.restore();
+   const sprite=e.crawler?10:{worm:11,beetle:12,spider:13,bat:14}[e.kind],isBat=e.kind==='bat';
+   const t=Game.elapsed*(e.crawler?6:isBat?12:9),size=e.crawler?72:isBat?58:e.kind==='spider'?36:29;
+   ctx.save();ctx.translate(e.x,e.y+(isBat?-18-Math.sin(t*.5)*5:0));ctx.rotate(Math.atan2(Game.p.y-e.y,Game.p.x-e.x)-Math.PI/2);
+   if(e.crawler&&Art.crawlerMotion)Art.motionFrame(ctx,Art.crawlerMotion,Math.floor(t)%4,0,0,size);
+   else if(isBat&&Art.batMotion)Art.motionFrame(ctx,Art.batMotion,Math.floor(t)%4,0,0,size);
+   else {ctx.scale(1+Math.sin(t)*.08,1-Math.sin(t)*.035);Art.expeditionSprite(ctx,sprite,0,0,size);}
+   ctx.restore();
    if(e.windup>0||e.attackState==='windup')Art.label(ctx,e.x,e.y-35,'!','#ff9b7b');return true;
   }
   return false;

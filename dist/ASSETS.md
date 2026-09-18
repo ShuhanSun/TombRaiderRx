@@ -49,3 +49,11 @@ The same tool produced `assets/raider-coffin-push.png`, a four-direction four-st
 `assets/breath-button.svg`: a code-native functional control icon added for the hold-breath mechanic. It uses the game's bronze coin treatment with a pale lung-and-breath symbol and contains no label text.
 
 `assets/raider-hold-breath.png`: built-in image generation, 4×4 character sheet matching the explorer. Rows show front, left, right and back directions; every frame uses a crouched, mouth-covered stealth pose with a low lantern. The runtime removes the neutral checkerboard color key and darkens the character while breath is held.
+
+## Antique relics and creature motion (v31)
+
+The built-in image-generation tool produced eight separate realistic antique cutouts: `relic-jade-bi.webp`, `relic-boshan-incense.webp`, `relic-bronze-mirror.webp`, `relic-gold-belt-hook.webp`, `relic-lacquer-box.webp`, `relic-jade-cicada.webp`, `relic-gilt-jue.webp` and `relic-jade-plaque.webp`. Each source was generated independently as one centered museum-grade object with a transparent background, elevated three-quarter view, dim warm tomb lighting, no text and no watermark. The accepted sources were visually inspected, then resized to 384×384 WebP while retaining alpha for fast mobile loading.
+
+`assets/crawling-zombie-motion.webp` and `assets/bat-flight-motion.webp` are separate four-frame transparent motion sheets. Their briefs specified a continuous reach–drag–recover crawl and raised–spread–downstroke–recover wing cycle, with fixed scale, direction, camera and lighting. Both were inspected for complete uncropped silhouettes, then normalized to 1136×411 WebP so the renderer can sample four equal frames.
+
+`assets/tomb-wall-candle.webp` is a separate realistic transparent Han-style bronze wall lamp with a short bracket, mounting plate, aged patina and complete warm flame. The built-in generation brief requested an elevated three-quarter 2.5D game view, dim tomb lighting, safe transparent padding, and no wall scene, labels or watermark. It was visually inspected and resized to 384×384 WebP with alpha. Runtime lighting uses the image on all four room walls and drives the surrounding light separately so flicker, falloff and sequential ignition remain physically consistent.

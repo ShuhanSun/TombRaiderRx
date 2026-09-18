@@ -13,6 +13,7 @@ const Passage={
         document.getElementById('exit-title').textContent=escape?(cn?'归途见曙光':'Return to the light'):(cn?t.name:t.en);
         document.getElementById('passage-description').textContent=escape?(cn?'十层机关已突破。穿过最后的盗洞，离开地下长夜。':'Ten floors survived. Leave the buried night behind.'):(cn?`${t.note} 守墓者：${SPECIES[completed].name}。拉闸后${FLOOD_TYPES[completed].name}扩散。`:`${t.enNote} Guardian: ${SPECIES[completed].en}. Opening the gate releases ${FLOOD_TYPES[completed].en}.`);
         document.getElementById('passage-detail').textContent=escape?(cn?'此行功成 · 带着发现重返人间':'Expedition complete · carry your discoveries home'):(cn?`${t.seals?`${t.seals} 道封印 · `:''}${t.water?'积水区域 · ':''}残油铜灯 20 秒 · 本层无法返回`:`${t.seals?`${t.seals} seals · `:''}${t.water?'Flooded areas · ':''}20-second lamp · No return`);
+        Game.renderRelicReport('passage-relics');
         const btn=document.getElementById('exit-confirm-btn');btn.disabled=false;btn.textContent=escape?(cn?'重返人间':'Return above'):(cn?'沿盗洞深入':'Descend');
         document.getElementById('passage-status').textContent=cn?'整顿行装，准备好后继续':'Take a breath. Continue when ready.';
         document.getElementById('passage-progress-fill').style.width='0%';this.draw();

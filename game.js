@@ -22,6 +22,17 @@ const LEVELS_DATA = [
 
 const WALL_COLORS = ['#6b3527','#4f5758','#356f66','#6e261d','#858278','#205d68','#3f315f','#231c43','#7b1e22','#1d2557'];
 
+const RELICS = [
+    {name:'汉代谷纹玉璧',en:'Han Grain-Pattern Jade Bi',price:18,image:'assets/relic-jade-bi.webp'},
+    {name:'错金青铜博山炉',en:'Gold-Inlaid Boshan Censer',price:42,image:'assets/relic-boshan-incense.webp'},
+    {name:'四神纹铜镜',en:'Four Guardians Bronze Mirror',price:12,image:'assets/relic-bronze-mirror.webp'},
+    {name:'金兽首带钩',en:'Gold Beast-Head Belt Hook',price:28,image:'assets/relic-gold-belt-hook.webp'},
+    {name:'朱漆云纹奁盒',en:'Vermilion Cloud Lacquer Box',price:16,image:'assets/relic-lacquer-box.webp'},
+    {name:'玉蝉含',en:'Jade Cicada',price:9,image:'assets/relic-jade-cicada.webp'},
+    {name:'鎏金铜爵',en:'Gilt Bronze Jue',price:35,image:'assets/relic-gilt-jue.webp'},
+    {name:'金缕玉牌',en:'Gold-Thread Jade Plaque',price:55,image:'assets/relic-jade-plaque.webp'}
+];
+
 const SPECIAL_ITEMS = ['item_candle', 'item_wine', 'item_hoof', 'item_jade', 'item_compass'];
 const PROJ_TYPES = {
     ARROW: { spd: 350, size: 3, col: '#eee', trail: true },
@@ -310,31 +321,38 @@ class GroundItem extends Entity {
     }
 }
 
+class RelicItem extends Entity {
+    constructor(x,y,relicIndex){super(x,y,'relic_item');this.relicIndex=relicIndex;this.phase=Math.random()*Math.PI*2;}
+    update(dt,p){if(!this.dead&&Math.hypot(this.x-p.x,this.y-p.y)<34){Game.collectRelic(this.relicIndex);this.dead=1;}}
+}
+
 class Coffin extends Entity {
-    constructor(x,y,c){super(x,y,'coffin');this.content=c;this.opened=0;this.shake=0;this.lidOffset=0;this.lidProgress=0;this.lidDirX=1;this.lidDirY=0;this.interactTimer=0;this.revealTimer=0;}
+    constructor(x,y,c){super(x,y,'coffin');this.content=c;this.opened=0;this.shake=0;this.lidOffset=0;this.lidProgress=0;this.lidDirX=1;this.lidDirY=0;this.interactTimer=0;this.revealTimer=0;this.pushStarted=false;this.pushProgress=0;}
     interact(dt, p) {
         if(this.opened||this.hidden||this.rising||this.locked) return;
         if(Math.hypot(this.x-p.x, this.y-p.y) < 45) {
             const angle=Math.atan2(this.y-p.y,this.x-p.x);p.direction=Math.abs(Math.cos(angle))>Math.abs(Math.sin(angle))?(Math.cos(angle)<0?1:2):(Math.sin(angle)<0?3:0);p.pushDirection=p.direction;
-            p.pushingCoffin=this;p.pushUntil=Game.elapsed+.12;
+            if(!this.pushStarted){this.pushStarted=true;p.pushingCoffin=this;p.pushUntil=Game.elapsed+.68;}
             this.interactTimer += dt;
+            this.pushProgress=Math.min(1,this.interactTimer/.6);
             if(this.interactTimer > 0.6) {
                 this.open(p);
             }
         } else {
-            this.interactTimer = 0;
+            this.interactTimer = 0;this.pushProgress=0;this.pushStarted=false;
         }
     }
     open(p=Game.p) {
         if(this.opened||this.hidden||this.rising||this.locked) return;
         const dx=this.x-(p?.x??this.x-1),dy=this.y-(p?.y??this.y),d=Math.hypot(dx,dy)||1;
         this.lidDirX=dx/d;this.lidDirY=dy/d;this.lidProgress=0;
-        if(p){const angle=Math.atan2(this.y-p.y,this.x-p.x);p.direction=Math.abs(Math.cos(angle))>Math.abs(Math.sin(angle))?(Math.cos(angle)<0?1:2):(Math.sin(angle)<0?3:0);p.pushDirection=p.direction;p.pushingCoffin=this;p.pushUntil=Game.elapsed+.72;}
+        if(p){const angle=Math.atan2(this.y-p.y,this.x-p.x);p.direction=Math.abs(Math.cos(angle))>Math.abs(Math.sin(angle))?(Math.cos(angle)<0?1:2):(Math.sin(angle)<0?3:0);p.pushDirection=p.direction;if(!this.pushStarted){this.pushStarted=true;p.pushingCoffin=this;p.pushUntil=Game.elapsed+.68;}}
+        this.pushProgress=1;
         this.opened = 1;TombDangers.coffinFX(this); this.shake = 0.5; this.revealTimer = 0.6; AudioSys.playOpen();
     }
     reveal() {
             if(this.revealed)return;this.revealed=true;
-            if(Expedition.reveal(this))return;
+            const handled=Expedition.reveal(this);Expedition.maybeDropRelic(this);if(handled)return;
             if(this.content === 'supply') {
                 Game.spawn(new GroundItem(this.x+35,this.y,'item_wine'));
                 Game.spawn(new GroundItem(this.x-35,this.y,'item_jade'));
@@ -760,7 +778,7 @@ const Game = {
         document.getElementById('sound-test-btn').textContent=cn?'开启 / 试音':'Enable / Test sound';
         document.getElementById('pause-sound-btn').textContent=cn?'开启 / 试音':'Enable / Test sound';
         document.getElementById('game-ver').textContent=cn?'古墓新篇 · 画境与回声':'EXPEDITION · STONE & ECHO';
-        if(this.p) { this.updateHUD();World.room=null;World.updateRoom(); }
+        if(this.p) { this.updateHUD();this.refreshRelics();World.room=null;World.updateRoom(); }
     },
 
     init: function(){
@@ -788,7 +806,7 @@ const Game = {
     },
     restart: function() {
         AudioSys.init();
-        Passage.reset();this.lvl = 1; this.saved = null; this.items = [];
+        Passage.reset();this.lvl = 1; this.saved = null; this.items = [];this.relics=[];this.refreshRelics();
         document.getElementById('game-over-modal').classList.remove('active');
         document.getElementById('victory-modal').classList.remove('active');
         this.running = 1;
@@ -907,6 +925,24 @@ const Game = {
         if(c==='item_jade'){ this.p.buffs.jade=1; this.msg(LANG[curLang].msgs.immune, col); }
     },
 
+    collectRelic: function(index){
+        const relic=RELICS[index];if(!relic)return;
+        this.relics.push({index,floor:this.lvl});AudioSys.playItem(true);this.msg(curLang==='CN'?`发现 ${relic.name} · 估值 ${relic.price} 万元`:`Found ${relic.en} · value ${relic.price}0K CNY`,'#f3cf73');
+        this.refreshRelics();
+    },
+    relicTotal: function(){return (this.relics||[]).reduce((sum,r)=>sum+RELICS[r.index].price,0);},
+    refreshRelics: function(){
+        const el=document.getElementById('relic-strip');if(!el)return;const count=this.relics?.length||0;
+        el.style.display=count?'flex':'none';el.innerHTML=count?(curLang==='CN'?`<span>冥器 ${count}</span><b>${this.relicTotal()} 万元</b>`:`<span>Relics ${count}</span><b>${this.relicTotal()}0K CNY</b>`):'';
+    },
+    relicReportHTML: function(){
+        if(!this.relics?.length)return `<p class="relic-empty">${curLang==='CN'?'尚未收集到古董冥器':'No antique relics collected yet'}</p>`;
+        const counts=new Map();for(const found of this.relics)counts.set(found.index,(counts.get(found.index)||0)+1);
+        const cards=[...counts].map(([index,count])=>{const r=RELICS[index],subtotal=r.price*count;return `<article class="relic-card"><img src="${r.image}" alt="${curLang==='CN'?r.name:r.en}"><div><strong>${curLang==='CN'?r.name:r.en}${count>1?` ×${count}`:''}</strong><span>${curLang==='CN'?`单件 ${r.price} 万元 · 小计 ${subtotal} 万元`:`${r.price}0K CNY each · ${subtotal}0K total`}</span></div></article>`;}).join('');
+        return `<div class="relic-report-head"><span>${curLang==='CN'?`已收集 ${this.relics.length} 件古董冥器`:`${this.relics.length} antiques collected`}</span><b>${curLang==='CN'?`总估值 ${this.relicTotal()} 万元`:`Total ${this.relicTotal()}0K CNY`}</b></div><div class="relic-grid">${cards}</div>`;
+    },
+    renderRelicReport: function(id){const el=document.getElementById(id);if(el)el.innerHTML=this.relicReportHTML();},
+
     spawn: function(e){this.ents.push(e);},
     msg: function(t,c){const b=document.getElementById('msg-box');b.textContent=t;b.style.color=c;b.classList.add('msg-show');clearTimeout(this.msgTimer);this.msgTimer=setTimeout(()=>b.classList.remove('msg-show'),2500);},
     updateHUD: function(){
@@ -930,13 +966,15 @@ const Game = {
     victory: function(){
         this.running=0; Input.reset();Sound.pause();
         document.getElementById('win-desc').textContent=this.runSummary();
+        this.renderRelicReport('win-relics');
         document.getElementById('victory-modal').classList.add('active');
         document.getElementById('win-btn').focus();
     },
 
     runSummary: function() {
         const time=`${Math.floor(this.elapsed/60)}:${String(Math.floor(this.elapsed%60)).padStart(2,'0')}`;
-        return curLang==='CN'?`抵达第 ${this.lvl} 层 · 探索 ${time}`:`Floor ${this.lvl} · ${time}`;
+        const relics=this.relics?.length||0,total=this.relicTotal();
+        return curLang==='CN'?`抵达第 ${this.lvl} 层 · 探索 ${time} · 冥器 ${relics} 件 · 总估值 ${total} 万元`:`Floor ${this.lvl} · ${time} · ${relics} antiques · ${total}0K CNY`;
     },
     loop: function(timestamp){
         this.raf=null;
@@ -969,7 +1007,7 @@ const Game = {
             if(e.update) e.update(dt,this.p);
         }
         const coffins=this.ents.filter(e=>e.type==='coffin'&&!e.dead),nearest=coffins.filter(e=>!e.opened&&!e.hidden&&!e.rising&&!e.locked&&Math.hypot(e.x-this.p.x,e.y-this.p.y)<45).sort((a,b)=>Math.hypot(a.x-this.p.x,a.y-this.p.y)-Math.hypot(b.x-this.p.x,b.y-this.p.y))[0];
-        for(const c of coffins)if(c!==nearest&&!c.opened)c.interactTimer=0;
+        for(const c of coffins)if(c!==nearest&&!c.opened){c.interactTimer=0;c.pushStarted=false;c.pushProgress=0;}
         nearest?.interact(dt,this.p);
         this.texts=this.texts.filter(t=>t.life>0);
         this.texts.forEach(t=>t.update(dt));
