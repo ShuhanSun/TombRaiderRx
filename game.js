@@ -573,7 +573,7 @@ class Player extends Entity {
     nearestTarget(){
         let nearest,best=78*78;
         for(const e of Game.ents){
-            if(e.dead||e.type!=='zombie')continue;
+            if(e.dead||!['zombie','boss'].includes(e.type))continue;
             const distance=(e.x-this.x)**2+(e.y-this.y)**2;
             if(distance>best||(nearest&&distance===best)||!MapSys.lineClear(this.x,this.y,e.x,e.y))continue;
             nearest=e;best=distance;
@@ -745,7 +745,7 @@ const Game = {
             'guide-find':cn?'驻足开棺':'DISCOVER',
             'guide-find-desc':cn?'驻足开棺寻找钥匙与补给，留意通往主墓室的路线。':'Stay beside a coffin to open it. Find the bronze key on each floor.',
             'guide-exit':cn?'寻龙脱身':'ESCAPE',
-            'guide-exit-desc':cn?'棺中寻钥匙；解印拉闸后，25秒内回主墓室。':'Find the key, break seals, then turn the crank. Reach the exit within 25 seconds.',
+            'guide-exit-desc':cn?'寻钥匙，开主棺击败墓主；解印拉闸后，25秒内回主墓室。':'Find the key, open the royal coffin and defeat its boss. Break seals and crank the gate, then escape within 25 seconds.',
             'pause-title':cn?'灯火未熄':'The flame awaits',
             'pause-desc':cn?'歇息片刻，古墓中的时间已暂停。':'Take a breath. The tomb is paused.',
             'resume-btn':cn?'继续探索':'Resume exploration',
@@ -918,7 +918,7 @@ const Game = {
 
         const cn=curLang==='CN';
         const objective=!this.p.hasKey?(cn?'① 驻足开棺 · 寻找机关钥匙':'① Open coffins · find the bronze key'):World.remaining()?(cn?`② 破除剩余 ${World.remaining()} 道封印`:`② Break ${World.remaining()} remaining seals`):ExitGate.remaining>0?(cn?`③ 返回主墓室 · 盗洞 ${Math.ceil(ExitGate.remaining)}秒`:`③ Return to the tomb · ${Math.ceil(ExitGate.remaining)}s`):(cn?'③ 找到机械开关 · 驻足拉闸开启盗洞':'③ Find the crank · stand beside it to open the exit');
-        document.getElementById('objective').textContent=objective;
+        document.getElementById('objective').textContent=this.p.hasKey&&!BossFight.cleared?(cn?'② 开启主棺 · 击败本层墓主':'② Open the royal coffin · defeat its guardian'):objective;
         document.getElementById('exit-confirm-btn').textContent=this.lvl===10?(cn?'逃出生天':'Escape the tomb'):LANG[curLang].exitModal.yes;
     },
     over: function(){

@@ -14,6 +14,7 @@ const TOMB_STYLES=[
 const Expedition={
  walls:[],switches:[],style:TOMB_STYLES[0],
  setup(){
+  BossFight.reset();
   this.style=TOMB_STYLES[Game.lvl-1];this.walls=[];this.switches=[];Game.p.hasKey=false;
   Game.ents=Game.ents.filter(e=>!['coffin','ground_item','zombie','vermin'].includes(e.type));
   const rooms=World.rooms.filter(r=>!['entry','sanctuary'].includes(r.kind));
@@ -63,6 +64,7 @@ const Expedition={
   }else Game.spawn(new TombCreature(x,y,kind));
  },
  reveal(c){
+  if(c.royal){BossFight.summon(c);return true;}
   if(c.explosive){c.fuse=1.4;Game.msg(curLang==='CN'?'棺内火药嘶响！退后！':'Explosive coffin! Back away!','#ff986d');}
   if(c.content==='key'){Game.p.hasKey=true;Game.msg(curLang==='CN'?'青铜机关钥匙 · 可开启盗洞机关':'Bronze key · exit crank unlocked','#eac879');Game.updateHUD();return true;}
   if(c.content!=='cache')return false;
@@ -99,7 +101,7 @@ const Expedition={
   for(const c of this.hidden)if(c.rising){c.elevation=Math.max(0,Math.min(1,c.elevation+(c.liftTarget?1:-1)*dt*.65));if(c.elevation===c.liftTarget && (c.liftTarget===0||Math.hypot(c.x-Game.p.x,c.y-Game.p.y)>=34)){c.hidden=c.elevation===0;c.rising=false;}}
   for(const w of this.walls){
    w.target=Math.hypot(Game.p.x-w.x,Game.p.y-w.y)<90?0:1;
-   const occupied=Game.ents.some(e=>['player','zombie','vermin'].includes(e.type)&&Math.abs(e.x-w.x)<39&&Math.abs(e.y-w.y)<39);
+   const occupied=Game.ents.some(e=>['player','zombie','vermin','boss'].includes(e.type)&&Math.abs(e.x-w.x)<39&&Math.abs(e.y-w.y)<39);
    if(w.target&&occupied)continue;
    w.height=Math.max(0,Math.min(1,w.height+(w.target?1:-1)*dt*.55));
    const solid=w.height>.65;

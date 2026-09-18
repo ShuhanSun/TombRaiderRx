@@ -3,7 +3,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
 const root=path.resolve(__dirname,'..');
-const source=['levels.js','audio.js','escape.js','dangers.js','expedition.js','world.js','art.js','transitions.js','game.js'].map(f=>fs.readFileSync(path.join(root,f),'utf8')).join('\n');
+const source=['levels.js','audio.js','escape.js','dangers.js','expedition.js','world.js','art.js','transitions.js','bosses.js','game.js'].map(f=>fs.readFileSync(path.join(root,f),'utf8')).join('\n');
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 // Run the real game with a strict DOM fixture and a controllable animation clock.
 function setup(seed=1) {
@@ -41,7 +41,7 @@ function setup(seed=1) {
         requestAnimationFrame:fn=>{frames.set(++next,fn);return next;},cancelAnimationFrame:id=>frames.delete(id),
         setTimeout:fn=>{timers.set(++next,fn);return next;},clearTimeout:id=>timers.delete(id)
     });
-    vm.runInContext(source+'\nthis.api={Game,MapSys,Input,Player,Coffin,Zombie,Trap,Projectile,Effect,FloatText,AudioSys,CONFIG,TERRAIN,World,Art,Scene,Sound,THEMES,Passage,ExitGate,SPECIES,FLOOD_TYPES,Expedition,TombCreature,FLOOR_PLANS,TombDangers};',context);
+    vm.runInContext(source+'\nthis.api={Game,MapSys,Input,Player,Coffin,Zombie,Trap,Projectile,Effect,FloatText,AudioSys,CONFIG,TERRAIN,World,Art,Scene,Sound,THEMES,Passage,ExitGate,SPECIES,FLOOD_TYPES,Expedition,TombCreature,FLOOR_PLANS,TombDangers,BossFight,TombBoss,BOSS_SPECS};',context);
     const api=context.api;
     api.Art.ready=true;api.Art.sprites={};api.Art.walker={};api.Art.zombies={};api.Art.traps={};api.Art.trapEmitters={width:400,height:200};api.Art.mechanisms={};api.Art.tiles=Array(16).fill({});
     api.Game.resize();api.Game.restart();

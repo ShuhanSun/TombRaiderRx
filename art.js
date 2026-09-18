@@ -18,7 +18,7 @@ const Art = {
                 c.getContext('2d').drawImage(materials,xs[x]+2,ys[y]+2,xs[x+1]-xs[x]-4,ys[y+1]-ys[y]-4,0,0,400,400);
                 this.tiles.push(c);
             }
-            this.prepareWalker();this.prepareBreathRaider();this.ready=true;
+            this.prepareWalker();this.prepareBreathRaider();return Promise.all(BOSS_SPECS.map((_,i)=>load(`assets/boss-${i+1}.webp`))).then(images=>{this.bossSprites=images;this.ready=true;});
         }).catch(()=>{this.failed=true;});
     },
     coffinDetail(ctx,index,x,y,size){
@@ -216,6 +216,7 @@ const Scene = {
         const main=game.ents.find(e=>e.royal);
         if(main){ctx.save();ctx.fillStyle='#060c1399';ctx.fillRect(main.x-58,main.y-25,116,50);ctx.fillStyle=World.theme.tint+'55';ctx.fillRect(main.x-54,main.y-32,108,43);ctx.strokeStyle='#b4a28566';ctx.lineWidth=2;ctx.strokeRect(main.x-52,main.y-30,104,40);ctx.restore();}
         TombDangers.drawStains(ctx,left,right,top,bottom);
+        BossFight.drawMarks(ctx);
         this.roomAtmosphere(ctx,time,'under',left,right,top,bottom);
         ExitGate.draw(ctx,left,right,top,bottom);
         this.drawTerrain(ctx,left,right,top,bottom,game,'masonry');
@@ -258,6 +259,7 @@ const Scene = {
         }
         TombDangers.drawClouds(ctx,left,right,top,bottom);
         ctx.restore();
+        BossFight.drawHUD(ctx,w);
     },
     roomAtmosphere(ctx,time,layer,left=0,right=MapSys.w,top=0,bottom=MapSys.h){
         for(const r of World.rooms){
@@ -325,6 +327,7 @@ const Scene = {
         }
     },
     entity(ctx,e,game) {
+        if(e.type==='boss'){e.draw(ctx);return;}
         if(Expedition.render(ctx,e))return;
         const time=game.elapsed,cn=curLang==='CN',distance=Math.hypot(e.x-game.p.x,e.y-game.p.y);
         if(e.type==='arrival_coffin'){Art.coffinDetail(ctx,1,e.x,e.y,155);return;}
@@ -335,7 +338,7 @@ const Scene = {
             const open=ExitGate.remaining>0;
             Art.glow(ctx,e.x,e.y,65,open?'#e4b95555':'#d4bd7040');
             Art.mechanism(ctx,open?1:0,e.x,e.y-15,84);
-            Art.label(ctx,e.x,e.y-65,open?(cn?`闸门开启 ${Math.ceil(ExitGate.remaining)}秒`:`OPEN ${Math.ceil(ExitGate.remaining)}s`):ExitGate.ready()?(cn?'驻足拉闸 · 开启盗洞':'STAND TO TURN CRANK'):(cn?(game.p.hasKey?'机械开关 · 封印未解除':'机械开关 · 需要棺中钥匙'):'CRANK · KEY / SEALS REQUIRED'));
+            Art.label(ctx,e.x,e.y-65,open?(cn?`闸门开启 ${Math.ceil(ExitGate.remaining)}秒`:`OPEN ${Math.ceil(ExitGate.remaining)}s`):ExitGate.ready()?(cn?'驻足拉闸 · 开启盗洞':'STAND TO TURN CRANK'):(cn?(game.p.hasKey?(!BossFight.cleared?'机械开关 · 先击败墓主':'机械开关 · 封印未解除'):'机械开关 · 需要棺中钥匙'):'CRANK · KEY / BOSS / SEALS REQUIRED'));
             if(ExitGate.progress>0)Art.progress(ctx,e.x,e.y-52,ExitGate.progress,'#efd496');return;
         }
         if(e.type==='exit') {
@@ -383,7 +386,7 @@ const Scene = {
             if(game.p.y<e.y&&distance<85)ctx.globalAlpha=.62;
             if(e.rising){ctx.globalAlpha=e.elevation;ctx.translate(0,(1-e.elevation)*30);}
             if(e.royal&&!e.opened){ctx.filter=Expedition.style.filter;Art.expeditionSprite(ctx,15,e.x,e.y,115);}else if(e.opened){Art.coffinDetail(ctx,2,e.x,e.y,95);Art.coffinLidSprite(ctx,e,e.royal?112:94);}else Art.sprite(ctx,4,e.x+(e.shake>0?Math.sin(time*50)*2:0),e.y,90);ctx.restore();
-            if(!e.opened&&distance<130)Art.label(ctx,e.x,e.y-72,(cn?'靠近开棺':'STAY TO OPEN'));
+            if(!e.opened&&distance<130)Art.label(ctx,e.x,e.y-72,e.royal?(cn?'主棺 · 开启唤醒墓主':'ROYAL COFFIN · AWAKEN GUARDIAN'):(cn?'靠近开棺':'STAY TO OPEN'));
             if(!e.opened&&e.interactTimer>0)Art.progress(ctx,e.x,e.y-61,e.interactTimer/.6,'#e8c981');return;
         }
         if(e.type==='ground_item') {

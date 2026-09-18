@@ -127,6 +127,7 @@ const World = {
     canExit() {return ExitGate.ready()&&ExitGate.remaining>0;},
     target() {
         if(!Game.p.hasKey)return Expedition.keyCoffin;
+        if(!BossFight.cleared)return BossFight.boss||Game.mainCoffinPos;
         if(!Game.exit)return Game.mainCoffinPos;
         const seals=this.altars.filter(a=>a.kind==='seal'&&!a.done).sort((a,b)=>Math.hypot(a.x-Game.p.x,a.y-Game.p.y)-Math.hypot(b.x-Game.p.x,b.y-Game.p.y));
         return seals[0]||(ExitGate.remaining>0?Game.exitPos:ExitGate.switch);
@@ -143,7 +144,7 @@ const World = {
         hint.textContent=type?(cn?type.hint:type.enHint):(cn?'沿石壁前行，留意通向其他墓室的岔口。':'Follow the stone passage and watch for branching rooms.');
     },
     update(dt) {
-        Expedition.update(dt);ExitGate.update(dt);this.updateRoom();
+        Expedition.update(dt);BossFight.update(dt);ExitGate.update(dt);this.updateRoom();
         for(const a of this.altars) {
             if(a.done)continue;
             if(Math.hypot(a.x-Game.p.x,a.y-Game.p.y)<48) {

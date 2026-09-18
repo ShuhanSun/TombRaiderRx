@@ -25,7 +25,7 @@ const SPECIES=[
 ];
 const ExitGate={
  duration:25,remaining:0,radius:0,progress:0,latched:false,exposure:0,notice:-1,
- ready(){return !!Game.exit&&World.remaining()===0&&!!Game.p.hasKey;},
+ ready(){return !!Game.exit&&World.remaining()===0&&!!Game.p.hasKey&&BossFight.cleared;},
  setup(){
   this.remaining=0;this.radius=0;this.progress=0;this.latched=false;this.exposure=0;this.notice=-1;
   this.flood=FLOOD_TYPES[Game.lvl-1];const queue=this.rebuildDistance();
@@ -53,7 +53,7 @@ const ExitGate={
   Game.msg(curLang==='CN'?`闸门已开 · ${this.duration} 秒 · ${this.flood.name}正在涌出 · 速回主墓室`:`Gate open · ${this.duration}s · ${this.flood.en} spreading`,this.flood.color);Game.updateHUD();return true;
  },
  levelAt(x,y){const i=Math.floor(y/50)*MapSys.w+Math.floor(x/50);return this.dist?.[i]>=0?Math.max(0,Math.min(1,this.radius-this.dist[i])):0;},
- speed(){return this.levelAt(Game.p.x,Game.p.y)>.25?this.flood.slow:1;},
+ speed(){return (this.levelAt(Game.p.x,Game.p.y)>.25?this.flood.slow:1)*BossFight.slow();},
  update(dt){
   const wasOpen=this.remaining>0;
   if(wasOpen){this.remaining=Math.max(0,this.remaining-dt);this.radius+=dt*.7;}

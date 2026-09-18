@@ -1,5 +1,7 @@
 # Asset provenance
 
+Ten independent boss artworks were generated with the built-in image generator, one per floor. `assets/boss-1.webp` through `assets/boss-10.webp` preserve transparent backgrounds and are resized to 512×512 and encoded as WebP for mobile loading. Designs, in floor order: Han armored marquis, mechanical crossbow revenant, bronze taotie, furnace demon, bone sorcerer, spectral river queen, talisman priest, faceless shadow, undead emperor, and meteor giant. Generation briefs are recorded in `boss-art-manifest.json`; individual subject descriptions in that record were reconstructed after session recovery.
+
 Original atlases were generated with the built-in image generation tool for this game, then inspected and copied into `assets/`. No third-party game artwork was imported. All atlases are 1254×1254 pixels. Source images are unchanged; the Canvas renderer uses explicit source rectangles because generated cell boundaries are not perfectly uniform.
 
 - `assets/tomb-sprites.png`: RGBA with transparency. Sixteen richly detailed painterly, slightly elevated orthographic game sprites: explorer, blue/red/green jiangshi; closed/open stone sarcophagus, bronze crossbow, brazier; lamp, wine flask, hoof talisman, jade vest; compass, relic seal, altar, stairs.
