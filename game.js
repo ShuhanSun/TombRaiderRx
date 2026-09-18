@@ -359,6 +359,7 @@ class Coffin extends Entity {
                 Game.addText(this.x,this.y,curLang==='CN'?'供物尚存':'Offerings remain','#aaddbb');
             }
             else if(this.content === 'zombie') {
+                this.occupantEscaped=true;
                 Game.spawn(new Zombie(this.x,this.y+20));
                 Game.addText(this.x, this.y, LANG[curLang].msgs.zombie, '#f44336');
                 Game.spawn(new Effect(this.x,this.y,'burst'));

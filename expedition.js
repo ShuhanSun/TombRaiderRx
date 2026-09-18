@@ -29,7 +29,7 @@ const Expedition={
   this.zombieBudget=2*(3+Math.floor(Game.lvl/2));this.verminBudget=2*(1+Math.floor(Game.lvl/3));this.itemBudget=5+Game.lvl;
   const payloads=[{loot:['item_compass','item_candle']}];
   for(let i=1;i<this.zombieBudget;i++)payloads.push({enemy:i%3===1?'crawler':'zombie'});
-  for(let i=0;i<this.verminBudget;i++)payloads.push({enemy:['worm','beetle','spider','bat'][(i+Game.lvl-1)%4]});
+  for(let i=0;i<this.verminBudget;i++)payloads.push({enemy:['worm','beetle','spider'][(i+Game.lvl-1)%3]});
   for(let i=0;i<this.itemBudget-3;i++){const code=i===0?'item_shovel':i===1?'item_jade':['item_wine','item_hoof','item_jade'][i%3];payloads.push({loot:[code]});}
   this.coffins=[];
   for(const payload of payloads){
@@ -63,6 +63,7 @@ const Expedition={
   }else Game.spawn(new TombCreature(x,y,kind));
  },
  spawnBloodCorpse(c){
+  c.occupantEscaped=true;
   const base=SPECIES[Game.lvl-1],z=new Zombie(c.x,c.y+25,1);
   z.species={...base,name:'赤血厉尸',en:'Blood corpse',type:1,
    speed:Math.max(128,base.speed*1.32),sense:Math.max(285,base.sense+70),
@@ -83,7 +84,7 @@ const Expedition={
   if(c.content==='key'){Game.p.hasKey=true;Game.msg(curLang==='CN'?'青铜机关钥匙 · 可开启盗洞机关':'Bronze key · exit crank unlocked','#eac879');Game.updateHUD();return true;}
   if(c.content!=='cache')return false;
   for(const p of [c.payload,...c.extra]){
-   if(p.enemy)this.spawnEnemy(p.enemy,c.x,c.y+35,c);
+   if(p.enemy){if(p.enemy==='zombie'||p.enemy==='crawler')c.occupantEscaped=true;this.spawnEnemy(p.enemy,c.x,c.y+35,c);}
    if(p.loot)p.loot.forEach((code,i)=>{const item=new GroundItem(c.x+(i?35:-35),c.y+30,code);Game.spawn(item);});
   }
   Game.addText(c.x,c.y,c.payload.enemy?(curLang==='CN'?'棺中有异动！':'Something stirs!'):(curLang==='CN'?'取出随葬供物':'Burial supplies'),'#d2b38b');return true;
@@ -155,11 +156,10 @@ const Expedition={
    ctx.restore();return true;
   }
   if(e.type==='vermin'||e.crawler){
-   const sprite=e.crawler?10:{worm:11,beetle:12,spider:13,bat:14}[e.kind],isBat=e.kind==='bat';
-   const t=Game.elapsed*(e.crawler?6:isBat?12:9),size=e.crawler?72:isBat?58:e.kind==='spider'?36:29;
-   ctx.save();ctx.translate(e.x,e.y+(isBat?-18-Math.sin(t*.5)*5:0));ctx.rotate(Math.atan2(Game.p.y-e.y,Game.p.x-e.x)-Math.PI/2);
+   const sprite=e.crawler?10:{worm:11,beetle:12,spider:13}[e.kind];
+   const t=Game.elapsed*(e.crawler?6:9),size=e.crawler?72:e.kind==='spider'?36:29;
+   ctx.save();ctx.translate(e.x,e.y);ctx.rotate(Math.atan2(Game.p.y-e.y,Game.p.x-e.x)-Math.PI/2);
    if(e.crawler&&Art.crawlerMotion)Art.motionFrame(ctx,Art.crawlerMotion,Math.floor(t)%4,0,0,size);
-   else if(isBat&&Art.batMotion)Art.motionFrame(ctx,Art.batMotion,Math.floor(t)%4,0,0,size);
    else {ctx.scale(1+Math.sin(t)*.08,1-Math.sin(t)*.035);Art.expeditionSprite(ctx,sprite,0,0,size);}
    ctx.restore();
    if(e.windup>0||e.attackState==='windup')Art.label(ctx,e.x,e.y-35,'!','#ff9b7b');return true;
@@ -182,7 +182,7 @@ class TombPot{
  draw(ctx){ctx.save();if(this.hitTimer>0)ctx.filter='brightness(1.35)';Art.expeditionSprite(ctx,this.sprite,this.x+Math.sin(this.hitTimer*70)*this.hitTimer*7,this.y,this.size);if(this.hp===1){ctx.strokeStyle='#17110ddd';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(this.x-5,this.y-this.size*.58);ctx.lineTo(this.x+3,this.y-this.size*.36);ctx.lineTo(this.x-6,this.y-this.size*.18);ctx.stroke();}ctx.restore();}
 }
 class TombCreature{
- constructor(x,y,kind){Object.assign(this,{x,y,kind,type:'vermin',dead:0,cooldown:1,windup:0});}
+ constructor(x,y,kind){if(kind==='bat')kind='spider';Object.assign(this,{x,y,kind,type:'vermin',dead:0,cooldown:1,windup:0});}
  update(dt,p){
   if(this.dead)return;
   const d=Math.hypot(p.x-this.x,p.y-this.y);
@@ -192,7 +192,7 @@ class TombCreature{
   if(this.windup>0){this.windup=Math.max(0,this.windup-dt);if(!this.windup){if(d<34&&MapSys.lineClear(this.x,this.y,p.x,p.y))p.hit();this.cooldown=1.8;}return;}
   if(d<28&&!this.cooldown){this.windup=.55;return;}
   if(d>220||d<25)return;
-  const speed={worm:24,beetle:49,spider:66,bat:88}[this.kind]||42,angle=Math.atan2(p.y-this.y,p.x-this.x)+(this.kind==='spider'?Math.sin(Game.elapsed*3)*.5:0);
+  const speed={worm:24,beetle:49,spider:66}[this.kind]||42,angle=Math.atan2(p.y-this.y,p.x-this.x)+(this.kind==='spider'?Math.sin(Game.elapsed*3)*.5:0);
   const x=this.x+Math.cos(angle)*speed*dt,y=this.y+Math.sin(angle)*speed*dt;
   if(MapSys.canOccupy(x,this.y,7))this.x=x;if(MapSys.canOccupy(this.x,y,7))this.y=y;
  }

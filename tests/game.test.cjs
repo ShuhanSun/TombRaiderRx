@@ -446,12 +446,24 @@ test('antique relics are collected, priced in ten-thousand yuan and reported aft
 
 test('creatures telegraph attacks, respect warding and use finite coffin spawns',()=>{
  const {Game,TombCreature}=setup();Game.p.inv=0;
- for(const kind of ['worm','beetle','spider','bat']){
+ for(const kind of ['worm','beetle','spider']){
   const c=new TombCreature(Game.p.x,Game.p.y,kind);c.cooldown=0;Game.p.hp=5;Game.p.inv=0;
   c.update(.01,Game.p);assert.equal(Game.p.hp,5);assert.ok(c.windup>0);
   c.update(.6,Game.p);assert.equal(Game.p.hp,4);
   c.cooldown=0;Game.p.inv=0;Game.p.buffs.hoof=1;c.update(1,Game.p);assert.equal(Game.p.hp,4);Game.p.buffs.hoof=0;
  }
+});
+
+test('bats never spawn and a zombie leaves its opened coffin visibly empty',()=>{
+ const {Game,Expedition,Coffin,Art,Scene}=setup();
+ for(let lvl=1;lvl<=10;lvl++){
+  Game.load(lvl);for(const c of Game.ents.filter(e=>e.type==='coffin'))c.reveal();
+  assert.equal(Game.ents.some(e=>e.kind==='bat'),false);
+ }
+ const coffin=new Coffin(Game.p.x+40,Game.p.y,'zombie');Game.ents.push(coffin);coffin.open();coffin.reveal();
+ assert.equal(coffin.occupantEscaped,true);assert.ok(Game.ents.some(e=>e.type==='zombie'));
+ let empty=0;Art.emptyCoffin=()=>empty++;Art.coffinLidSprite=()=>{};Scene.entity(Game.ctx,coffin,Game);assert.equal(empty,1);
+ const royal=Game.ents.find(e=>e.royal)||Expedition.coffins[0];if(royal){royal.royal=true;royal.opened=1;Expedition.spawnBloodCorpse(royal);assert.equal(royal.occupantEscaped,true);}
 });
 
 test('sealed chambers have one moving entrance and required relic/key remain outside',()=>{

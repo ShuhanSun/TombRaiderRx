@@ -21,7 +21,6 @@ const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:
     Art.remains=await loadImage('assets/tomb-remains.png');
     Art.coffinPush=await loadImage('assets/raider-coffin-push.png');
     Art.crawlerMotion=await loadImage('assets/crawling-zombie-motion.webp');
-    Art.batMotion=await loadImage('assets/bat-flight-motion.webp');
     Art.wallCandleImage=await loadImage('assets/tomb-wall-candle.webp');
     Art.relics=await Promise.all(['relic-jade-bi','relic-boshan-incense','relic-bronze-mirror','relic-gold-belt-hook','relic-lacquer-box','relic-jade-cicada','relic-gilt-jue','relic-jade-plaque'].map(n=>loadImage(`assets/${n}.webp`)));
     const pushSheet=createCanvas(640,640),pushCtx=pushSheet.getContext('2d');

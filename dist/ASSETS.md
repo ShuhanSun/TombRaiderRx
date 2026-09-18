@@ -29,7 +29,7 @@ Prompt: A photorealistic orthographic two-panel ancient Chinese tomb material at
 
 
 ## Expedition atlas
-`assets/tomb-expedition.png`: built-in image generation, transparent 4×4 atlas. Prompt: realistic 2.5D overhead Chinese tomb objects, ten themed funerary architectural props (stone stele, crossbow, bronze guardian, ritual furnace, bone urn, water jar, talisman pillar, rooted pillar, gilt dragon column, meteor monolith), crawling corpse, worms, scarab, spider, bat, red lacquer coffin on pedestal. Neutral upper-left light, isolated alpha cutouts, no text. Integrated as runtime sprites.
+`assets/tomb-expedition.png`: built-in image generation, transparent 4×4 atlas. Prompt: realistic 2.5D overhead Chinese tomb objects, ten themed funerary architectural props (stone stele, crossbow, bronze guardian, ritual furnace, bone urn, water jar, talisman pillar, rooted pillar, gilt dragon column, meteor monolith), crawling corpse, worms, scarab, spider, and red lacquer coffin on pedestal. Neutral upper-left light, isolated alpha cutouts, no text. Integrated as runtime sprites.
 
 
 ## Coffin detail atlas
@@ -54,6 +54,6 @@ The same tool produced `assets/raider-coffin-push.png`, a four-direction four-st
 
 The built-in image-generation tool produced eight separate realistic antique cutouts: `relic-jade-bi.webp`, `relic-boshan-incense.webp`, `relic-bronze-mirror.webp`, `relic-gold-belt-hook.webp`, `relic-lacquer-box.webp`, `relic-jade-cicada.webp`, `relic-gilt-jue.webp` and `relic-jade-plaque.webp`. Each source was generated independently as one centered museum-grade object with a transparent background, elevated three-quarter view, dim warm tomb lighting, no text and no watermark. The accepted sources were visually inspected, then resized to 384×384 WebP while retaining alpha for fast mobile loading.
 
-`assets/crawling-zombie-motion.webp` and `assets/bat-flight-motion.webp` are separate four-frame transparent motion sheets. Their briefs specified a continuous reach–drag–recover crawl and raised–spread–downstroke–recover wing cycle, with fixed scale, direction, camera and lighting. Both were inspected for complete uncropped silhouettes, then normalized to 1136×411 WebP so the renderer can sample four equal frames.
+`assets/crawling-zombie-motion.webp` is a four-frame transparent motion sheet. Its brief specified a continuous reach–drag–recover crawl with fixed scale, direction, camera and lighting. It was inspected for a complete uncropped silhouette, then normalized to 1136×411 WebP so the renderer can sample four equal frames.
 
 `assets/tomb-wall-candle.webp` is a separate realistic transparent Han-style bronze wall lamp with a short bracket, mounting plate, aged patina and complete warm flame. The built-in generation brief requested an elevated three-quarter 2.5D game view, dim tomb lighting, safe transparent padding, and no wall scene, labels or watermark. It was visually inspected and resized to 384×384 WebP with alpha. Runtime lighting uses the image on all four room walls and drives the surrounding light separately so flicker, falloff and sequential ignition remain physically consistent.
