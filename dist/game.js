@@ -927,13 +927,17 @@ const Game = {
 
     collectRelic: function(index){
         const relic=RELICS[index];if(!relic)return;
-        this.relics.push({index,floor:this.lvl});AudioSys.playItem(true);this.msg(curLang==='CN'?`发现 ${relic.name} · 估值 ${relic.price} 万元`:`Found ${relic.en} · value ${relic.price}0K CNY`,'#f3cf73');
-        this.refreshRelics();
+        this.relics.push({index,floor:this.lvl});AudioSys.playItem(true);this.showRelicNotice(relic);
     },
     relicTotal: function(){return (this.relics||[]).reduce((sum,r)=>sum+RELICS[r.index].price,0);},
     refreshRelics: function(){
         const el=document.getElementById('relic-strip');if(!el)return;const count=this.relics?.length||0;
-        el.style.display=count?'flex':'none';el.innerHTML=count?(curLang==='CN'?`<span>冥器 ${count}</span><b>${this.relicTotal()} 万元</b>`:`<span>Relics ${count}</span><b>${this.relicTotal()}0K CNY</b>`):'';
+        el.classList.remove('relic-found');el.style.display=count?'flex':'none';el.innerHTML=count?(curLang==='CN'?`<span>冥器 ${count}</span><b>${this.relicTotal()} 万元</b>`:`<span>Relics ${count}</span><b>${this.relicTotal()}0K CNY</b>`):'';
+    },
+    showRelicNotice: function(relic){
+        const el=document.getElementById('relic-strip');if(!el)return;clearTimeout(this.relicTimer);el.style.display='flex';el.classList.add('relic-found');
+        el.innerHTML=curLang==='CN'?`<span>发现 ${relic.name}</span><b>估值 ${relic.price} 万元</b>`:`<span>Found ${relic.en}</span><b>Value ${relic.price}0K CNY</b>`;
+        this.relicTimer=setTimeout(()=>this.refreshRelics(),2600);
     },
     relicReportHTML: function(){
         if(!this.relics?.length)return `<p class="relic-empty">${curLang==='CN'?'尚未收集到古董冥器':'No antique relics collected yet'}</p>`;

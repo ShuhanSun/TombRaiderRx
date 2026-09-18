@@ -178,9 +178,7 @@ const World = {
             const x=r.x*50,y=r.y*50,w=r.w*50,h=r.h*50,p=r.entered?r.lightProgress:0;
             if(!r.entered)continue;
             if(x+w<Game.p.x-Game.width/2-160||x>Game.p.x+Game.width/2+160||y+h<Game.p.y-Game.height/2-160||y>Game.p.y+Game.height/2+160)continue;
-            const lamps=[],stepX=Math.max(120,w/5),stepY=Math.max(120,h/5);
-            for(let lx=x+65;lx<=x+w-65;lx+=stepX){lamps.push({x:lx,y:y+15,side:'top'},{x:lx,y:y+h-15,side:'bottom'});}
-            for(let ly=y+70;ly<=y+h-70;ly+=stepY){lamps.push({x:x+15,y:ly,side:'left'},{x:x+w-15,y:ly,side:'right'});}
+            const lamps=this.wallLamps(r);
             const origin=r.lightOrigin||{x:x+w/2,y:y+h/2};
             lamps.sort((a,b)=>Math.hypot(a.x-origin.x,a.y-origin.y)-Math.hypot(b.x-origin.x,b.y-origin.y));
             for(let i=0;i<lamps.length;i++){
@@ -197,5 +195,24 @@ const World = {
                 personal.addColorStop(0,`rgba(255,197,104,${.2*flicker})`);personal.addColorStop(.5,`rgba(174,103,41,${.08*flicker})`);personal.addColorStop(1,'rgba(30,12,4,0)');ctx.fillStyle=personal;ctx.fillRect(Game.p.x-radius,Game.p.y-radius,radius*2,radius*2);ctx.restore();
             }
         }
+    },
+    wallLamps(r) {
+        const lamps=[],solid=(x,y)=>x>=0&&y>=0&&x<MapSys.w&&y<MapSys.h&&MapSys.t[y*MapSys.w+x]===TERRAIN.WALL;
+        const add=(tx,ty,ix,iy,side,x,y)=>{
+            // The bracket needs an uninterrupted wall tile on both sides. This
+            // keeps every candle off carved doors and the mouth of a passage.
+            const horizontal=side==='top'||side==='bottom',before=horizontal?solid(tx-1,ty):solid(tx,ty-1),after=horizontal?solid(tx+1,ty):solid(tx,ty+1);
+            if(solid(tx,ty)&&before&&after&&MapSys.t[iy*MapSys.w+ix]!==TERRAIN.WALL)lamps.push({x,y,side,mountX:tx,mountY:ty});
+        };
+        const stepX=Math.max(3,Math.floor(r.w/4)),stepY=Math.max(3,Math.floor(r.h/4));
+        for(let tx=r.x+2;tx<=r.x+r.w-3;tx+=stepX){
+            add(tx,r.y-1,tx,r.y,'top',(tx+.5)*50,r.y*50+5);
+            add(tx,r.y+r.h,tx,r.y+r.h-1,'bottom',(tx+.5)*50,(r.y+r.h)*50-5);
+        }
+        for(let ty=r.y+2;ty<=r.y+r.h-3;ty+=stepY){
+            add(r.x-1,ty,r.x,ty,'left',r.x*50+5,(ty+.5)*50);
+            add(r.x+r.w,ty,r.x+r.w-1,ty,'right',(r.x+r.w)*50-5,(ty+.5)*50);
+        }
+        return lamps;
     }
 };

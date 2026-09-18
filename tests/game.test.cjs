@@ -628,8 +628,8 @@ test('royal coffin releases a powerful red blood corpse and corpse beetle swarm'
  assert.equal(Game.ents.filter(e=>e.type==='relic_item').length,beforeR+1);
 });
 
-test('main and side chambers stay black until entry then light wall lamps gradually',()=>{
- const {Game,World,Art,calls}=setup();const room=World.rooms.find(r=>r.kind==='main'||r.kind==='exit'||r.kind==='ear_left');assert.ok(room?.darkBeforeEntry);assert.equal(room.entered,false);
+test('main and side chambers stay dark until entry and light only intact wall-mounted lamps',()=>{
+ const {Game,World,Art,MapSys,calls}=setup();const room=World.rooms.find(r=>r.kind==='main'||r.kind==='exit'||r.kind==='ear_left');assert.ok(room?.darkBeforeEntry);assert.equal(room.entered,false);
  assert.ok(World.rooms.slice(1).every(r=>r.darkBeforeEntry&&!r.entered));assert.equal(World.rooms[0].entered,true);
  const x=(room.x+.5)*50,y=(room.y+.5)*50;assert.equal(World.roomHiddenAt(x,y),room);
  calls.length=0;World.drawRoomLighting(Game.ctx,1);assert.equal(room.lightProgress,0);
@@ -637,6 +637,10 @@ test('main and side chambers stay black until entry then light wall lamps gradua
  Art.wallCandleImage={};calls.length=0;World.drawRoomLighting(Game.ctx,2);assert.ok(calls.some(c=>c[0]==='drawImage'));World.update(5);assert.equal(room.lightProgress,1);assert.equal(World.roomHiddenAt(x,y),undefined);
  room.lightProgress=.1;calls.length=0;World.drawRoomLighting(Game.ctx,2);const early=calls.filter(c=>c[0]==='drawImage').length;
  room.lightProgress=.85;calls.length=0;World.drawRoomLighting(Game.ctx,2);assert.ok(calls.filter(c=>c[0]==='drawImage').length>early);
+ const lamps=World.wallLamps(room);assert.ok(lamps.length);
+ for(const lamp of lamps){
+  assert.equal(MapSys.t[lamp.mountY*MapSys.w+lamp.mountX],1);
+ }
 });
 
 test('large pots take two shovel hits and use bounded item, insect and empty outcomes',()=>{

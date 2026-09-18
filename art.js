@@ -253,8 +253,9 @@ const Scene = {
         for(const t of game.texts) {ctx.save();ctx.translate(t.x,t.y);t.draw(ctx);ctx.restore();}
         ctx.restore();
         this.drawDarkness(ctx,w,h,cx,cy,time,left,right,top,bottom,game);
-        // Keep the nearby actors readable through the torch falloff.
+        // The carried lamp always keeps the player readable.
         ctx.save();ctx.translate(-cx,-cy);
+        this.entity(ctx,p,game);
         if(p.hasCompass) {
             const target=World.target();
             if(target) {
@@ -328,7 +329,10 @@ const Scene = {
         const pad=24;
         const mask=this.lightMask||(this.lightMask=this.canvasFactory?this.canvasFactory():document.createElement('canvas'));
         if(mask.width!==w+pad*2||mask.height!==h+pad*2){mask.width=w+pad*2;mask.height=h+pad*2;}
-        const m=mask.getContext('2d');m.clearRect(0,0,mask.width,mask.height);m.fillStyle='rgba(3,6,9,.96)';m.fillRect(0,0,mask.width,mask.height);
+        const m=mask.getContext('2d');m.clearRect(0,0,mask.width,mask.height);
+        // A translucent earth-brown ambient veil preserves stone texture and
+        // wall height. Darkness comes from light falloff, never a pure-black slab.
+        m.fillStyle='rgba(8,10,10,.78)';m.fillRect(0,0,mask.width,mask.height);
         m.save();m.globalCompositeOperation='destination-out';
         const illuminate=(x,y,r,color,strength=1)=>{
             if(x+r<cx||x-r>cx+w||y+r<cy||y-r>cy+h||Expedition.hiddenRoomAt(x,y))return;
