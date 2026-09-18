@@ -1,6 +1,18 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const {setup}=require('./harness.cjs');
+test('movement and attacks drive animated poses without moving collision anchors',()=>{
+ const {Game,BossFight}=setup();Game.ents.find(e=>e.royal).reveal();const b=BossFight.boss;b.rise=0;const initial=b.pose();
+ b.move(5,0);assert.ok(b.moving&&b.stride>0);assert.notDeepEqual(b.pose(),initial);const x=b.x,y=b.y;
+ b.locked={x:Game.p.x,y:Game.p.y};b.release();assert.equal(b.attackT,.62);b.attackT=.31;assert.notEqual(b.pose().rotation,initial.rotation);assert.equal(b.x,x);assert.equal(b.y,y);
+ b.hitTimer=0;b.damage(1);assert.equal(b.hitTimer,.45);Game.p.holdingBreath=true;b.update(.1,Game.p);assert.equal(b.attackT,0);assert.equal(b.moving,false);
+});
+test('death remains animated but cannot attack or receive damage and expires once',()=>{
+ const {Game,BossFight,TombDangers}=setup();Game.ents.find(e=>e.royal).reveal();const b=BossFight.boss;b.rise=0;b.damage(b.maxHp);
+ const remnant=Game.ents.find(e=>e.type==='boss_death');assert.ok(remnant);assert.equal(remnant.dead,0);assert.ok(!TombDangers.enemies().includes(remnant));assert.equal(b.damage(1),false);
+ BossFight.defeat(b);assert.equal(Game.ents.filter(e=>e.type==='boss_death').length,1);
+ remnant.update(.9);assert.equal(remnant.dead,0);remnant.update(.91);assert.equal(remnant.dead,1);Game.load(2);assert.ok(!Game.ents.some(e=>e.type==='boss_death'));
+});
 test('each royal coffin summons one distinct increasingly strong guardian after opening',()=>{
  const {Game,BossFight,BOSS_SPECS}=setup();let hp=0,speed=0;
  assert.equal(new Set(BOSS_SPECS.map(b=>b.name)).size,10);assert.equal(new Set(BOSS_SPECS.map(b=>b.pattern)).size,10);

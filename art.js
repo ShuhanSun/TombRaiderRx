@@ -327,7 +327,7 @@ const Scene = {
         }
     },
     entity(ctx,e,game) {
-        if(e.type==='boss'){e.draw(ctx);return;}
+        if(e.type==='boss'||e.type==='boss_death'){e.draw(ctx);return;}
         if(Expedition.render(ctx,e))return;
         const time=game.elapsed,cn=curLang==='CN',distance=Math.hypot(e.x-game.p.x,e.y-game.p.y);
         if(e.type==='arrival_coffin'){Art.coffinDetail(ctx,1,e.x,e.y,155);return;}
