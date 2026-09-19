@@ -3,8 +3,26 @@ const vm=require('node:vm');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
+const zlib=require('node:zlib');
 const {setup}=require('./harness.cjs');
 const root=path.resolve(__dirname,'..');
+
+function assertPngDecodes(relative){
+ const data=fs.readFileSync(path.join(root,relative));assert.equal(data.subarray(1,4).toString(),'PNG');
+ let at=8,width=0,height=0,channels=0,interlace=0;const idat=[];
+ while(at<data.length){const length=data.readUInt32BE(at),type=data.subarray(at+4,at+8).toString(),body=data.subarray(at+8,at+8+length);at+=12+length;
+  if(type==='IHDR'){width=body.readUInt32BE(0);height=body.readUInt32BE(4);channels={0:1,2:3,3:1,4:2,6:4}[body[9]];assert.equal(body[8],8);interlace=body[12];}
+  if(type==='IDAT')idat.push(body);if(type==='IEND')break;
+ }
+ assert.equal(interlace,0);const raw=zlib.inflateSync(Buffer.concat(idat)),stride=width*channels;assert.equal(raw.length,(stride+1)*height);
+ for(let y=0;y<height;y++)assert.ok(raw[y*(stride+1)]<=4,`${relative} row ${y} has an invalid PNG filter`);
+}
+
+test('referenced art assets exist and action atlases fully decode',()=>{
+ const source=['art.js','styles.css','index.html'].map(f=>fs.readFileSync(path.join(root,f),'utf8')).join('\n');
+ for(const ref of new Set(source.match(/assets\/[\w./-]+(?:png|webp|svg)/g)||[]))assert.ok(fs.existsSync(path.join(root,ref)),`missing ${ref}`);
+ assertPngDecodes('assets/raider-shovel-attack-v2.png');assertPngDecodes('assets/raider-coffin-push-v2.png');
+});
 
 test('ordinary coffins stay dry while the royal coffin releases only red blood',()=>{
  const {Game,TombDangers,Coffin}=setup();
