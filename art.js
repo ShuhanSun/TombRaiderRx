@@ -10,8 +10,8 @@ const Art = {
     load() {
         const load=src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src;});
         const relicPaths=['relic-jade-bi','relic-boshan-incense','relic-bronze-mirror','relic-gold-belt-hook','relic-lacquer-box','relic-jade-cicada','relic-gilt-jue','relic-jade-plaque'].map(n=>`assets/${n}.webp`);
-        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png'),load('assets/tomb-mechanisms.png'),load('assets/tomb-stone-realistic.png'),load('assets/tomb-expedition.png'),load('assets/tomb-coffin-details.png'),load('assets/raider-shovel-attack.png'),load('assets/entrenching-shovel.png'),load('assets/tomb-remains.png'),load('assets/raider-coffin-push.png'),load('assets/coffin-lid.png'),load('assets/trap-emitters.png'),load('assets/raider-hold-breath.png'),load('assets/crawling-zombie-motion.webp'),load('assets/tomb-wall-candle.webp'),Promise.all(relicPaths.map(load))]).then(([sprites,materials,walker,zombies,traps,mechanisms,stone,expedition,coffinDetails,shovelAttack,shovelItem,remains,coffinPush,coffinLid,trapEmitters,breathRaider,crawlerMotion,wallCandle,relics])=>{
-            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;this.mechanisms=mechanisms;this.stone=stone;this.expedition=expedition;this.coffinDetails=coffinDetails;this.shovelAttack=shovelAttack;this.shovelItem=shovelItem;this.remains=remains;this.coffinPush=coffinPush;this.coffinLid=coffinLid;this.trapEmitters=trapEmitters;this.breathRaider=breathRaider;this.crawlerMotion=crawlerMotion;this.wallCandleImage=wallCandle;this.relics=relics;
+        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png'),load('assets/tomb-mechanisms.png'),load('assets/tomb-stone-realistic.png'),load('assets/tomb-expedition.png'),load('assets/tomb-coffin-details.png'),load('assets/empty-stone-coffin.png'),load('assets/raider-shovel-attack-v2.png'),load('assets/entrenching-shovel.png'),load('assets/tomb-remains.png'),load('assets/raider-coffin-push-v2.png'),load('assets/coffin-lid.png'),load('assets/trap-emitters.png'),load('assets/raider-hold-breath.png'),load('assets/crawling-zombie-motion.webp'),load('assets/tomb-wall-candle.webp'),Promise.all(relicPaths.map(load))]).then(([sprites,materials,walker,zombies,traps,mechanisms,stone,expedition,coffinDetails,emptyCoffinImage,shovelAttack,shovelItem,remains,coffinPush,coffinLid,trapEmitters,breathRaider,crawlerMotion,wallCandle,relics])=>{
+            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;this.mechanisms=mechanisms;this.stone=stone;this.expedition=expedition;this.coffinDetails=coffinDetails;this.emptyCoffinImage=emptyCoffinImage;this.shovelAttack=shovelAttack;this.shovelItem=shovelItem;this.remains=remains;this.coffinPush=coffinPush;this.coffinLid=coffinLid;this.trapEmitters=trapEmitters;this.breathRaider=breathRaider;this.crawlerMotion=crawlerMotion;this.wallCandleImage=wallCandle;this.relics=relics;
             const xs=[0,313,626,940,1254],ys=[0,302,618,918,1254];
             for(let i=0;i<16;i++) {
                 const c=document.createElement('canvas');c.width=c.height=400;
@@ -27,11 +27,8 @@ const Art = {
         ctx.drawImage(this.coffinDetails,index%2*w,Math.floor(index/2)*h,w,h,x-size/2,y-size*.8,size,size);
     },
     emptyCoffin(ctx,x,y,size){
-        this.coffinDetail(ctx,2,x,y,size);
-        ctx.save();ctx.translate(x,y-size*.29);
-        const cavity=ctx.createLinearGradient(0,-size*.33,0,size*.28);cavity.addColorStop(0,'#100d0b');cavity.addColorStop(.55,'#211b15');cavity.addColorStop(1,'#090807');
-        ctx.fillStyle=cavity;ctx.beginPath();ctx.moveTo(-size*.19,-size*.3);ctx.lineTo(size*.18,-size*.24);ctx.lineTo(size*.2,size*.27);ctx.lineTo(-size*.2,size*.27);ctx.closePath();ctx.fill();
-        ctx.strokeStyle='#75695666';ctx.lineWidth=Math.max(1,size*.015);for(let i=0;i<4;i++){const yy=-size*.17+i*size*.11;ctx.beginPath();ctx.moveTo(-size*.15,yy);ctx.lineTo(size*.15,yy+size*.02);ctx.stroke();}ctx.restore();
+        if(this.emptyCoffinImage)ctx.drawImage(this.emptyCoffinImage,x-size/2,y-size*.82,size,size);
+        else this.coffinDetail(ctx,2,x,y,size);
     },
     shovelRaider(ctx,e,x,y,size){
         if(!this.shovelAttack||e.attackT<=0){this.raider(ctx,e,x,y,size*.88);return;}
@@ -211,12 +208,12 @@ const Scene = {
     paintTerrain(ctx,left,right,top,bottom){
         for(let y=top;y<bottom;y++)for(let x=left;x<right;x++){
             const at=y*MapSys.w+x,type=MapSys.t[at]===1&&Expedition.visualWallAt(at)?0:MapSys.t[at];
-            const bleed=0,dx=x*50-bleed,dy=y*50-bleed,dsize=50+bleed*2;
+            const bleed=type===1?.35:0,dx=x*50-bleed,dy=y*50-bleed,dsize=50+bleed*2;
             ctx.save();ctx.filter=Expedition.style.filter;Art.stoneSurface(ctx,type===1,x,y,dx,dy,dsize,dsize);
             ctx.globalAlpha=type===1?0:.2;ctx.drawImage(Art.tiles[type===1?Expedition.style.wall:Expedition.style.floor],x%8*50,y%8*50,50,50,dx,dy,dsize,dsize);ctx.restore();
             ctx.fillStyle=(type===1?World.theme.wallTint:World.theme.floorTint)+'38';ctx.fillRect(dx,dy,dsize,dsize);
             if(type!==1){ctx.fillStyle=World.theme.tint+'16';ctx.fillRect(x*50,y*50,50,50);}
-            ctx.fillStyle=type===1?'#02070988':'#111c2520';ctx.fillRect(x*50,y*50,50,50);
+            ctx.fillStyle=type===1?'#25302c3d':'#111c2520';ctx.fillRect(x*50,y*50,50,50);
         }
     },
 
@@ -313,9 +310,12 @@ const Scene = {
         // Merge adjoining faces into one slab: no per-tile rounded ends or shadow seams.
         fronts.sort((a,b)=>a.y-b.y||a.x-b.x);
         for(let i=0;i<fronts.length;){const start=fronts[i++];let end=start.x+50;while(i<fronts.length&&fronts[i].y===start.y&&fronts[i].x===end){end+=50;i++;}
-            const y=start.y,face=ctx.createLinearGradient(0,y,0,y+39);face.addColorStop(0,'#a49c8177');face.addColorStop(.12,'#303736ee');face.addColorStop(1,'#101717');
-            ctx.save();ctx.fillStyle=face;ctx.beginPath();ctx.roundRect(start.x-1,y,end-start.x+2,39,10);ctx.fill();
-            const shadow=ctx.createLinearGradient(0,y+33,0,y+72);shadow.addColorStop(0,'#000000c0');shadow.addColorStop(1,'#00000000');ctx.fillStyle=shadow;ctx.fillRect(start.x-7,y+33,end-start.x+14,39);ctx.restore();
+            const y=start.y,face=ctx.createLinearGradient(0,y,0,y+35);face.addColorStop(0,'#938a70cc');face.addColorStop(.13,'#5c594bdd');face.addColorStop(.58,'#393d36ee');face.addColorStop(1,'#242924f2');
+            ctx.save();ctx.fillStyle=face;ctx.beginPath();ctx.roundRect(start.x-1,y,end-start.x+2,35,6);ctx.fill();
+            // Irregular horizontal joints make the raised face read as masonry,
+            // while one continuous strip prevents tile-by-tile seams.
+            ctx.strokeStyle='#b0a78a35';ctx.lineWidth=1;for(let yy=y+9;yy<y+32;yy+=10){ctx.beginPath();ctx.moveTo(start.x+2,yy);ctx.lineTo(end-2,yy);ctx.stroke();}
+            const shadow=ctx.createLinearGradient(0,y+31,0,y+63);shadow.addColorStop(0,'#080a08a8');shadow.addColorStop(1,'#080a0800');ctx.fillStyle=shadow;ctx.fillRect(start.x-5,y+31,end-start.x+10,32);ctx.restore();
         }
         const key=p=>p.join(','),remaining=new Map(edges.map(e=>[key(e[0]),e]));
         ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();
@@ -330,7 +330,7 @@ const Scene = {
             }
             if(closed)ctx.closePath();else ctx.lineTo(...path[path.length-1]);
         }
-        ctx.strokeStyle='#070d0fde';ctx.lineWidth=13;ctx.shadowColor='#000';ctx.shadowBlur=12;ctx.shadowOffsetY=8;ctx.stroke();ctx.shadowBlur=0;ctx.shadowOffsetY=0;ctx.strokeStyle='#b5ad9066';ctx.lineWidth=3;ctx.stroke();ctx.restore();
+        ctx.strokeStyle='#343a32e8';ctx.lineWidth=7;ctx.shadowColor='#050706aa';ctx.shadowBlur=8;ctx.shadowOffsetY=5;ctx.stroke();ctx.shadowBlur=0;ctx.shadowOffsetY=0;ctx.strokeStyle='#aa9f7f8a';ctx.lineWidth=2.2;ctx.stroke();ctx.restore();
     },
     drawDarkness(ctx,w,h,cx,cy,time,left,right,top,bottom,game){
         const pad=24;

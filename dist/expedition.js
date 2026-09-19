@@ -22,7 +22,7 @@ const Expedition={
   const royalCenter={x:(royalRoom.x+royalRoom.w/2)*50,y:(royalRoom.y+royalRoom.h/2)*50};
   const main=spots.filter(p=>p.room===royalRoom).sort((a,b)=>Math.abs(Math.hypot(a.x-royalCenter.x,a.y-royalCenter.y)-80)-Math.abs(Math.hypot(b.x-royalCenter.x,b.y-royalCenter.y)-80))[0]||spots[0];spots=spots.filter(p=>p!==main);
   const mainCoffin=new Coffin(main.x,main.y,'exit_coffin');mainCoffin.royal=true;Game.spawn(mainCoffin);Game.mainCoffinPos={x:mainCoffin.x,y:mainCoffin.y};
-  for(const offset of [-82,82])if(MapSys.canOccupy(mainCoffin.x+offset,mainCoffin.y-25,12))Game.spawn({type:'burial_decor',x:mainCoffin.x+offset,y:mainCoffin.y-25,sprite:this.style.decor,size:80,dead:0});
+  for(const offset of [-125,125])if(MapSys.canOccupy(mainCoffin.x+offset,mainCoffin.y-25,12))Game.spawn({type:'burial_decor',x:mainCoffin.x+offset,y:mainCoffin.y-25,sprite:this.style.decor,size:80,dead:0});
   const keySpot=spots.find(p=>p.room!==Game.exitRoom)||spots[0];spots=spots.filter(p=>p!==keySpot);
   const key=new Coffin(keySpot.x,keySpot.y,'key');Game.spawn(key);this.keyCoffin=key;
   // First find is a compass in a coffin; only one emergency wine sits in the open.
@@ -52,7 +52,53 @@ const Expedition={
    if(r===Game.exitRoom||(roomIndex+Game.lvl)%3===0)Game.spawn({type:'tomb_remains',variant:(roomIndex+Game.lvl)%4,x:(r.x+r.w*.52)*50,y:(r.y+r.h*.68)*50,size:62+Math.min(20,Game.lvl*2),dead:0});
    if(Game.lvl>=7&&r===Game.exitRoom)Game.spawn({type:'tomb_remains',variant:2,x:(r.x+r.w*.28)*50,y:(r.y+r.h*.38)*50,size:88,dead:0});
   }
-  this.buildWalls();this.placePots();TombDangers.setup();
+ this.buildWalls();this.placePots();TombDangers.setup();
+ },
+ displayRadius(e){
+  if(e.type==='coffin')return e.royal?62:50;
+  if(e.type==='arrival_coffin')return 58;
+  if(e.type==='pot')return 38;
+  if(e.type==='burial_decor'||e._layoutKind==='prop')return Math.max(26,(e.size||62)*.38);
+  if(e.type==='tomb_remains')return Math.max(28,(e.size||62)*.38);
+  if(e.type==='bone_pile')return Math.max(20,(e.size||42)*.34);
+  if(e.type==='trap'||e.type==='altar'||e.type==='gate_switch')return 28;
+  if(e.type==='ground_item'||e.type==='relic_item')return 18;
+  return 20;
+ },
+ arrangeStaticObjects(){
+  const reserved=[],gap=14,conflicts=(e,x=e.x,y=e.y)=>reserved.some(o=>Math.hypot(o.x-x,o.y-y)<o.r+this.displayRadius(e)+gap);
+  const keep=e=>reserved.push({x:e.x,y:e.y,r:this.displayRadius(e),e});
+  // Mechanisms must retain their authored wall alignment. They reserve space
+  // before burial furnishings are distributed around them.
+  const fixed=[Game.p,...Game.ents.filter(e=>e.type==='trap'),...World.altars,...World.hazards,...(TombDangers.sources||[]),...(ExitGate.switch?[ExitGate.switch]:[])];
+  for(const e of fixed)if(e?.x!==undefined)keep(e);
+  const movable=[...Game.ents.filter(e=>['coffin','arrival_coffin','burial_decor','bone_pile','tomb_remains','pot','ground_item'].includes(e.type)),...World.props.map(e=>(e._layoutKind='prop',e))]
+   .sort((a,b)=>(a.type==='coffin'?-2:0)-(b.type==='coffin'?-2:0)||(b.royal?1:0)-(a.royal?1:0));
+  for(const e of movable){
+   if(!conflicts(e)){keep(e);continue;}
+   const room=World.rooms.find(r=>World.inside(r,e.x,e.y));if(!room){keep(e);continue;}
+   const candidates=[],margin=e.type==='coffin'?1.35:1.05;
+   for(let gy=room.y+margin;gy<=room.y+room.h-margin;gy+=.65)for(let gx=room.x+margin;gx<=room.x+room.w-margin;gx+=.65){
+    const x=gx*50,y=gy*50;if(!MapSys.canOccupy(x,y,14)||conflicts(e,x,y))continue;
+    const edge=Math.min(gx-room.x,room.x+room.w-gx,gy-room.y,room.y+room.h-gy),axis=Math.abs(gx-(room.x+room.w/2));
+    const style=e.type==='coffin'?axis*18:edge*7;candidates.push({x,y,score:Math.hypot(x-e.x,y-e.y)+style});
+   }
+   candidates.sort((a,b)=>a.score-b.score);
+   if(candidates[0]){e.x=candidates[0].x;e.y=candidates[0].y;keep(e);continue;}
+   let fallback=null;for(let radius=70;radius<=320&&!fallback;radius+=25)for(let n=0;n<20;n++){const a=n*Math.PI/10,x=e.x+Math.cos(a)*radius,y=e.y+Math.sin(a)*radius;if(World.inside(room,x,y)&&MapSys.canOccupy(x,y,14)&&!conflicts(e,x,y)){fallback={x,y};break;}}
+   if(fallback){e.x=fallback.x;e.y=fallback.y;keep(e);continue;}
+   if(['coffin','arrival_coffin','ground_item'].includes(e.type))keep(e);else {e.dead=1;e._layoutHidden=true;}
+  }
+  World.props=World.props.filter(e=>!e._layoutHidden);
+  if(Game.mainCoffinPos&&Game.ents.find(e=>e.royal)){const main=Game.ents.find(e=>e.royal);Game.mainCoffinPos={x:main.x,y:main.y};}
+ },
+ safeDrop(c,index=0){
+  const occupied=[...Game.ents.filter(e=>!e.dead&&e!==c),...World.props,...World.altars];
+  for(const radius of [74,96,118])for(let n=0;n<12;n++){
+   const angle=(n+index*3)*Math.PI/6,x=c.x+Math.cos(angle)*radius,y=c.y+Math.sin(angle)*radius;
+   if(MapSys.canOccupy(x,y,12)&&!occupied.some(e=>e.x!==undefined&&Math.hypot(e.x-x,e.y-y)<this.displayRadius(e)+25))return {x,y};
+  }
+  return {x:c.x+(index%2?72:-72),y:c.y+70+Math.floor(index/2)*28};
  },
  spawnEnemy(kind,x,y,homeCoffin=null){
   if(kind==='zombie'||kind==='crawler'){
@@ -85,7 +131,7 @@ const Expedition={
   if(c.content!=='cache')return false;
   for(const p of [c.payload,...c.extra]){
    if(p.enemy){if(p.enemy==='zombie'||p.enemy==='crawler')c.occupantEscaped=true;this.spawnEnemy(p.enemy,c.x,c.y+35,c);}
-   if(p.loot)p.loot.forEach((code,i)=>{const item=new GroundItem(c.x+(i?35:-35),c.y+30,code);Game.spawn(item);});
+   if(p.loot)p.loot.forEach((code,i)=>{const drop=this.safeDrop(c,i);Game.spawn(new GroundItem(drop.x,drop.y,code));});
   }
   Game.addText(c.x,c.y,c.payload.enemy?(curLang==='CN'?'棺中有异动！':'Something stirs!'):(curLang==='CN'?'取出随葬供物':'Burial supplies'),'#d2b38b');return true;
  },
@@ -93,7 +139,7 @@ const Expedition={
   if(c.relicRolled)return;c.relicRolled=true;
   if(!c.royal&&Math.random()>.3)return;
   const unlocked=Math.min(RELICS.length,3+Math.ceil((Game.lvl-1)/2)),index=Math.floor(Math.random()*unlocked);
-  Game.spawn(new RelicItem(c.x+(Math.random()-.5)*42,c.y+42,index));
+  const drop=this.safeDrop(c,7);Game.spawn(new RelicItem(drop.x,drop.y,index));
   Game.addText(c.x,c.y-18,curLang==='CN'?'棺中有古董冥器！':'An antique relic!','#f4d47f');
  },
  buildWalls(){

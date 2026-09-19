@@ -71,7 +71,7 @@ const World = {
         // The first compass is discoverable without having to search the entire floor.
         const compass=Game.ents.find(e=>e.code==='item_compass');
         if(compass&&!Game.p.hasCompass) {compass.x=Game.p.x+65;compass.y=Game.p.y+50;}
-        Expedition.setup();for(const r of this.rooms)if(r.entered===undefined){r.darkBeforeEntry=true;r.entered=false;r.lightProgress=0;}ExitGate.setup();this.baseSight=this.theme.sight;
+        Expedition.setup();for(const r of this.rooms)if(r.entered===undefined){r.darkBeforeEntry=true;r.entered=false;r.lightProgress=0;}ExitGate.setup();Expedition.arrangeStaticObjects();this.baseSight=this.theme.sight;
         this.updateRoom();
     },
     placeProjectileCover() {

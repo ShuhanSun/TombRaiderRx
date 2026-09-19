@@ -9,6 +9,7 @@ const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:
     Scene.canvasFactory=()=>createCanvas(1,1);
     Art.smokeCanvasFactory=()=>createCanvas(136,136);
     Art.coffinDetails=await loadImage('assets/tomb-coffin-details.png');
+    Art.emptyCoffinImage=await loadImage('assets/empty-stone-coffin.png');
     Art.expedition=await loadImage('assets/tomb-expedition.png');
     Art.stone=await loadImage('assets/tomb-stone-realistic.png');
     Art.sprites=await loadImage('assets/tomb-sprites.png');
@@ -16,10 +17,10 @@ const {createCanvas,loadImage}=require(require.resolve('@napi-rs/canvas',{paths:
     Art.breathRaider=await loadImage('assets/raider-hold-breath.png');Art.prepareBreathRaider(()=>createCanvas(1,1));
     Art.zombies=await loadImage('assets/jiangshi-motion.png');Art.traps=await loadImage('assets/trap-motion.png');
     Art.mechanisms=await loadImage('assets/tomb-mechanisms.png');
-    Art.shovelAttack=await loadImage('assets/raider-shovel-attack.png');
+    Art.shovelAttack=await loadImage('assets/raider-shovel-attack-v2.png');
     Art.shovelItem=await loadImage('assets/entrenching-shovel.png');
     Art.remains=await loadImage('assets/tomb-remains.png');
-    Art.coffinPush=await loadImage('assets/raider-coffin-push.png');
+    Art.coffinPush=await loadImage('assets/raider-coffin-push-v2.png');
     Art.crawlerMotion=await loadImage('assets/crawling-zombie-motion.webp');
     Art.wallCandleImage=await loadImage('assets/tomb-wall-candle.webp');
     Art.relics=await Promise.all(['relic-jade-bi','relic-boshan-incense','relic-bronze-mirror','relic-gold-belt-hook','relic-lacquer-box','relic-jade-cicada','relic-gilt-jue','relic-jade-plaque'].map(n=>loadImage(`assets/${n}.webp`)));

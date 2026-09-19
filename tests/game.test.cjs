@@ -466,6 +466,18 @@ test('bats never spawn and a zombie leaves its opened coffin visibly empty',()=>
  const royal=Game.ents.find(e=>e.royal)||Expedition.coffins[0];if(royal){royal.royal=true;royal.opened=1;Expedition.spawnBloodCorpse(royal);assert.equal(royal.occupantEscaped,true);}
 });
 
+test('burial furnishings and coffins keep readable spacing on every floor',()=>{
+ const {Game,Expedition,World,TombDangers,ExitGate}=setup(118);
+ for(let lvl=1;lvl<=10;lvl++){
+  Game.load(lvl);
+  const objects=[...Game.ents.filter(e=>!e.dead&&!e.vent&&['coffin','arrival_coffin','burial_decor','bone_pile','tomb_remains','pot','ground_item','trap'].includes(e.type)),...World.props,...World.altars,...World.hazards,...TombDangers.sources,ExitGate.switch].filter(Boolean);
+  for(let i=0;i<objects.length;i++)for(let j=i+1;j<objects.length;j++){
+   const a=objects[i],b=objects[j];if(a===b)continue;
+   assert.ok(Math.hypot(a.x-b.x,a.y-b.y)>=Expedition.displayRadius(a)+Expedition.displayRadius(b)+6,`floor ${lvl}: ${a.type||a.kind||'prop'} overlaps ${b.type||b.kind||'prop'}`);
+  }
+ }
+});
+
 test('sealed chambers have one moving entrance and required relic/key remain outside',()=>{
  const {Game,Expedition,World,MapSys}=setup(81);
  for(let lvl=1;lvl<=10;lvl++){

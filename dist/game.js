@@ -354,8 +354,9 @@ class Coffin extends Entity {
             if(this.revealed)return;this.revealed=true;
             const handled=Expedition.reveal(this);Expedition.maybeDropRelic(this);if(handled)return;
             if(this.content === 'supply') {
-                Game.spawn(new GroundItem(this.x+35,this.y,'item_wine'));
-                Game.spawn(new GroundItem(this.x-35,this.y,'item_jade'));
+                const wine=Expedition.safeDrop(this,0),jade=Expedition.safeDrop(this,1);
+                Game.spawn(new GroundItem(wine.x,wine.y,'item_wine'));
+                Game.spawn(new GroundItem(jade.x,jade.y,'item_jade'));
                 Game.addText(this.x,this.y,curLang==='CN'?'供物尚存':'Offerings remain','#aaddbb');
             }
             else if(this.content === 'zombie') {
