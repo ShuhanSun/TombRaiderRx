@@ -8,10 +8,10 @@ const Art = {
         [0,924,314,330],[319,912,307,342],[635,934,305,320],[946,922,308,332]
     ],
     load() {
-        const load=src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src;});
+        const load=(src,attempt=0)=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>attempt<2?setTimeout(()=>load(src,attempt+1).then(resolve,reject),120*(attempt+1)):reject(new Error(`Unable to load ${src}`));img.src=src;});
         const relicPaths=['relic-jade-bi','relic-boshan-incense','relic-bronze-mirror','relic-gold-belt-hook','relic-lacquer-box','relic-jade-cicada','relic-gilt-jue','relic-jade-plaque'].map(n=>`assets/${n}.webp`);
-        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png'),load('assets/tomb-mechanisms.png'),load('assets/tomb-stone-realistic.png'),load('assets/tomb-expedition.png'),load('assets/tomb-coffin-details.png'),load('assets/empty-stone-coffin.png'),load('assets/raider-shovel-attack-v2.png'),load('assets/entrenching-shovel.png'),load('assets/tomb-remains.png'),load('assets/raider-coffin-push-v2.png'),load('assets/coffin-lid.png'),load('assets/trap-emitters.png'),load('assets/raider-hold-breath.png'),load('assets/crawling-zombie-motion.webp'),load('assets/tomb-wall-candle.webp'),Promise.all(relicPaths.map(load))]).then(([sprites,materials,walker,zombies,traps,mechanisms,stone,expedition,coffinDetails,emptyCoffinImage,shovelAttack,shovelItem,remains,coffinPush,coffinLid,trapEmitters,breathRaider,crawlerMotion,wallCandle,relics])=>{
-            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;this.mechanisms=mechanisms;this.stone=stone;this.expedition=expedition;this.coffinDetails=coffinDetails;this.emptyCoffinImage=emptyCoffinImage;this.shovelAttack=shovelAttack;this.shovelItem=shovelItem;this.remains=remains;this.coffinPush=coffinPush;this.coffinLid=coffinLid;this.trapEmitters=trapEmitters;this.breathRaider=breathRaider;this.crawlerMotion=crawlerMotion;this.wallCandleImage=wallCandle;this.relics=relics;
+        return Promise.all([load('assets/tomb-sprites.png'),load('assets/tomb-materials.png'),load('assets/raider-walk.png'),load('assets/jiangshi-motion.png'),load('assets/trap-motion.png'),load('assets/tomb-mechanisms.png'),load('assets/tomb-stone-realistic.png'),load('assets/tomb-expedition.png'),load('assets/tomb-coffin-details.png'),load('assets/empty-stone-coffin.png'),load('assets/raider-shovel-attack-v2.png'),load('assets/entrenching-shovel.png'),load('assets/tomb-remains.png'),load('assets/raider-coffin-push-v2.png'),load('assets/coffin-lid.png'),load('assets/trap-emitters.png'),load('assets/raider-hold-breath.png'),load('assets/crawling-zombie-motion.webp'),load('assets/tomb-wall-candle.webp'),load('assets/wood-shield-realistic.png'),load('assets/raider-shield.png'),Promise.all(relicPaths.map(load))]).then(([sprites,materials,walker,zombies,traps,mechanisms,stone,expedition,coffinDetails,emptyCoffinImage,shovelAttack,shovelItem,remains,coffinPush,coffinLid,trapEmitters,breathRaider,crawlerMotion,wallCandle,woodShieldImage,shieldRaider,relics])=>{
+            this.sprites=sprites;this.materials=materials;this.walker=walker;this.zombies=zombies;this.traps=traps;this.mechanisms=mechanisms;this.stone=stone;this.expedition=expedition;this.coffinDetails=coffinDetails;this.emptyCoffinImage=emptyCoffinImage;this.shovelAttack=shovelAttack;this.shovelItem=shovelItem;this.remains=remains;this.coffinPush=coffinPush;this.coffinLid=coffinLid;this.trapEmitters=trapEmitters;this.breathRaider=breathRaider;this.crawlerMotion=crawlerMotion;this.wallCandleImage=wallCandle;this.woodShieldImage=woodShieldImage;this.shieldRaider=shieldRaider;this.relics=relics;
             const xs=[0,313,626,940,1254],ys=[0,302,618,918,1254];
             for(let i=0;i<16;i++) {
                 const c=document.createElement('canvas');c.width=c.height=400;
@@ -137,6 +137,11 @@ const Art = {
         const sw=this.breathRaider.width/4,sh=this.breathRaider.height/4,frame=e.moving?e.walkFrame%4:0;
         ctx.drawImage(this.breathRaider,frame*sw,e.direction*sh,sw,sh,x-size/2,y-size*.88,size,size);
     },
+    shieldRaiderSprite(ctx,e,x,y,size) {
+        if(!this.shieldRaider){this.raider(ctx,e,x,y,size);return;}
+        const sw=this.shieldRaider.width/4,sh=this.shieldRaider.height/4,frame=e.moving?e.walkFrame%4:1;
+        ctx.drawImage(this.shieldRaider,frame*sw,e.direction*sh,sw,sh,x-size/2,y-size*.94,size,size);
+    },
 
     mechanism(ctx,index,x,y,size) {
         const xs=[0,319,638,956,1275],ys=[0,402,665,941,1233],col=index%4,row=Math.floor(index/4);
@@ -247,11 +252,18 @@ const Scene = {
             }
             if(warn&&!active)Art.label(ctx,hazard.x,hazard.y-37,curLang==='CN'?'避开机关':'MOVE AWAY','#ffc39b');
         }
-        const visible=e=>!Expedition.hiddenRoomAt(e.x,e.y)&&e.x>cx-100&&e.x<cx+w+100&&e.y>cy-100&&e.y<cy+h+100;
-        const objects=[...World.props.map(e=>({...e,type:'decoration'})),...World.altars.map(e=>({...e,type:'altar'})),...game.ents.filter(e=>!e.dead&&(!e.hidden||e.rising)),...Expedition.switches,...TombDangers.sources,ExitGate.switch,...(World.canExit()?[{...game.exitPos,type:'exit'}]:[])].filter(visible).sort((a,b)=>a.y-b.y);
+        const visible=e=>e&&!Expedition.hiddenRoomAt(e.x,e.y)&&e.x>cx-100&&e.x<cx+w+100&&e.y>cy-100&&e.y<cy+h+100;
+        const objects=game.sceneObjects||(game.sceneObjects=[]);objects.length=0;
+        const add=e=>{if(visible(e))objects.push(e);};
+        for(const e of World.props){e.type=e.type||'decoration';add(e);}
+        for(const e of World.altars){e.type=e.type||'altar';add(e);}
+        for(const e of game.ents)if(e!==p&&!e.dead&&(!e.hidden||e.rising))add(e);
+        for(const e of Expedition.switches)add(e);for(const e of TombDangers.sources)add(e);add(ExitGate.switch);
+        if(World.canExit()){const exit=game.exitRenderObject||(game.exitRenderObject={type:'exit'});exit.x=game.exitPos.x;exit.y=game.exitPos.y;add(exit);}
+        objects.sort((a,b)=>a.y-b.y);
         // Ground remains must never cover an actor's body when their sort anchors overlap.
-        for(const e of objects.filter(e=>['tomb_remains','bone_pile'].includes(e.type)))this.entity(ctx,e,game);
-        for(const e of objects.filter(e=>!['tomb_remains','bone_pile'].includes(e.type)))this.entity(ctx,e,game);
+        for(const e of objects)if(e.type==='tomb_remains'||e.type==='bone_pile')this.entity(ctx,e,game);
+        for(const e of objects)if(e.type!=='tomb_remains'&&e.type!=='bone_pile')this.entity(ctx,e,game);
         TombDangers.drawJets(ctx,left,right,top,bottom);
         this.roomAtmosphere(ctx,time,'over',left,right,top,bottom);
         for(const t of game.texts) {ctx.save();ctx.translate(t.x,t.y);t.draw(ctx);ctx.restore();}
@@ -419,9 +431,9 @@ const Scene = {
                 if(e.buffs.jade>0||e.buffs.hoof>0) {ctx.strokeStyle=e.buffs.jade>0?'#b8f0d2':'#d8b077';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(e.x,e.y,25,12,0,0,Math.PI*2);ctx.stroke();}
                 ctx.save();if(e.inv>0)ctx.globalAlpha=.6+.4*Math.sin(time*25)**2;
                 const bob=e.moving?-Math.abs(Math.sin(e.stepPhase))*1.8:0;
-                if(e.holdingBreath){ctx.filter='brightness(.52) saturate(.42) contrast(.92)';Art.breathRaiderSprite(ctx,e,e.x,e.y+bob+5,82);}else if(e.rollTime>0){ctx.translate(e.x,e.y-20);ctx.rotate((.65-e.rollTime)/.65*Math.PI*2);Art.raider(ctx,e,0,20,74);}else if(e.pushingCoffin)Art.pushRaider(ctx,e,e.x,e.y,82);else if(e.hasShovel)Art.shovelRaider(ctx,e,e.x,e.y+bob,84);else Art.raider(ctx,e,e.x,e.y+bob,74);ctx.restore();
+                if(e.holdingBreath){ctx.filter='brightness(.52) saturate(.42) contrast(.92)';Art.breathRaiderSprite(ctx,e,e.x,e.y+bob+5,82);}else if(e.rollTime>0){ctx.translate(e.x,e.y-20);ctx.rotate((.65-e.rollTime)/.65*Math.PI*2);Art.raider(ctx,e,0,20,74);}else if(e.pushingCoffin)Art.pushRaider(ctx,e,e.x,e.y,82);else if(e.shieldHits>0&&e.attackT<=0)Art.shieldRaiderSprite(ctx,e,e.x,e.y+bob,86);else if(e.hasShovel)Art.shovelRaider(ctx,e,e.x,e.y+bob,84);else Art.raider(ctx,e,e.x,e.y+bob,74);ctx.restore();
                 if(e.hasShovel&&e.attackT>0){const progress=1-e.attackT/.48;ctx.save();ctx.translate(e.x,e.y-18);ctx.rotate(e.attackAngle);ctx.globalAlpha=Math.sin(progress*Math.PI)*.8;for(let i=0;i<3;i++){ctx.strokeStyle=i===0?'#f5dfb8':'#aab6ac';ctx.lineWidth=5-i*1.4;ctx.beginPath();ctx.arc(0,0,47+i*5,-1.05+progress*.7,.25+progress*.7);ctx.stroke();}ctx.restore();}
-                if(e.shieldHits>0)Art.woodShield(ctx,e.x+(e.facingLeft?-19:19),e.y-15,1,e.facingLeft);
+                if(e.shieldHits>0&&!Art.shieldRaider)Art.woodShield(ctx,e.x+(e.facingLeft?-19:19),e.y-15,1,e.facingLeft);
             } else {
                 const pose=e.attackState==='windup'?2:e.attackState==='strike'?3:lift>2?1:0;
                 const lunge=e.attackState==='strike'?Math.sin((1-e.attackClock/.24)*Math.PI)*11:0;
@@ -492,6 +504,7 @@ Art.shovel=function(ctx,x,y,scale){
  ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);ctx.strokeStyle='#997449';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-20,0);ctx.lineTo(12,0);ctx.stroke();ctx.fillStyle='#6e7b78';ctx.beginPath();ctx.moveTo(10,-8);ctx.lineTo(28,-10);ctx.lineTo(31,0);ctx.lineTo(28,10);ctx.lineTo(10,8);ctx.closePath();ctx.fill();ctx.restore();
 };
 Art.woodShield=function(ctx,x,y,scale=1,flip=false){
+ if(Art.woodShieldImage){ctx.save();ctx.translate(x,y);if(flip)ctx.scale(-1,1);ctx.drawImage(Art.woodShieldImage,-24*scale,-30*scale,48*scale,60*scale);ctx.restore();return;}
  ctx.save();ctx.translate(x,y);if(flip)ctx.scale(-1,1);ctx.scale(scale,scale);
  ctx.shadowColor='#050302aa';ctx.shadowBlur=5;ctx.fillStyle='#6f4326';ctx.strokeStyle='#c18b50';ctx.lineWidth=2.2;
  ctx.beginPath();ctx.moveTo(0,-20);ctx.quadraticCurveTo(17,-17,16,1);ctx.quadraticCurveTo(13,17,0,23);ctx.quadraticCurveTo(-13,17,-16,1);ctx.quadraticCurveTo(-17,-17,0,-20);ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowBlur=0;

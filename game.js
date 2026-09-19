@@ -59,13 +59,13 @@ const LANG = {
         winDesc: "穿越十层，逃出生天！",
         winBtn: "再来一局",
         items: {
-            shovel: {n:"兵工铲", d:"近战武器：靠近僵尸时自动挥击。"},
+            shovel: {n:"兵工铲", d:"近战武器：靠近僵尸、尸鳖或蜘蛛时自动挥击。"},
             candle: {n:"残油铜灯", d:"<b>添油续火</b>: 扩大视野 20 秒，每层仅一盏。"},
             wine: {n:"糯米酒", d:"<b>祛阴补阳</b>: 恢复 1 点生命值。"},
             hoof: {n:"黑驴蹄子", d:"<b>生人勿近</b>: 僵尸退避 15 秒。"},
             jade: {n:"金缕玉衣", d:"<b>刀枪不入</b>: 抵挡下一次伤害后破损，不叠加。"},
             compass: {n:"风水罗盘", d:"<b>寻龙分金</b>: 持有时显示小地图并指引目标；受伤可能掉落。"},
-            shield: {n:"榆木护盾", d:"<b>横木护身</b>: 可抵挡 3 次弓弩箭矢或守墓尸攻击；无法抵挡火焰、巨石与滚木。"}
+            shield: {n:"榆木护盾", d:"<b>横木护身</b>: 可自动抵挡任意 3 次攻击，耐久耗尽后碎裂。"}
         },
         msgs: {
             start: "进入第 %s 层",
@@ -78,7 +78,7 @@ const LANG = {
             heal: "生命恢复!",
             repel: "尸畏 15秒!",
             immune: "玉衣护身 · 可抵挡一次伤害",
-            shield: "榆木护盾 · 可抵挡 3 次箭矢或守墓尸攻击",
+            shield: "榆木护盾 · 可抵挡任意 3 次攻击",
             hole: "水脉倒灌 · 盗洞已开"
         },
         levelNames: LEVEL_NAMES_CN,
@@ -101,13 +101,13 @@ const LANG = {
         winDesc: "Artifacts found. You survived!",
         winBtn: "Play Again",
         items: {
-            shovel: {n:"Entrenching Shovel", d:"Automatically strikes nearby zombies."},
+            shovel: {n:"Entrenching Shovel", d:"Automatically strikes nearby zombies, beetles and spiders."},
             candle: {n:"Oil Lamp", d:"<b>Last Oil</b>: Wider sight for 20 seconds. One lamp per floor."},
             wine: {n:"Rice Wine", d:"<b>Vitality</b>: Restore 1 HP."},
             hoof: {n:"Donkey Hoof", d:"<b>Repel</b>: Zombies fear you for 15s."},
             jade: {n:"Jade Suit", d:"<b>Invincible</b>: Blocks one hit, then breaks. Does not stack."},
             compass: {n:"Compass", d:"<b>Feng Shui</b>: Unlocks the minimap and guides you. May drop when hurt."},
-            shield: {n:"Elmwood Shield", d:"<b>Wooden Guard</b>: Blocks 3 crossbow or tomb-guardian attacks, but not fire, stones or logs."}
+            shield: {n:"Elmwood Shield", d:"<b>Wooden Guard</b>: Automatically blocks any 3 attacks, then breaks."}
         },
         msgs: {
             start: "Entered Level %s",
@@ -120,7 +120,7 @@ const LANG = {
             heal: "HP Restored!",
             repel: "Repel 15s!",
             immune: "Jade suit · blocks one hit",
-            shield: "Elmwood shield · blocks 3 bolts or guardian attacks",
+            shield: "Elmwood shield · blocks any 3 attacks",
             hole: "Exit Opened! Water Rising!"
         },
         levelNames: LEVEL_NAMES_EN,
@@ -620,14 +620,14 @@ class Projectile extends Entity {
 class Player extends Entity {
     constructor(x,y){super(x,y,'player');this.hp=5;this.sight=CONFIG.BASE_SIGHT;this.inv=0;this.buffs={hoof:0,candle:0,jade:0};this.walkT=0;this.hasCompass=0;this.hasShovel=false;this.shieldHits=0;this.attackCooldown=0;this.attackT=0;this.attackAngle=0;this.holdingBreath=false;this.breathRemaining=CONFIG.BREATH_MAX;this.breathExhausted=false;this.stepPhase=0;this.direction=0;this.walkFrame=1;this.walkDistance=0;this.stepDistance=0;this.moving=false;this.inWater=MapSys.get(x,y)===TERRAIN.WATER;}
     nearestTarget(){
-        let nearest,best=78*78;
+        let nearest,best=78*78,nearestPot,potBest=best;
         for(const e of Game.ents){
-            if(e.dead||e.type!=='zombie')continue;
+            if(e.dead||(e.type!=='zombie'&&e.type!=='vermin'&&e.type!=='pot'))continue;
             const distance=(e.x-this.x)**2+(e.y-this.y)**2;
-            if(distance>best||(nearest&&distance===best)||!MapSys.lineClear(this.x,this.y,e.x,e.y))continue;
-            nearest=e;best=distance;
+            if(e.type==='pot'){if(distance<potBest&&MapSys.lineClear(this.x,this.y,e.x,e.y)){nearestPot=e;potBest=distance;}continue;}
+            if(distance>best||(nearest&&distance===best)||!MapSys.lineClear(this.x,this.y,e.x,e.y))continue;nearest=e;best=distance;
         }
-        return nearest||Game.ents.filter(e=>e.type==='pot'&&!e.dead&&Math.hypot(e.x-this.x,e.y-this.y)<=78&&MapSys.lineClear(this.x,this.y,e.x,e.y)).sort((a,b)=>Math.hypot(a.x-this.x,a.y-this.y)-Math.hypot(b.x-this.x,b.y-this.y))[0];
+        return nearest||nearestPot;
     }
     attack(target=this.nearestTarget()){
         if(!Game.running||Game.pause||!this.hasShovel||this.holdingBreath||this.attackCooldown>0||this.rollTime>0||!target)return false;
@@ -702,8 +702,7 @@ this.moving=moved>.01;
     }
     hit(cause={}){
         if(!Game.running || this.inv>0)return;
-        const shieldable=cause.source==='zombie'||cause.source==='zombie_projectile'||(cause.source==='trap'&&cause.projectile==='ARROW');
-        if(this.shieldHits>0&&shieldable){
+        if(this.shieldHits>0){
             this.shieldHits--;this.inv=.38;Game.shake=5;AudioSys.playShieldBlock(this.shieldHits);
             Game.spawn(new Effect(this.x,this.y-8,'shield'));Game.msg(curLang==='CN'?`木盾格挡 · 剩余 ${this.shieldHits} 次${this.shieldHits?'':' · 已碎裂'}`:`Shield blocked the hit · ${this.shieldHits} use${this.shieldHits===1?'':'s'} left`,'#dfad72');
             Game.refreshBuffs();return;
@@ -722,7 +721,7 @@ this.moving=moved>.01;
         if(this.hp<=0)Game.over();
     }
     draw(ctx){
-        if(this.inv>0&&Date.now()%100<50)return;
+        if(this.inv>0)ctx.globalAlpha=.58+.42*Math.sin(Date.now()/70)**2;
         if(this.buffs.hoof>0) { ctx.beginPath(); ctx.arc(0,0,25,0,6.28); ctx.fillStyle='rgba(161,136,127,0.3)'; ctx.fill(); }
         if(this.buffs.jade>0) { ctx.beginPath(); ctx.arc(0,0,25,0,6.28); ctx.strokeStyle='#a5d6a7'; ctx.lineWidth=2; ctx.stroke(); }
         ctx.rotate(Math.atan2(Input.y,Input.x));
@@ -1063,17 +1062,19 @@ const Game = {
         this.elapsed+=dt;
         if(this.tutorialActive&&this.tutorialDelay>0){this.tutorialDelay=Math.max(0,this.tutorialDelay-dt);if(this.tutorialDelay===0)document.getElementById('move-tutorial').style.display='block';}
         this.shake=this.shake>0.1?this.shake*Math.pow(0.9,dt*60):0;
-        this.ents=this.ents.filter(e=>!e.dead);
+        let write=0;for(let i=0;i<this.ents.length;i++)if(!this.ents[i].dead)this.ents[write++]=this.ents[i];this.ents.length=write;
         // Player first; entities spawned during a step start updating on the next step.
         if(!(this.p.pushingCoffin&&this.p.pushUntil>this.elapsed))this.p.pushingCoffin=null;
         this.p.update(dt);
-        for(const e of [...this.ents]) {
+        const updateCount=this.ents.length;
+        for(let i=0;i<updateCount;i++) {const e=this.ents[i];
             if(!this.running||this.pause) break;
             if(e===this.p||e.dead) continue;
             if(e.update) e.update(dt,this.p);
         }
-        const coffins=this.ents.filter(e=>e.type==='coffin'&&!e.dead),nearest=coffins.filter(e=>!e.opened&&!e.hidden&&!e.rising&&!e.locked&&Math.hypot(e.x-this.p.x,e.y-this.p.y)<45).sort((a,b)=>Math.hypot(a.x-this.p.x,a.y-this.p.y)-Math.hypot(b.x-this.p.x,b.y-this.p.y))[0];
-        for(const c of coffins)if(c!==nearest&&!c.opened){c.interactTimer=0;c.pushStarted=false;c.pushProgress=0;}
+        let nearest=null,nearestDistance=45*45;
+        for(const e of this.ents)if(e.type==='coffin'&&!e.dead&&!e.opened&&!e.hidden&&!e.rising&&!e.locked&&e.reopenDelay<=0){const distance=(e.x-this.p.x)**2+(e.y-this.p.y)**2;if(distance<nearestDistance){nearest=e;nearestDistance=distance;}}
+        for(const c of this.ents)if(c.type==='coffin'&&c!==nearest&&!c.opened){c.interactTimer=0;c.pushStarted=false;c.pushProgress=0;}
         nearest?.interact(dt,this.p);
         this.texts=this.texts.filter(t=>t.life>0);
         this.texts.forEach(t=>t.update(dt));

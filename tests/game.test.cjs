@@ -577,8 +577,8 @@ test('doubled traps and six hidden emitters are dispersed after coffin placement
  for(let lvl=1;lvl<=10;lvl++){Game.load(lvl);const traps=Game.ents.filter(e=>e.type==='trap');assert.equal(traps.filter(t=>!t.vent).length,THEMES[lvl-1].trapCount);for(let i=0;i<traps.length;i++)for(let j=i+1;j<traps.length;j++)assert.ok(Math.hypot(traps[i].x-traps[j].x,traps[i].y-traps[j].y)>=175);assert.equal(TombDangers.vents.length,6);}
 });
 
-test('shovel attacks nearby zombies automatically and respects stealth, cooldown and walls',()=>{
- const {Game,MapSys,Zombie}=setup();MapSys.t.fill(0);Game.ents=[Game.p];Game.p.x=125;Game.p.y=125;
+test('shovel attacks nearby zombies and insects automatically and respects stealth, cooldown and walls',()=>{
+ const {Game,MapSys,Zombie,TombCreature}=setup();MapSys.t.fill(0);Game.ents=[Game.p];Game.p.x=125;Game.p.y=125;
  const z=new Zombie(185,125,0);Game.spawn(z);
  Game.p.update(.01);assert.equal(z.hp,undefined);
  Game.getItem('item_shovel');Game.p.update(.01);assert.equal(z.hp,2);Game.p.update(.01);assert.equal(z.hp,2);
@@ -586,6 +586,7 @@ test('shovel attacks nearby zombies automatically and respects stealth, cooldown
  Game.p.stopHoldingBreath();MapSys.t[2*MapSys.w+3]=1;Game.p.update(.01);assert.equal(z.hp,2);
  MapSys.t.fill(0);z.x=210;Game.p.update(.01);assert.equal(z.hp,2);
  z.x=185;Game.p.attackCooldown=0;Game.p.update(.01);assert.equal(z.hp,1);Game.elapsed+=.7;Game.p.attackCooldown=0;Game.p.update(.01);assert.equal(z.dead,1);
+ const beetle=new TombCreature(175,125,'beetle');Game.spawn(beetle);Game.p.attackCooldown=0;Game.p.update(.01);assert.equal(beetle.dead,1);
  Game.restart();assert.equal(Game.p.hasShovel,false);
 });
 
@@ -711,12 +712,14 @@ test('jade suit break triggers its dedicated sound without losing health',()=>{
  assert.equal(breaks,1);assert.equal(Game.p.hp,hp);assert.equal(Game.p.buffs.jade,0);
 });
 
-test('wooden shield has three uses and only blocks crossbows and zombie attacks',()=>{
- const {Game,els}=setup();Game.running=1;Game.getItem('item_shield');assert.equal(Game.p.shieldHits,3);assert.match(els['buff-bar'].innerHTML,/3\/3/);
+test('wooden shield has three uses, blocks every attack and uses unified realistic art',()=>{
+ const {Game,els,calls}=setup();Game.running=1;Game.getItem('item_shield');assert.equal(Game.p.shieldHits,3);assert.match(els['buff-bar'].innerHTML,/3\/3/);
  const hp=Game.p.hp;
- for(const cause of [{source:'trap',projectile:'ARROW'},{source:'zombie'},{source:'zombie_projectile',projectile:'VENOM'}]){Game.p.inv=0;Game.p.hit(cause);}
+ for(const cause of [{source:'trap',projectile:'STONE'},{source:'trap',projectile:'FIRE'},{}]){Game.p.inv=0;Game.p.hit(cause);}
  assert.equal(Game.p.hp,hp);assert.equal(Game.p.shieldHits,0);
- Game.getItem('item_shield');Game.p.inv=0;Game.p.hit({source:'trap',projectile:'STONE'});assert.equal(Game.p.hp,hp-1);assert.equal(Game.p.shieldHits,3);
+ Game.p.inv=0;Game.p.hit({source:'zombie'});assert.equal(Game.p.hp,hp-1);
+ const before=calls.length;Game.p.inv=1;Game.p.draw(Game.ctx);assert.ok(calls.length>before,'hurt flicker must still draw the player');
+ const art=fs.readFileSync(path.join(root,'art.js'),'utf8');assert.match(art,/wood-shield-realistic\.png/);assert.match(art,/raider-shield\.png/);assert.ok(fs.statSync(path.join(root,'assets/wood-shield-realistic.png')).size>100000);assert.ok(fs.statSync(path.join(root,'assets/raider-shield.png')).size>100000);
 });
 
 test('pickup detail window reports supplies and burial relic information',()=>{
