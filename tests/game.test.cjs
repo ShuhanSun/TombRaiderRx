@@ -6,11 +6,13 @@ const path=require('node:path');
 const {setup}=require('./harness.cjs');
 const root=path.resolve(__dirname,'..');
 
-test('coffin opening only releases red blood, never clouds or green liquid',()=>{
- const {Game,TombDangers}=setup();
- for(let i=0;i<12;i++)TombDangers.coffinFX({x:125+i*50,y:175});
+test('ordinary coffins stay dry while the royal coffin releases only red blood',()=>{
+ const {Game,TombDangers,Coffin}=setup();
+ const ordinary=new Coffin(125,175,'supply');ordinary.open(Game.p);
+ assert.equal(TombDangers.stains.length,0);assert.equal(TombDangers.bursts.length,0);
+ const royal=new Coffin(225,175,'exit_coffin');royal.royal=true;royal.open(Game.p);
  assert.equal(TombDangers.clouds.length,0);
- assert.equal(TombDangers.stains.length,12);
+ assert.equal(TombDangers.stains.length,1);
  assert.ok(TombDangers.stains.every(s=>s.color==='#6f0915'));
  assert.ok(TombDangers.bursts.every(b=>b.blood));
  Game.load(2);assert.equal(TombDangers.stains.length,0);
@@ -597,12 +599,14 @@ test('zombies face their coffin while returning, then sink and close the lid',()
  for(let i=0;i<800&&!z.dead;i++)z.update(1/60,Game.p);
  assert.ok(z.x>startX);assert.equal(z.returningToCoffin,true);assert.equal(z.returnFacingLeft,false);assert.ok(Math.abs(z.attackAim)<.3);assert.equal(z.dead,1);
  assert.equal(coffin.closing,true);assert.equal(coffin.locked,true);assert.equal(coffin.occupantEscaped,false);
- coffin.update(.8);assert.equal(coffin.opened,0);assert.equal(coffin.closing,false);assert.equal(coffin.lidProgress,0);
+ coffin.update(.8);assert.equal(coffin.opened,0);assert.equal(coffin.closing,false);assert.equal(coffin.lidProgress,0);assert.equal(coffin.locked,false);
+ coffin.update(.8);Game.p.stopHoldingBreath();coffin.open(Game.p);assert.equal(coffin.opened,1);coffin.update(.7);
+ assert.equal(coffin.returnedOccupant,false);assert.equal(coffin.occupantEscaped,true);assert.equal(z.dead,0);assert.equal(Game.ents.filter(e=>e===z).length,1);
 });
 
-test('breath control uses a pinch-nose icon and accessible label',()=>{
+test('breath control uses a nose-and-cross icon and accessible label',()=>{
  setup();const icon=fs.readFileSync(path.join(root,'assets/breath-button.svg'),'utf8'),markup=fs.readFileSync(path.join(root,'index.html'),'utf8');
- assert.match(icon,/手捏鼻子屏气/);assert.match(markup,/aria-label="按住捏鼻屏气"/);
+ assert.match(icon,/鼻子加叉号屏气/);assert.match(icon,/#ff655e/);assert.match(markup,/aria-label="按住屏气"/);
 });
 
 test('all continuous burrows contain beetles and stomping plays one sound',()=>{

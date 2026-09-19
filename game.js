@@ -341,9 +341,9 @@ class RelicItem extends Entity {
 }
 
 class Coffin extends Entity {
-    constructor(x,y,c){super(x,y,'coffin');this.content=c;this.opened=0;this.shake=0;this.lidOffset=0;this.lidProgress=0;this.lidDirX=1;this.lidDirY=0;this.interactTimer=0;this.revealTimer=0;this.pushStarted=false;this.pushProgress=0;}
+    constructor(x,y,c){super(x,y,'coffin');this.content=c;this.opened=0;this.shake=0;this.lidOffset=0;this.lidProgress=0;this.lidDirX=1;this.lidDirY=0;this.interactTimer=0;this.revealTimer=0;this.reopenDelay=0;this.pushStarted=false;this.pushProgress=0;}
     interact(dt, p) {
-        if(this.opened||this.hidden||this.rising||this.locked) return;
+        if(this.opened||this.hidden||this.rising||this.locked||this.reopenDelay>0) return;
         if(Math.hypot(this.x-p.x, this.y-p.y) < 45) {
             const angle=Math.atan2(this.y-p.y,this.x-p.x);p.direction=Math.abs(Math.cos(angle))>Math.abs(Math.sin(angle))?(Math.cos(angle)<0?1:2):(Math.sin(angle)<0?3:0);p.pushDirection=p.direction;
             if(!this.pushStarted){this.pushStarted=true;p.pushingCoffin=this;p.pushUntil=Game.elapsed+.68;}
@@ -357,14 +357,15 @@ class Coffin extends Entity {
         }
     }
     open(p=Game.p) {
-        if(this.opened||this.hidden||this.rising||this.locked) return;
+        if(this.opened||this.hidden||this.rising||this.locked||this.reopenDelay>0) return;
         const dx=this.x-(p?.x??this.x-1),dy=this.y-(p?.y??this.y),d=Math.hypot(dx,dy)||1;
         this.lidDirX=dx/d;this.lidDirY=dy/d;this.lidProgress=0;
         if(p){const angle=Math.atan2(this.y-p.y,this.x-p.x);p.direction=Math.abs(Math.cos(angle))>Math.abs(Math.sin(angle))?(Math.cos(angle)<0?1:2):(Math.sin(angle)<0?3:0);p.pushDirection=p.direction;if(!this.pushStarted){this.pushStarted=true;p.pushingCoffin=this;p.pushUntil=Game.elapsed+.68;}}
         this.pushProgress=1;
-        this.opened = 1;TombDangers.coffinFX(this); this.shake = 0.5; this.revealTimer = 0.6; AudioSys.playOpen();
+        this.opened = 1;if(this.royal)TombDangers.coffinFX(this);this.shake = 0.5; this.revealTimer = 0.6; AudioSys.playOpen();
     }
     reveal() {
+            if(this.returnedOccupant){this.releaseReturnedOccupant();return;}
             if(this.revealed)return;this.revealed=true;
             const handled=Expedition.reveal(this);Expedition.maybeDropRelic(this);if(handled)return;
             if(this.content === 'supply') {
@@ -389,13 +390,21 @@ class Coffin extends Entity {
                 Game.addText(this.x, this.y, LANG[curLang].msgs.empty, '#aaa');
             }
     }
+    releaseReturnedOccupant(){
+        const zombie=this.returnedZombie;this.returnedZombie=null;this.returnedOccupant=false;
+        if(!zombie)return;
+        this.occupantEscaped=true;zombie.dead=0;zombie.x=this.x;zombie.y=this.y+20;zombie.sink=0;zombie.returningToCoffin=false;zombie.stealthLostT=0;zombie.attackState='';zombie.attackClock=0;zombie.attackCD=.65;zombie.hopHeight=0;zombie.moving=false;
+        if(!Game.ents.includes(zombie))Game.spawn(zombie);
+        Game.addText(this.x,this.y,curLang==='CN'?'守墓尸再次破棺而出！':'The guardian rises again!','#f44336');AudioSys.playAttack();
+    }
     update(dt) {
         this.shake=Math.max(0,this.shake-dt);
+        this.reopenDelay=Math.max(0,this.reopenDelay-dt);
         if(this.revealTimer>0) {
             this.revealTimer=Math.max(0,this.revealTimer-dt);
             if(this.revealTimer===0) this.reveal();
         }
-        if(this.closing){this.lidProgress=Math.max(0,this.lidProgress-dt/.78);if(this.lidProgress===0){this.opened=0;this.closing=false;}}
+        if(this.closing){this.lidProgress=Math.max(0,this.lidProgress-dt/.78);if(this.lidProgress===0){this.opened=0;this.closing=false;this.locked=false;this.reopenDelay=.8;this.interactTimer=0;this.pushStarted=false;this.pushProgress=0;}}
         else if(this.opened)this.lidProgress=Math.min(1,this.lidProgress+dt/0.68);
     }
     draw(ctx) {
@@ -512,7 +521,7 @@ class Zombie extends Entity {
     }
     resealHomeCoffin(){
         const c=this.homeCoffin;if(!c||c.returnedOccupant)return;
-        c.returnedOccupant=true;c.occupantEscaped=false;c.locked=true;c.opened=1;c.closing=true;c.lidProgress=1;c.lidDirX=c.lidDirX||1;c.lidDirY=c.lidDirY||0;
+        c.returnedOccupant=true;c.returnedZombie=this;c.occupantEscaped=false;c.locked=true;c.opened=1;c.closing=true;c.lidProgress=1;c.lidDirX=c.lidDirX||1;c.lidDirY=c.lidDirY||0;
         AudioSys.playOpen();Game.addText(c.x,c.y-34,curLang==='CN'?'守墓尸归棺 · 棺盖闭合':'Guardian returned · coffin sealed','#aa9c87');
     }
     draw(ctx){
@@ -1078,7 +1087,7 @@ const Game = {
     refreshBuffs: function() {
         const breath=document.getElementById('breath-btn'),count=document.getElementById('breath-count'),status=document.getElementById('breath-status');
         count.textContent=String(Math.ceil(this.p.breathRemaining));breath.setAttribute('aria-pressed',String(this.p.holdingBreath));
-        breath.setAttribute('aria-label',curLang==='CN'?`按住捏鼻屏气，剩余 ${Math.ceil(this.p.breathRemaining)} 秒`:`Pinch nose and hold breath, ${Math.ceil(this.p.breathRemaining)} seconds remaining`);
+        breath.setAttribute('aria-label',curLang==='CN'?`按住屏气，剩余 ${Math.ceil(this.p.breathRemaining)} 秒`:`Hold breath, ${Math.ceil(this.p.breathRemaining)} seconds remaining`);
         const seconds=Math.ceil(this.p.breathRemaining),ratio=Math.max(0,this.p.breathRemaining/CONFIG.BREATH_MAX);
         status.classList.toggle('active',this.p.holdingBreath);status.classList.toggle('low',this.p.holdingBreath&&seconds<=10);status.classList.toggle('exhausted',this.p.breathExhausted);
         status.style.setProperty?.('--breath-angle',`${ratio*360}deg`);
