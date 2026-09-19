@@ -30,7 +30,7 @@ const Expedition={
   const payloads=[{loot:['item_compass','item_candle']}];
   for(let i=1;i<this.zombieBudget;i++)payloads.push({enemy:i%3===1?'crawler':'zombie'});
   for(let i=0;i<this.verminBudget;i++)payloads.push({enemy:['worm','beetle','spider'][(i+Game.lvl-1)%3]});
-  for(let i=0;i<this.itemBudget-3;i++){const code=i===0?'item_shovel':i===1?'item_jade':['item_wine','item_hoof','item_jade'][i%3];payloads.push({loot:[code]});}
+  for(let i=0;i<this.itemBudget-3;i++){const code=i===0?'item_shovel':i===1?'item_jade':i===2?'item_shield':['item_wine','item_hoof','item_jade','item_shield'][i%4];payloads.push({loot:[code]});}
   this.coffins=[];
   for(const payload of payloads){
    const p=spots.shift();if(!p){const c=this.coffins[this.coffins.length-1];c.extra.push(payload);continue;}
@@ -156,9 +156,12 @@ const Expedition={
    for(let yy=y+1;yy<y+4;yy++)for(let xx=x+1;xx<x+4;xx++){MapSys.t[yy*MapSys.w+xx]=0;World.roomTiles[yy*MapSys.w+xx]=id;}
    const dx=x+side.dx,dy=y+side.dy;
    const wall={at:dy*MapSys.w+dx,x:dx*50+25,y:dy*50+25,type:'moving_wall',mode:this.walls.length?'slide':'lift',height:1,target:1,manual:true,room,dead:0};this.walls.push(wall);
-   const loot=this.coffins.find(c=>!c.hidden&&!c.locked&&!c.sealed&&c.payload?.loot&&!c.payload.loot.includes('item_compass')&&!c.payload.loot.includes('item_candle'));
+   const contains=(c,code)=>[c.payload,...(c.extra||[])].some(p=>p?.loot?.includes(code));
+   const loot=(this.walls.length===1?this.coffins.find(c=>!c.locked&&!c.sealed&&contains(c,'item_shield')):null)||this.coffins.find(c=>!c.hidden&&!c.locked&&!c.sealed&&c.payload?.loot&&!c.payload.loot.includes('item_compass')&&!c.payload.loot.includes('item_candle'));
    if(!loot)throw new Error('Sealed chamber must contain supplies');
-   if(loot){loot.x=(x+2)*50+25;loot.y=(y+2)*50+25;loot.sealed=true;}
+   if(loot){loot.x=(x+2)*50+25;loot.y=(y+2)*50+25;loot.sealed=true;loot.hidden=false;loot.rising=false;this.hidden=this.hidden.filter(c=>c!==loot);}
+   const relicIndex=(Game.lvl*2+this.sealedRooms.length-1)%RELICS.length;
+   const burialRelic=new RelicItem((room.x+.4)*50,(room.y+.4)*50,relicIndex);burialRelic.sealed=true;burialRelic.guaranteed=true;Game.spawn(burialRelic);
    Game.spawn({type:'burial_decor',x:(x+3.4)*50,y:(y+1.5)*50,sprite:this.style.decor,size:48,dead:0});
   }
  },

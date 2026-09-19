@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>寻龙诀 · 十层古墓</title>
-    <link rel="stylesheet" href="styles.css?v=22">
+    <link rel="stylesheet" href="styles.css?v=23">
 
 </head>
 <body>
@@ -26,6 +26,12 @@
     <div id="relic-strip"></div>
     <div id="buff-bar"></div>
     <div id="msg-box" role="status" aria-live="polite"></div>
+    <div id="damage-flash" aria-hidden="true"></div>
+    <aside id="pickup-popup" role="status" aria-live="polite">
+        <div class="pickup-visual"><img id="pickup-image" alt=""><span id="pickup-icon"></span></div>
+        <div class="pickup-copy"><span id="pickup-tag"></span><strong id="pickup-name"></strong><p id="pickup-detail"></p><b id="pickup-stat"></b></div>
+        <button type="button" aria-label="关闭物品详情" onclick="Game.hidePickupDetails()">×</button>
+    </aside>
     <div id="breath-status" role="status" aria-live="polite">
         <div class="breath-status-ring"><strong id="breath-status-time">30s</strong></div>
         <div><b id="breath-status-title">屏气隐匿中</b><span id="breath-status-copy">僵尸无法发现或攻击你 · 松开恢复呼吸</span></div>
@@ -35,7 +41,7 @@
     <div id="move-tutorial" role="status"><div class="drag-demo"><i></i><b>→</b></div><p id="tutorial-copy"></p></div>
     <!-- Controls -->
     <div id="joystick-zone"><div id="joystick-knob"></div></div>
-    <button id="breath-btn" aria-label="按住屏气"><span id="breath-count">30</span></button>
+    <button id="breath-btn" aria-label="按住捏鼻屏气"><span id="breath-count">30</span></button>
     <button id="sprint-btn" aria-label="按住冲刺"></button>
 </div>
 
@@ -100,10 +106,10 @@
 <script src="audio.js?v=15"></script>
 <script src="escape.js?v=15"></script>
 <script src="dangers.js?v=17"></script>
-<script src="expedition.js?v=24"></script>
+<script src="expedition.js?v=25"></script>
 <script src="world.js?v=22"></script>
-<script src="art.js?v=26"></script>
+<script src="art.js?v=28"></script>
 <script src="transitions.js?v=16"></script>
-<script src="game.js?v=32"></script>
+<script src="game.js?v=34"></script>
 </body>
 </html>

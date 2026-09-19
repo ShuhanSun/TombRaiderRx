@@ -43,8 +43,9 @@ body { margin: 0; overflow: hidden; background: #050505; touch-action: none; fon
         .buff { background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px; border-left: 3px solid; font-size: 14px; color: #fff; animation: fadeIn 0.5s; }
         .buff-hoof { border-color: #a1887f; }
         .buff-candle { border-color: #ff5252; }
-        .buff-jade { border-color: #a5d6a7; color: #a5d6a7; }
-        .buff-compass { border-color: #ffd700; color: #ffd700; }
+.buff-jade { border-color: #a5d6a7; color: #a5d6a7; }
+.buff-compass { border-color: #ffd700; color: #ffd700; }
+.buff-shield { border-color:#b98249;color:#edc28d; }
 
         /* Message Toast */
         #msg-box { position: absolute; top: 20%; width: 100%; text-align: center; font-size: 26px; color: #fff; font-weight: bold; text-shadow: 0 0 10px #000; opacity: 0; transition: opacity 0.5s; z-index: 10; pointer-events: none; }
@@ -289,6 +290,23 @@ html[lang='en'] h1 { font-size:clamp(32px,7vw,68px); letter-spacing:4px; }
 #relic-strip b {color:#f4d681;font-size:13px;}
 #relic-strip.relic-found {animation:relic-notice 2.6s ease both;border-color:#e4bd6b99;box-shadow:0 5px 22px #0009,0 0 18px #d7a84c2b;}
 @keyframes relic-notice {0%{opacity:0;transform:translate(-50%,-10px)}12%,82%{opacity:1;transform:translate(-50%,0)}100%{opacity:.88}}
+#damage-flash {position:absolute;inset:0;z-index:18;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 48%,transparent 17%,#720a164f 62%,#a6001fba 100%);box-shadow:inset 0 0 100px 22px #d10c2c99;}
+#damage-flash.active {animation:damage-hit .62s ease-out both;}
+@keyframes damage-hit {0%{opacity:1;filter:brightness(1.65)}18%{opacity:.78}100%{opacity:0;filter:brightness(1)}}
+#pickup-popup {position:absolute;z-index:19;left:50%;top:max(84px,calc(env(safe-area-inset-top) + 66px));transform:translate(-50%,-16px) scale(.97);width:min(520px,calc(100vw - 28px));min-height:118px;display:grid;grid-template-columns:90px 1fr 28px;gap:14px;align-items:center;padding:16px 14px;border:1px solid #c39a5b66;border-radius:10px;background:linear-gradient(135deg,#171c18f4,#0b1113f4);box-shadow:0 18px 45px #000c,0 0 30px #b87b2c20;color:#d8cdb5;opacity:0;visibility:hidden;pointer-events:none;}
+#pickup-popup.active {visibility:visible;pointer-events:auto;animation:pickup-window 4.2s ease both;}
+@keyframes pickup-window {0%{opacity:0;transform:translate(-50%,-16px) scale(.97)}8%,88%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-8px) scale(.99)}}
+.pickup-visual {width:82px;height:82px;display:grid;place-items:center;border:1px solid #a47e4860;border-radius:8px;background:radial-gradient(circle,#72502c42,#090d0d);overflow:hidden;}
+.pickup-visual img {width:76px;height:76px;object-fit:contain;filter:drop-shadow(0 5px 8px #000);}
+#pickup-icon {width:100%;height:100%;display:grid;place-items:center;font-size:46px;filter:drop-shadow(0 5px 8px #000);}
+.pickup-copy {min-width:0;text-align:left;}
+#pickup-tag {display:block;margin-bottom:4px;color:#9f8a68;font-size:9px;letter-spacing:2px;}
+#pickup-name {display:block;color:#f0d89f;font:500 21px/1.2 serif;letter-spacing:1px;}
+#pickup-detail {margin:7px 0 5px;color:#b9b7aa;font-size:12px;line-height:1.55;}
+#pickup-detail b {color:#d7bc82;}
+#pickup-stat {display:block;color:#d9a864;font-size:11px;}
+#pickup-popup>button {align-self:start;width:28px;height:28px;padding:0;border:0;background:transparent;color:#938b78;font-size:23px;line-height:1;cursor:pointer;pointer-events:auto;}
+@media (max-width:540px){#pickup-popup{top:max(74px,calc(env(safe-area-inset-top) + 58px));grid-template-columns:66px 1fr 24px;gap:10px;min-height:96px;padding:11px}.pickup-visual{width:62px;height:62px}.pickup-visual img{width:58px;height:58px}#pickup-icon{font-size:34px}#pickup-name{font-size:17px}#pickup-detail{font-size:11px;margin:5px 0 3px}}
 .relic-report {width:100%;max-width:520px;margin:12px auto 16px;color:#cfc5ae;text-align:left;}
 .relic-report-head {display:flex;justify-content:space-between;gap:12px;padding:8px 2px;border-bottom:1px solid #ac8d4e55;font-size:14px;}
 .relic-report-head b {color:#f2d080;white-space:nowrap;}
@@ -304,7 +322,7 @@ html[lang='en'] h1 { font-size:clamp(32px,7vw,68px); letter-spacing:4px; }
 @media (max-width:430px){#relic-strip{top:max(8px,env(safe-area-inset-top));max-width:52vw;padding:6px 9px;font-size:11px}#relic-strip b{font-size:12px}.relic-grid{grid-template-columns:1fr}.relic-report-head{flex-direction:column;gap:3px}.relic-card img{width:40px;height:40px}}
 @media (max-height:500px){#relic-strip{top:6px}.relic-grid{max-height:102px}}
 
-#breath-btn {position:absolute;left:max(112px,calc(env(safe-area-inset-left) + 112px));bottom:max(62px,calc(env(safe-area-inset-bottom) + 26px));width:78px;height:78px;display:flex;align-items:flex-end;justify-content:center;pointer-events:auto;touch-action:none;z-index:5;box-shadow:0 4px 20px #0008;background:url('assets/breath-button.svg') center/cover no-repeat;border:0;border-radius:50%;padding:0 0 7px;color:#d9fff2;}
+#breath-btn {position:absolute;left:max(112px,calc(env(safe-area-inset-left) + 112px));bottom:max(62px,calc(env(safe-area-inset-bottom) + 26px));width:78px;height:78px;display:flex;align-items:flex-end;justify-content:center;pointer-events:auto;touch-action:none;z-index:5;box-shadow:0 4px 20px #0008;background:url('assets/breath-button.svg?v=2') center/cover no-repeat;border:0;border-radius:50%;padding:0 0 7px;color:#d9fff2;}
 #breath-btn.pressed {transform:scale(.94);filter:brightness(1.22);box-shadow:0 0 24px #78d9bd66;}
 #breath-count {min-width:26px;padding:1px 5px;border-radius:9px;background:#07100dda;color:#d9fff2;font:700 12px/1.2 system-ui;text-align:center;}
 #breath-status {--breath-angle:360deg;position:absolute;left:50%;bottom:max(36px,calc(env(safe-area-inset-bottom) + 20px));transform:translate(-50%,18px);display:flex;align-items:center;gap:12px;min-width:min(360px,72vw);padding:10px 16px 10px 11px;border:1px solid #8cd8c266;border-radius:16px;background:linear-gradient(90deg,#071613ee,#0c1517df);box-shadow:0 8px 28px #000b,0 0 25px #74ceb72c;opacity:0;transition:opacity .18s,transform .18s;z-index:8;color:#d9fff2;pointer-events:none;}

@@ -1,10 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <title>手捏鼻子屏气</title>
   <defs>
     <radialGradient id="b" cx="42%" cy="34%" r="70%"><stop stop-color="#69583f"/><stop offset=".58" stop-color="#30291f"/><stop offset="1" stop-color="#111713"/></radialGradient>
     <linearGradient id="r" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d5b77b"/><stop offset=".5" stop-color="#604b2d"/><stop offset="1" stop-color="#b28c51"/></linearGradient>
   </defs>
   <circle cx="64" cy="64" r="61" fill="#111915" opacity=".9"/>
   <circle cx="64" cy="64" r="52" fill="url(#b)" stroke="url(#r)" stroke-width="5"/>
-  <path d="M64 31v27M61 45c-8 2-16 11-18 24-2 14 3 24 14 21 7-2 7-11 7-20M67 45c8 2 16 11 18 24 2 14-3 24-14 21-7-2-7-11-7-20" fill="none" stroke="#e7d3a6" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M31 55c-7 2-11 7-13 13M97 55c7 2 11 7 13 13" fill="none" stroke="#8dd9c3" stroke-width="4" stroke-linecap="round" opacity=".9"/>
+  <path d="M75 30c-14-7-32 1-36 18-3 13 2 28 14 35 6 4 13 5 20 3" fill="none" stroke="#e7d3a6" stroke-width="5.5" stroke-linecap="round"/>
+  <path d="M59 44c-1 8-3 15-7 21 5 4 11 4 16 0" fill="none" stroke="#e7d3a6" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="51" cy="43" r="3" fill="#e7d3a6"/>
+  <path d="M94 91c-2-11-7-18-15-23l-12-7c-4-2-8-1-10 3-1 4 1 7 5 9l7 4M95 77 78 60c-3-3-7-3-10 0-2 3-1 7 2 9l10 9M84 96c-8 4-19 2-25-5L47 78c-3-3-8-3-10 0-3 3-2 7 1 10l13 15" fill="none" stroke="#8dd9c3" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="58" cy="67" r="4" fill="#d8c08d"/>
+  <circle cx="70" cy="65" r="4" fill="#d8c08d"/>
 </svg>

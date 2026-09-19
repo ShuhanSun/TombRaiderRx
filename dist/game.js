@@ -23,17 +23,17 @@ const LEVELS_DATA = [
 const WALL_COLORS = ['#6b3527','#4f5758','#356f66','#6e261d','#858278','#205d68','#3f315f','#231c43','#7b1e22','#1d2557'];
 
 const RELICS = [
-    {name:'汉代谷纹玉璧',en:'Han Grain-Pattern Jade Bi',price:18,image:'assets/relic-jade-bi.webp'},
-    {name:'错金青铜博山炉',en:'Gold-Inlaid Boshan Censer',price:42,image:'assets/relic-boshan-incense.webp'},
-    {name:'四神纹铜镜',en:'Four Guardians Bronze Mirror',price:12,image:'assets/relic-bronze-mirror.webp'},
-    {name:'金兽首带钩',en:'Gold Beast-Head Belt Hook',price:28,image:'assets/relic-gold-belt-hook.webp'},
-    {name:'朱漆云纹奁盒',en:'Vermilion Cloud Lacquer Box',price:16,image:'assets/relic-lacquer-box.webp'},
-    {name:'玉蝉含',en:'Jade Cicada',price:9,image:'assets/relic-jade-cicada.webp'},
-    {name:'鎏金铜爵',en:'Gilt Bronze Jue',price:35,image:'assets/relic-gilt-jue.webp'},
-    {name:'金缕玉牌',en:'Gold-Thread Jade Plaque',price:55,image:'assets/relic-jade-plaque.webp'}
+    {name:'汉代谷纹玉璧',en:'Han Grain-Pattern Jade Bi',price:18,image:'assets/relic-jade-bi.webp',desc:'礼天祭祀之玉，谷纹象征五谷丰登。',enDesc:'A ceremonial jade disc whose grain pattern invokes abundance.'},
+    {name:'错金青铜博山炉',en:'Gold-Inlaid Boshan Censer',price:42,image:'assets/relic-boshan-incense.webp',desc:'炉盖叠铸仙山，焚香时烟气穿峰而出。',enDesc:'An incense burner cast as layered sacred peaks.'},
+    {name:'四神纹铜镜',en:'Four Guardians Bronze Mirror',price:12,image:'assets/relic-bronze-mirror.webp',desc:'青龙、白虎、朱雀、玄武镇守四方。',enDesc:'A bronze mirror guarded by the four celestial beasts.'},
+    {name:'金兽首带钩',en:'Gold Beast-Head Belt Hook',price:28,image:'assets/relic-gold-belt-hook.webp',desc:'贵族束带之器，兽首纹显示墓主身份。',enDesc:'A noble belt hook shaped with a watchful beast head.'},
+    {name:'朱漆云纹奁盒',en:'Vermilion Cloud Lacquer Box',price:16,image:'assets/relic-lacquer-box.webp',desc:'朱漆层叠，云气纹环绕盒身。',enDesc:'A vermilion lacquer box wrapped in flowing cloud motifs.'},
+    {name:'玉蝉含',en:'Jade Cicada',price:9,image:'assets/relic-jade-cicada.webp',desc:'置于逝者口中，寄托蜕变重生之愿。',enDesc:'Placed with the dead as a symbol of rebirth.'},
+    {name:'鎏金铜爵',en:'Gilt Bronze Jue',price:35,image:'assets/relic-gilt-jue.webp',desc:'祭宴礼器，残留鎏金仍映出火光。',enDesc:'A gilded ritual wine vessel that still catches the firelight.'},
+    {name:'金缕玉牌',en:'Gold-Thread Jade Plaque',price:55,image:'assets/relic-jade-plaque.webp',desc:'金丝缀玉，属于高等级墓葬的护身葬具。',enDesc:'Gold thread binds fine jade from a high-status burial.'}
 ];
 
-const SPECIAL_ITEMS = ['item_candle', 'item_wine', 'item_hoof', 'item_jade', 'item_compass'];
+const SPECIAL_ITEMS = ['item_candle', 'item_wine', 'item_hoof', 'item_jade', 'item_compass', 'item_shield'];
 const PROJ_TYPES = {
     ARROW: { spd: 350, size: 3, col: '#eee', trail: true },
     STONE: { spd: 180, size: 10, col: '#795548', trail: false },
@@ -64,7 +64,8 @@ const LANG = {
             wine: {n:"糯米酒", d:"<b>祛阴补阳</b>: 恢复 1 点生命值。"},
             hoof: {n:"黑驴蹄子", d:"<b>生人勿近</b>: 僵尸退避 15 秒。"},
             jade: {n:"金缕玉衣", d:"<b>刀枪不入</b>: 抵挡下一次伤害后破损，不叠加。"},
-            compass: {n:"风水罗盘", d:"<b>寻龙分金</b>: 持有时显示小地图并指引目标；受伤可能掉落。"}
+            compass: {n:"风水罗盘", d:"<b>寻龙分金</b>: 持有时显示小地图并指引目标；受伤可能掉落。"},
+            shield: {n:"榆木护盾", d:"<b>横木护身</b>: 可抵挡 3 次弓弩箭矢或守墓尸攻击；无法抵挡火焰、巨石与滚木。"}
         },
         msgs: {
             start: "进入第 %s 层",
@@ -77,6 +78,7 @@ const LANG = {
             heal: "生命恢复!",
             repel: "尸畏 15秒!",
             immune: "玉衣护身 · 可抵挡一次伤害",
+            shield: "榆木护盾 · 可抵挡 3 次箭矢或守墓尸攻击",
             hole: "水脉倒灌 · 盗洞已开"
         },
         levelNames: LEVEL_NAMES_CN,
@@ -104,7 +106,8 @@ const LANG = {
             wine: {n:"Rice Wine", d:"<b>Vitality</b>: Restore 1 HP."},
             hoof: {n:"Donkey Hoof", d:"<b>Repel</b>: Zombies fear you for 15s."},
             jade: {n:"Jade Suit", d:"<b>Invincible</b>: Blocks one hit, then breaks. Does not stack."},
-            compass: {n:"Compass", d:"<b>Feng Shui</b>: Unlocks the minimap and guides you. May drop when hurt."}
+            compass: {n:"Compass", d:"<b>Feng Shui</b>: Unlocks the minimap and guides you. May drop when hurt."},
+            shield: {n:"Elmwood Shield", d:"<b>Wooden Guard</b>: Blocks 3 crossbow or tomb-guardian attacks, but not fire, stones or logs."}
         },
         msgs: {
             start: "Entered Level %s",
@@ -117,6 +120,7 @@ const LANG = {
             heal: "HP Restored!",
             repel: "Repel 15s!",
             immune: "Jade suit · blocks one hit",
+            shield: "Elmwood shield · blocks 3 bolts or guardian attacks",
             hole: "Exit Opened! Water Rising!"
         },
         levelNames: LEVEL_NAMES_EN,
@@ -177,11 +181,21 @@ const AudioSys = {
         const now = Date.now();
         if(now - this.lastHurt > 1000) {
             if(this.ctx) {
-                this.tone(120, 'sine', 0.2, 0.5, 80);
-                setTimeout(()=>this.tone(60, 'triangle', 0.3, 0.4), 50);
+                const t=this.ctx.currentTime,buffer=this.ctx.createBuffer(1,Math.ceil(this.ctx.sampleRate*.22),this.ctx.sampleRate),data=buffer.getChannelData(0);
+                for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.exp(-i/data.length*7);
+                const source=this.ctx.createBufferSource(),filter=this.ctx.createBiquadFilter(),gain=this.ctx.createGain();
+                source.buffer=buffer;filter.type='bandpass';filter.frequency.value=720;filter.Q.value=.7;gain.gain.setValueAtTime(.62,t);gain.gain.exponentialRampToValueAtTime(.001,t+.22);
+                source.connect(filter);filter.connect(gain);gain.connect(this.gain);source.start(t);source.stop(t+.23);
+                this.tone(145, 'sawtooth', 0.24, 0.7, 62);
+                setTimeout(()=>this.tone(54, 'triangle', 0.38, 0.52, 34), 45);
             }
             this.lastHurt = now;
         }
+    },
+    playShieldBlock: function(remaining) {
+        this.tone(210,'square',.08,.25,110);
+        setTimeout(()=>this.tone(96,'triangle',.22,.22,58),35);
+        if(!remaining)setTimeout(()=>this.tone(62,'sawtooth',.32,.2,30),95);
     },
     playJadeBreak: function() {
         this.tone(1180,'triangle',.08,.24,760);
@@ -308,9 +322,9 @@ class GroundItem extends Entity {
     }
     draw(ctx) {
         const iKey = this.code.replace('item_', '');
-        const colors = {candle:'#ff8a80', wine:'#fff', hoof:'#a1887f', jade:'#a5d6a7', compass:'#ffd700',shovel:'#c9d5cf'};
+        const colors = {candle:'#ff8a80', wine:'#fff', hoof:'#a1887f', jade:'#a5d6a7', compass:'#ffd700',shovel:'#c9d5cf',shield:'#b98249'};
         const yOff = Math.sin(Date.now()/300)*5;
-        const iconMap = {candle:'🪔', wine:'🍶', hoof:'🐴', jade:'🥋', compass:'🧭',shovel:'⚒'};
+        const iconMap = {candle:'🪔', wine:'🍶', hoof:'🐴', jade:'🥋', compass:'🧭',shovel:'⚒',shield:'🛡️'};
         ctx.font = "24px serif"; ctx.textAlign = "center";
         ctx.fillText(iconMap[iKey], 0, yOff);
         ctx.fillStyle = '#fff'; ctx.font = "12px serif";
@@ -361,7 +375,7 @@ class Coffin extends Entity {
             }
             else if(this.content === 'zombie') {
                 this.occupantEscaped=true;
-                Game.spawn(new Zombie(this.x,this.y+20));
+                const zombie=new Zombie(this.x,this.y+20);zombie.homeCoffin=this;zombie.homeX=this.x;zombie.homeY=this.y+18;Game.spawn(zombie);
                 Game.addText(this.x, this.y, LANG[curLang].msgs.zombie, '#f44336');
                 Game.spawn(new Effect(this.x,this.y,'burst'));
                 AudioSys.playAttack();
@@ -381,7 +395,8 @@ class Coffin extends Entity {
             this.revealTimer=Math.max(0,this.revealTimer-dt);
             if(this.revealTimer===0) this.reveal();
         }
-        if(this.opened)this.lidProgress=Math.min(1,this.lidProgress+dt/0.68);
+        if(this.closing){this.lidProgress=Math.max(0,this.lidProgress-dt/.78);if(this.lidProgress===0){this.opened=0;this.closing=false;}}
+        else if(this.opened)this.lidProgress=Math.min(1,this.lidProgress+dt/0.68);
     }
     draw(ctx) {
         if(this.shake>0){ctx.translate((Math.random()-.5)*4,0);}
@@ -427,7 +442,7 @@ class Zombie extends Entity {
         this.zType = type; // 0: Blue, 1: Red (Sprinter), 2: Green (Spitter)
         this.species={...SPECIES[Game.lvl-1],windup:type===SPECIES[Game.lvl-1].type?SPECIES[Game.lvl-1].windup:type===2?.6:.38};this.zType=type;this.spd=this.species.speed;
         this.dir = Math.random()*6.28; this.changeDirT = 0;
-        this.attackCD=0;this.attackState='';this.attackClock=0;this.attackAim=0;this.hopPhase=Math.random();this.hopHeight=0;this.landT=0;this.moving=false;this.homeCoffin=null;this.homeX=x;this.homeY=y;this.stealthLostT=0;this.returningToCoffin=false;this.sink=0;
+        this.attackCD=0;this.attackState='';this.attackClock=0;this.attackAim=0;this.hopPhase=Math.random();this.hopHeight=0;this.landT=0;this.moving=false;this.homeCoffin=null;this.homeX=x;this.homeY=y;this.stealthLostT=0;this.returningToCoffin=false;this.returnFacingLeft=false;this.sink=0;
     }
     update(dt,p) {
         const dx=p.x-this.x,dy=p.y-this.y,d=Math.hypot(dx,dy),repel=p.buffs.hoof>0;
@@ -447,7 +462,7 @@ class Zombie extends Entity {
                         AudioSys.playTrap(d);
                     } else {
                         const facing=(dx*Math.cos(this.attackAim)+dy*Math.sin(this.attackAim))/(d||1);
-                        if(d<43&&(facing>.3||d<18)&&MapSys.lineClear(this.x,this.y,p.x,p.y))p.hit();
+                        if(d<43&&(facing>.3||d<18)&&MapSys.lineClear(this.x,this.y,p.x,p.y))p.hit({source:'zombie'});
                         const fx=new Effect(this.x+Math.cos(this.attackAim)*20,this.y+Math.sin(this.attackAim)*20,'slash');fx.angle=this.attackAim;Game.spawn(fx);
                         if(d<220)AudioSys.playAttack();
                     }
@@ -466,8 +481,8 @@ class Zombie extends Entity {
             this.stealthLostT+=dt;
             if(this.stealthLostT<.85){this.hopHeight=0;this.hopPhase=0;return;}
             const hx=this.homeCoffin?.x??this.homeX,hy=this.homeCoffin?this.homeCoffin.y+18:this.homeY,hdx=hx-this.x,hdy=hy-this.y,homeDist=Math.hypot(hdx,hdy);
-            this.returningToCoffin=true;
-            if(homeDist<25){this.sink=Math.min(1,this.sink+dt/.8);this.hopHeight=0;this.moving=false;if(this.sink>=1)this.dead=1;return;}
+            this.returningToCoffin=true;this.returnFacingLeft=hdx<0;this.attackAim=Math.atan2(hdy,hdx);
+            if(homeDist<25){this.sink=Math.min(1,this.sink+dt/.8);this.hopHeight=0;this.moving=false;if(this.sink>=1){this.dead=1;this.resealHomeCoffin();}return;}
             vx=hdx/(homeDist||1);vy=hdy/(homeDist||1);
         }
         else if(repel&&d<350) {vx=-dx/(d||1);vy=-dy/(d||1);}
@@ -494,6 +509,11 @@ class Zombie extends Entity {
             this.landT=.13;
             if(d<280)Game.spawn(new Effect(this.x,this.y+4,'dust'));
         }
+    }
+    resealHomeCoffin(){
+        const c=this.homeCoffin;if(!c||c.returnedOccupant)return;
+        c.returnedOccupant=true;c.occupantEscaped=false;c.locked=true;c.opened=1;c.closing=true;c.lidProgress=1;c.lidDirX=c.lidDirX||1;c.lidDirY=c.lidDirY||0;
+        AudioSys.playOpen();Game.addText(c.x,c.y-34,curLang==='CN'?'守墓尸归棺 · 棺盖闭合':'Guardian returned · coffin sealed','#aa9c87');
     }
     draw(ctx){
         ctx.translate(0,this.hop||0);
@@ -577,7 +597,7 @@ class Projectile extends Entity {
                 const victim=TombDangers.enemies().find(e=>Math.hypot(this.x-e.x,this.y-e.y)<this.info.size+13);
                 if(victim){TombDangers.hurt(victim,this.pType==='STONE'||this.pType==='LOG'?2:1);this.dead=1;break;}
             }
-            if(Math.hypot(this.x-p.x,this.y-p.y)<this.info.size+10){p.hit();this.dead=1;}
+            if(Math.hypot(this.x-p.x,this.y-p.y)<this.info.size+10){p.hit({source:this.source==='enemy'?'zombie_projectile':'trap',projectile:this.pType});this.dead=1;}
         }
     }
     draw(ctx){
@@ -589,7 +609,7 @@ class Projectile extends Entity {
 }
 
 class Player extends Entity {
-    constructor(x,y){super(x,y,'player');this.hp=5;this.sight=CONFIG.BASE_SIGHT;this.inv=0;this.buffs={hoof:0,candle:0,jade:0};this.walkT=0;this.hasCompass=0;this.hasShovel=false;this.attackCooldown=0;this.attackT=0;this.attackAngle=0;this.holdingBreath=false;this.breathRemaining=CONFIG.BREATH_MAX;this.breathExhausted=false;this.stepPhase=0;this.direction=0;this.walkFrame=1;this.walkDistance=0;this.stepDistance=0;this.moving=false;this.inWater=MapSys.get(x,y)===TERRAIN.WATER;}
+    constructor(x,y){super(x,y,'player');this.hp=5;this.sight=CONFIG.BASE_SIGHT;this.inv=0;this.buffs={hoof:0,candle:0,jade:0};this.walkT=0;this.hasCompass=0;this.hasShovel=false;this.shieldHits=0;this.attackCooldown=0;this.attackT=0;this.attackAngle=0;this.holdingBreath=false;this.breathRemaining=CONFIG.BREATH_MAX;this.breathExhausted=false;this.stepPhase=0;this.direction=0;this.walkFrame=1;this.walkDistance=0;this.stepDistance=0;this.moving=false;this.inWater=MapSys.get(x,y)===TERRAIN.WATER;}
     nearestTarget(){
         let nearest,best=78*78;
         for(const e of Game.ents){
@@ -671,10 +691,16 @@ this.moving=moved>.01;
         if(this.pushingCoffin&&this.pushUntil>Game.elapsed){const angle=Math.atan2(this.pushingCoffin.y-this.y,this.pushingCoffin.x-this.x);this.direction=Math.abs(Math.cos(angle))>Math.abs(Math.sin(angle))?(Math.cos(angle)<0?1:2):(Math.sin(angle)<0?3:0);this.pushDirection=this.direction;}
 
     }
-    hit(){
+    hit(cause={}){
         if(!Game.running || this.inv>0)return;
+        const shieldable=cause.source==='zombie'||cause.source==='zombie_projectile'||(cause.source==='trap'&&cause.projectile==='ARROW');
+        if(this.shieldHits>0&&shieldable){
+            this.shieldHits--;this.inv=.38;Game.shake=5;AudioSys.playShieldBlock(this.shieldHits);
+            Game.spawn(new Effect(this.x,this.y-8,'shield'));Game.msg(curLang==='CN'?`木盾格挡 · 剩余 ${this.shieldHits} 次${this.shieldHits?'':' · 已碎裂'}`:`Shield blocked the hit · ${this.shieldHits} use${this.shieldHits===1?'':'s'} left`,'#dfad72');
+            Game.refreshBuffs();return;
+        }
         if(this.buffs.jade>0){this.buffs.jade=0;this.inv=1.5;AudioSys.playJadeBreak();Game.msg(curLang==='CN'?'玉衣碎裂 · 抵挡了一次伤害':'Jade suit shattered · one hit blocked','#a5d6a7');Game.refreshBuffs();return;}
-        this.hp--; this.inv=1.5; Game.shake=10; AudioSys.playHurt();
+        this.hp--; this.inv=1.5; Game.shake=16; AudioSys.playHurt();Game.damageFeedback();
         Game.updateHUD(); Game.msg(LANG[curLang].msgs.hurt,"#f00");
         const held=[...(this.hasCompass?['compass']:[]),...['candle','hoof'].filter(k=>this.buffs[k]>0)];
         if(held.length&&Math.random()<.35){
@@ -857,7 +883,7 @@ const Game = {
         this.pause = false;Sound.unlock();
         if(this.lvl>=10){ this.victory(); }
         else {
-            this.saved={hp:this.p.hp,hasCompass:this.p.hasCompass,hasShovel:this.p.hasShovel};
+            this.saved={hp:this.p.hp,hasCompass:this.p.hasCompass,hasShovel:this.p.hasShovel,shieldHits:this.p.shieldHits};
             this.load(this.lvl+1);
         }
     },
@@ -867,7 +893,7 @@ const Game = {
     },
 
     load: function(l){
-        this.lvl=l; this.ents=[]; this.texts=[]; this.exit=1; this.mainCoffinPos = null; this.shake=0; this.pause=false; Input.reset();
+        this.lvl=l; this.ents=[]; this.texts=[]; this.exit=1; this.mainCoffinPos = null; this.shake=0; this.pause=false; this.hidePickupDetails();Input.reset();
         this.hudTimer=0; this.lastTime=null; this.accumulator=0;
         this.buffHTML=null;this.itemHTML=null;Scene.invalidateTerrain();
         document.getElementById('item-bar').innerHTML = '';
@@ -913,7 +939,7 @@ const Game = {
     getItem: function(c) {
         AudioSys.playItem(true);
         const key = c.replace('item_','');
-        const colors = {candle:'#ff8a80', wine:'#fff', hoof:'#a1887f', jade:'#a5d6a7', compass:'#ffd700',shovel:'#c9d5cf'};
+        const colors = {candle:'#ff8a80', wine:'#fff', hoof:'#a1887f', jade:'#a5d6a7', compass:'#ffd700',shovel:'#c9d5cf',shield:'#b98249'};
         const col = colors[key];
 
         // Direct Pickup (No Modal)
@@ -925,11 +951,36 @@ const Game = {
         if(c==='item_wine'){ this.p.hp=Math.min(5,this.p.hp+1); this.msg(LANG[curLang].msgs.heal, col); this.updateHUD(); }
         if(c==='item_hoof'){ this.p.buffs.hoof=15; this.msg(LANG[curLang].msgs.repel, col); }
         if(c==='item_jade'){ this.p.buffs.jade=1; this.msg(LANG[curLang].msgs.immune, col); }
+        if(c==='item_shield'){ this.p.shieldHits=Math.max(this.p.shieldHits,3); this.msg(LANG[curLang].msgs.shield,col);this.refreshBuffs(); }
+        this.showPickupDetails({kind:'item',code:c});
     },
 
     collectRelic: function(index){
         const relic=RELICS[index];if(!relic)return;
-        this.relics.push({index,floor:this.lvl});AudioSys.playItem(true);this.showRelicNotice(relic);
+        this.relics.push({index,floor:this.lvl});AudioSys.playItem(true);this.showRelicNotice(relic);this.showPickupDetails({kind:'relic',relic});
+    },
+    showPickupDetails: function(entry){
+        const popup=document.getElementById('pickup-popup');if(!popup)return;clearTimeout(this.pickupTimer);
+        const cn=curLang==='CN',image=document.getElementById('pickup-image'),icon=document.getElementById('pickup-icon');
+        let name='',detail='',tag='',stat='',src='';
+        if(entry.kind==='relic'){
+            const r=entry.relic;name=cn?r.name:r.en;detail=cn?r.desc:r.enDesc;tag=cn?'密室陪葬冥器':'BURIAL RELIC';stat=cn?`估值 ${r.price} 万元`:`Estimated value ${r.price}0K CNY`;src=r.image;
+        }else{
+            const key=entry.code.replace('item_',''),item=LANG[curLang].items[key];if(!item)return;
+            const icons={shovel:'⚒',candle:'🪔',wine:'🍶',hoof:'🐴',jade:'🥋',compass:'🧭',shield:'🛡️'};
+            name=item.n;detail=item.d;tag=cn?'随身物品':'EXPEDITION ITEM';stat=key==='shield'?(cn?'耐久 3 / 3 · 自动格挡':'Durability 3 / 3 · automatic block'):key==='jade'?(cn?'次数 1 / 1':'Uses 1 / 1'):key==='candle'?(cn?'持续 20 秒':'Lasts 20 seconds'):'';icon.textContent=icons[key]||'◆';
+        }
+        image.style.display=src?'block':'none';image.src=src||'';icon.style.display=src?'none':'grid';
+        document.getElementById('pickup-tag').textContent=tag;document.getElementById('pickup-name').textContent=name;
+        document.getElementById('pickup-detail').innerHTML=detail;document.getElementById('pickup-stat').textContent=stat;
+        popup.classList.remove('active');void popup.offsetWidth;popup.classList.add('active');
+        this.pickupTimer=setTimeout(()=>this.hidePickupDetails(),4200);
+    },
+    hidePickupDetails: function(){clearTimeout(this.pickupTimer);document.getElementById('pickup-popup')?.classList.remove('active');},
+    damageFeedback: function(){
+        const flash=document.getElementById('damage-flash');if(flash){flash.classList.remove('active');void flash.offsetWidth;flash.classList.add('active');}
+        for(let i=0;i<9;i++)TombDangers.bursts.push({x:this.p.x+(Math.random()-.5)*28,y:this.p.y-18+(Math.random()-.5)*20,radius:18+i%3*5,life:.42,blood:true});
+        this.addText(this.p.x,this.p.y-58,curLang==='CN'?'－1 生命':'－1 HP','#ff776d');
     },
     relicTotal: function(){return (this.relics||[]).reduce((sum,r)=>sum+RELICS[r.index].price,0);},
     refreshRelics: function(){
@@ -1027,7 +1078,7 @@ const Game = {
     refreshBuffs: function() {
         const breath=document.getElementById('breath-btn'),count=document.getElementById('breath-count'),status=document.getElementById('breath-status');
         count.textContent=String(Math.ceil(this.p.breathRemaining));breath.setAttribute('aria-pressed',String(this.p.holdingBreath));
-        breath.setAttribute('aria-label',curLang==='CN'?`按住屏气，剩余 ${Math.ceil(this.p.breathRemaining)} 秒`:`Hold breath, ${Math.ceil(this.p.breathRemaining)} seconds remaining`);
+        breath.setAttribute('aria-label',curLang==='CN'?`按住捏鼻屏气，剩余 ${Math.ceil(this.p.breathRemaining)} 秒`:`Pinch nose and hold breath, ${Math.ceil(this.p.breathRemaining)} seconds remaining`);
         const seconds=Math.ceil(this.p.breathRemaining),ratio=Math.max(0,this.p.breathRemaining/CONFIG.BREATH_MAX);
         status.classList.toggle('active',this.p.holdingBreath);status.classList.toggle('low',this.p.holdingBreath&&seconds<=10);status.classList.toggle('exhausted',this.p.breathExhausted);
         status.style.setProperty?.('--breath-angle',`${ratio*360}deg`);
@@ -1037,6 +1088,7 @@ const Game = {
         let html='';
         if(this.p.buffs.hoof>0) html+=`<div class="buff buff-hoof">🐴 ${Math.ceil(this.p.buffs.hoof)}s</div>`;
         if(this.p.buffs.jade>0) html+=`<div class="buff buff-jade">🥋 ${curLang==='CN'?'护身 ×1':'Shield ×1'}</div>`;
+        if(this.p.shieldHits>0) html+=`<div class="buff buff-shield">🛡️ ${curLang==='CN'?`木盾 ${this.p.shieldHits}/3`:`Wood shield ${this.p.shieldHits}/3`}</div>`;
         if(this.p.hasCompass) html+=`<div class="buff buff-compass">🧭 ${curLang==='CN'?'寻龙':'Compass'}</div>`;
         const bar=document.getElementById('buff-bar');
         if(this.buffHTML!==html){bar.innerHTML=html;this.buffHTML=html;}

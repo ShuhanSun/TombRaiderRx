@@ -1,7 +1,10 @@
 const {test}=require('node:test');
 const vm=require('node:vm');
 const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
 const {setup}=require('./harness.cjs');
+const root=path.resolve(__dirname,'..');
 
 test('coffin opening only releases red blood, never clouds or green liquid',()=>{
  const {Game,TombDangers}=setup();
@@ -489,9 +492,11 @@ test('sealed chambers have one moving entrance and required relic/key remain out
    assert.ok(perimeter.every(at=>MapSys.t[at]===1));
    assert.ok(!World.inside(r,Expedition.keyCoffin.x,Expedition.keyCoffin.y));assert.ok(!World.inside(r,Game.mainCoffinPos.x,Game.mainCoffinPos.y));
    assert.equal(Expedition.switches.length,0);
-   assert.ok(Game.ents.some(c=>c.type==='coffin'&&World.inside(r,c.x,c.y)&&c.payload?.loot?.some(k=>['item_shovel','item_jade'].includes(k))));
+   assert.ok(Game.ents.some(c=>c.type==='coffin'&&World.inside(r,c.x,c.y)&&[c.payload,...(c.extra||[])].some(p=>p?.loot?.some(k=>['item_shovel','item_jade','item_shield'].includes(k)))));
+   assert.ok(Game.ents.some(e=>e.type==='relic_item'&&e.guaranteed&&World.inside(r,e.x,e.y)));
    Game.p.x=w.x;Game.p.y=w.y;Expedition.update(4);assert.equal(MapSys.t[w.at],0);
   }
+  const shieldRoom=Expedition.sealedRooms[0];assert.ok(Game.ents.some(c=>c.type==='coffin'&&World.inside(shieldRoom,c.x,c.y)&&[c.payload,...(c.extra||[])].some(p=>p?.loot?.includes('item_shield'))));
  }
 });
 
@@ -582,14 +587,22 @@ test('shovel attacks nearby zombies automatically and respects stealth, cooldown
  Game.restart();assert.equal(Game.p.hasShovel,false);
 });
 
-test('zombies freeze after losing the player, then return to and sink into their coffin',()=>{
- const {Game,MapSys,Zombie}=setup(17);MapSys.t.fill(0);Game.p.x=300;Game.p.y=300;
- const z=new Zombie(325,300,0);z.homeCoffin={x:430,y:300};Game.ents=[Game.p,z];z.update(.01,Game.p);assert.equal(z.attackState,'windup');
+test('zombies face their coffin while returning, then sink and close the lid',()=>{
+ const {Game,MapSys,Zombie,Coffin}=setup(17);MapSys.t.fill(0);Game.p.x=300;Game.p.y=300;
+ const coffin=new Coffin(430,300,'cache');coffin.opened=1;coffin.revealed=true;coffin.occupantEscaped=true;coffin.lidProgress=1;
+ const z=new Zombie(325,300,0);z.homeCoffin=coffin;Game.ents=[Game.p,z,coffin];z.update(.01,Game.p);assert.equal(z.attackState,'windup');
  Game.p.startHoldingBreath();const startX=z.x;
  for(let i=0;i<40;i++)z.update(1/60,Game.p);
  assert.equal(z.x,startX);assert.equal(z.attackState,'');assert.equal(Game.p.hp,5);
  for(let i=0;i<800&&!z.dead;i++)z.update(1/60,Game.p);
- assert.ok(z.x>startX);assert.equal(z.returningToCoffin,true);assert.equal(z.dead,1);
+ assert.ok(z.x>startX);assert.equal(z.returningToCoffin,true);assert.equal(z.returnFacingLeft,false);assert.ok(Math.abs(z.attackAim)<.3);assert.equal(z.dead,1);
+ assert.equal(coffin.closing,true);assert.equal(coffin.locked,true);assert.equal(coffin.occupantEscaped,false);
+ coffin.update(.8);assert.equal(coffin.opened,0);assert.equal(coffin.closing,false);assert.equal(coffin.lidProgress,0);
+});
+
+test('breath control uses a pinch-nose icon and accessible label',()=>{
+ setup();const icon=fs.readFileSync(path.join(root,'assets/breath-button.svg'),'utf8'),markup=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ assert.match(icon,/手捏鼻子屏气/);assert.match(markup,/aria-label="按住捏鼻屏气"/);
 });
 
 test('all continuous burrows contain beetles and stomping plays one sound',()=>{
@@ -692,6 +705,20 @@ test('sealed chambers stay black and undiscovered until a flush hidden wall slow
 test('jade suit break triggers its dedicated sound without losing health',()=>{
  const {Game,AudioSys}=setup();let breaks=0;AudioSys.playJadeBreak=()=>breaks++;Game.running=1;Game.p.inv=0;Game.p.buffs.jade=1;const hp=Game.p.hp;Game.p.hit();
  assert.equal(breaks,1);assert.equal(Game.p.hp,hp);assert.equal(Game.p.buffs.jade,0);
+});
+
+test('wooden shield has three uses and only blocks crossbows and zombie attacks',()=>{
+ const {Game,els}=setup();Game.running=1;Game.getItem('item_shield');assert.equal(Game.p.shieldHits,3);assert.match(els['buff-bar'].innerHTML,/3\/3/);
+ const hp=Game.p.hp;
+ for(const cause of [{source:'trap',projectile:'ARROW'},{source:'zombie'},{source:'zombie_projectile',projectile:'VENOM'}]){Game.p.inv=0;Game.p.hit(cause);}
+ assert.equal(Game.p.hp,hp);assert.equal(Game.p.shieldHits,0);
+ Game.getItem('item_shield');Game.p.inv=0;Game.p.hit({source:'trap',projectile:'STONE'});assert.equal(Game.p.hp,hp-1);assert.equal(Game.p.shieldHits,3);
+});
+
+test('pickup detail window reports supplies and burial relic information',()=>{
+ const {Game,RelicItem,RELICS,els}=setup();Game.getItem('item_shield');assert.ok(els['pickup-popup'].classList.contains('active'));assert.equal(els['pickup-name'].textContent,'榆木护盾');assert.match(els['pickup-stat'].textContent,/3 \/ 3/);
+ new RelicItem(Game.p.x,Game.p.y,0).update(.01,Game.p);assert.equal(els['pickup-name'].textContent,RELICS[0].name);assert.match(els['pickup-detail'].innerHTML,/谷纹/);
+ Game.hidePickupDetails();assert.equal(els['pickup-popup'].classList.contains('active'),false);
 });
 
 test('saved maps and item positions repeat exactly and grow on every floor',()=>{
