@@ -1,27 +1,119 @@
 # 寻龙诀 · Tomb Raider
 
-探索十层中国古墓的网页游戏。每层寻找机关钥匙、开启主棺应对守墓僵尸、解除封印，再拉动机械开关，限时进入主墓室巨棺中的盗洞。
+[English](README.md) | [简体中文](README.zh-CN.md)
 
- [当前试玩版](https://tombraider-playtest.bookcool.chatgpt.site)
+A browser-based tomb exploration game inspired by Chinese burial architecture, hidden chambers, mechanical traps, grave goods, and supernatural folklore.
 
-## 操作
+**Play the current build:** https://tombraider-playtest.bookcool.chatgpt.site
 
-电脑使用 WASD / 方向键移动、Shift 疾行、B 屏气、Esc 暂停、M 静音。手机按住画面拖动控制方向，并可按住疾行或屏气按钮。取得兵工铲后，靠近僵尸或大罐会自动攻击。大罐需要两铲打碎，少数藏有补给，较常钻出尸鳖或蜘蛛。屏气最长持续 30 秒，期间人物蹲下捂嘴并可缓慢移动；僵尸会短暂停住，随后慢慢返回原棺。连续点击顶部层级名称可以打开测试选关。
+You enter a sealed underground tomb with limited information. Explore chamber by chamber, read the environment, open coffins, recover tools and relics, survive traps and undead guardians, unlock the main burial chamber, and escape before the tomb turns against you.
 
-首关进入后显示拖动移动示范，实际移动后自动隐藏。十层固定地图及棺材位置保存于 `levels.js`，现为 72×72 到 144×144 格：保留各层原有拓扑和汉墓对称结构，同时将房间边长扩大约 50%、房间中心间距扩大一倍，使墓道明显加长；重新运行不会重排地图或棺材物品。墙体采用连续高墙面、圆角边缘和落地阴影，与地面形成明确高差；暗处仍保留石材纹理，人物随身灯持续照亮周身。进入房间后，写实壁灯会从靠近人物的一侧依次点亮，并只安装在完整墙面上，避开门洞和墓道口。火炉、喷火机关、火弹和岩浆会照亮邻近环境。
+## The Tomb-Raiding Loop
 
-## 探索与战斗
+1. **Explore** — move through tomb passages, side chambers, hidden rooms, and sealed burial spaces.
+2. **Investigate** — inspect coffins, relics, mechanisms, blood traces, wall structures, and environmental clues.
+3. **Prepare** — find tools and survival items before committing to riskier rooms.
+4. **Survive** — evade or fight undead guardians and use the tomb's own traps and terrain to stay alive.
+5. **Break through** — open the main chamber, deal with its guardian, and reach the escape tunnel.
 
-罗盘解锁小地图和目标箭头，受伤时可能掉落。油灯照明 20 秒；玉衣只能抵挡一次伤害。写实榆木护盾拥有 3 点耐久，会自动格挡任意攻击；持盾时人物显示统一的四向持盾行走动画。每层物品有限，大部分供物与僵尸藏在棺材中；普通棺开启时不会出现血迹，主棺则会释放高血量赤血厉尸与尸鳖群。普通棺有概率掉落写实古董冥器，主棺保证掉落一件。僵尸或爬尸破棺后，原棺会切换为独立的写实空棺素材。玩家按住鼻子加叉号的屏气按钮后，僵尸会转身面向原棺返回；完全沉入后棺盖自动闭合，短暂复位后可再次开启，守墓尸也会再次出棺。关卡加载时会按墓室中轴和墙边陈设规则调整棺材、罐子、石碑、遗骸与机关间距，避免物体彼此重叠或遮挡。冥器以万元估值，过关界面会汇总全部藏品与总价值。封闭陪葬密室没有灯光，开启前场景和小地图均不可见；入口墙没有提示或特殊边框，人物必须紧贴墙面，石墙才会用约四秒缓慢打开且不再关闭。每间密室保证放置一件陪葬冥器和一具补给棺，第一间密室可找到榆木护盾。拾取物品或冥器时会弹出图像、用途、耐久或估值等详细信息。兵工铲会自动攻击近处僵尸、尸鳖、蜘蛛与大罐，挥击有冷却且不能穿墙；屏气时自动攻击暂停。爬尸使用独立的四帧爬行动画。渲染循环复用可见对象列表并减少每帧数组分配，受伤闪烁只改变透明度，不再隐藏人物整帧。
+The goal is not to turn the tomb into a conventional combat arena. Combat creates pressure; exploration, spatial awareness, risk management, and environmental interaction drive the experience.
 
-盗洞限时开启后会扩散本层灾害，包括水、流沙、火与毒等。喷火、喷水与喷烟机关靠近触发，水柱会将人物推走翻滚，烟雾会扩散遮挡场景。部分棺材会爆炸，部分洞口持续爬出尸鳖。
+## What Makes It Different
 
-## 本地运行与验证
+- **Chinese tomb atmosphere** — stone chambers, burial corridors, coffins, grave goods, dim wall lighting, hidden rooms, and ritual architecture.
+- **Physical coffin interaction** — push lids aside, reveal empty coffins, supplies, relics, or undead occupants.
+- **Environmental danger** — fire, water, smoke, projectiles, rolling hazards, collapsing mechanisms, and other tomb traps use distinct visual language.
+- **Stealth through breath control** — holding your breath can reduce enemy aggression and create an opening to reposition.
+- **Exploration tools** — equipment changes how safely and efficiently you can navigate the tomb.
+- **Hidden spaces** — some burial chambers are concealed behind walls and reward careful exploration.
+- **Desktop + mobile** — the game is designed to be playable in a browser with keyboard or touch controls.
 
-运行 `python3 -m http.server 8000`，浏览器打开 `http://localhost:8000`。游戏无需构建，发布时保留根目录 HTML、CSS、全部 JS 和 assets 文件夹。
+## Equipment
 
-Node.js 22 以上运行 `node --test tests/*.test.cjs`。80 项测试覆盖扩展地图、动作图集完整性、冥器与估值、物品详情窗、木盾耐久与伤害类型、陷阱、渐亮墓室、隐藏墙与陪葬密室、大罐、血尸与尸鳖群、返棺朝向与棺盖闭合、单次推棺动画、自动攻击、屏气与控制逻辑。测试使用浏览器接口替身，不能代替手机实机触控与音频验收。
+| Item | Purpose |
+| --- | --- |
+| Entrenching Shovel / 兵工铲 | Close-range attack tool used against undead creatures, crawling enemies, and breakable containers. |
+| Compass | Unlocks navigation assistance such as the minimap and objective direction. |
+| Oil Lamp | Temporarily improves visibility in dark areas. |
+| Golden Jade Suit | Absorbs a single incoming hit. |
+| Wooden Shield | Blocks a limited number of attacks before breaking. |
 
-可选渲染检查：安装 `@napi-rs/canvas` 后执行 `node scripts/render-check.cjs`，截图输出到 tmp/render-check。性能优化与浏览器测量见 PERFORMANCE.md。美术及音频来源见 ASSETS.md。现行机制位于 expedition.js 与 dangers.js。
+Equipment is deliberately limited. The player is expected to make decisions about route, timing, positioning, and risk rather than simply overpower every threat.
 
-Created by Shuhan Sun. See LICENSE.
+## Controls
+
+### Desktop
+
+- **WASD / Arrow Keys** — Move
+- **Shift** — Sprint
+- **B** — Hold breath
+- **Esc** — Pause
+- **M** — Mute
+
+Combat and nearby interactions are contextual. After obtaining the shovel, nearby valid targets can be attacked automatically when conditions allow.
+
+### Mobile
+
+Drag on the game area to move. Sprint, breath control, and contextual actions are available through on-screen controls. The interface is designed to avoid browser double-tap zoom during rapid gameplay input.
+
+## Level Design
+
+The current game contains ten tomb levels with progressively larger spaces and more dangerous combinations of rooms, coffins, traps, enemies, and hidden areas.
+
+The maps are authored and stored in `levels.js` so layouts remain reproducible for balancing, testing, and bug fixing. Later levels increase spatial complexity rather than relying only on higher enemy health.
+
+## Visual and Interaction Goals
+
+The project aims for a grounded 2.5D tomb-exploration look rather than a bright arcade style. Walls should read as solid architecture with visible height and shadow. Smoke remains translucent so danger does not destroy readability. Important objects should be understandable from form, lighting, motion, and placement instead of excessive text labels.
+
+Character animation distinguishes walking, attacking, pushing coffins, holding breath, taking damage, and shield use. Open coffins retain their lids in the world rather than disappearing like ordinary loot containers.
+
+## Run Locally
+
+No build step is required.
+
+```bash
+python3 -m http.server 8000
+```
+
+Then open:
+
+```text
+http://localhost:8000
+```
+
+Keep the root HTML/CSS/JavaScript files and the `assets/` directory together when serving the game.
+
+## Tests
+
+Requires Node.js 22+.
+
+```bash
+node --test tests/*.test.cjs
+```
+
+The automated suite covers core gameplay behavior including map expansion, action atlases, coffins, relics, item details, shield durability, traps, hidden chambers, enemy behavior, return-to-coffin logic, pushing, auto-attack, breath control, and input handling.
+
+Browser mocks cannot fully replace real-device testing, so touch controls, audio, rendering, and mobile performance still require manual verification.
+
+Optional render validation:
+
+```bash
+node scripts/render-check.cjs
+```
+
+With `@napi-rs/canvas` installed, screenshots are written to `tmp/render-check`.
+
+## Project Notes
+
+- Performance notes: `PERFORMANCE.md`
+- Asset and audio credits: `ASSETS.md`
+- Main exploration mechanics: `expedition.js`
+- Hazards and trap logic: `dangers.js`
+- Level layouts: `levels.js`
+
+## Status
+
+This is an actively evolving playable prototype. The current focus is making each tomb feel more deliberate, readable, atmospheric, and replayable while keeping browser performance stable.
+
+Created by Shuhan Sun. See `LICENSE`.
